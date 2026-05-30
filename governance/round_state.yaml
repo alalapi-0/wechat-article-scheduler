@@ -1,13 +1,13 @@
 current_round:
-  id: round_006
-  name: Round 6 - 渲染与模板扩展
+  id: round_007
+  name: Round 7 - 封面资产管理
   status: active
-  updated_at: '2026-05-30T08:37:59.458763+00:00'
+  updated_at: '2026-05-30T08:38:02.215979+00:00'
 last_completed_round:
-  id: round_005
-  completed_at: '2026-05-30T08:37:59.458763+00:00'
+  id: round_006
+  completed_at: '2026-05-30T08:38:02.215979+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- Markdown/HTML 渲染规则与模板策略稳定
+- 素材目录、引用与人工裁剪流程
 next_actions:
-- 推进 Round 7：封面资产管理
+- 推进 Round 8：可观测与运维
