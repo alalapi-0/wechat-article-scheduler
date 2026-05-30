@@ -1,13 +1,14 @@
 current_round:
-  id: round_007
-  name: Round 7 - 封面资产管理
+  id: round_008
+  name: Round 8 - 可观测与运维
   status: active
-  updated_at: '2026-05-30T08:38:02.215979+00:00'
+  updated_at: '2026-05-30T08:38:04.232473+00:00'
 last_completed_round:
-  id: round_006
-  completed_at: '2026-05-30T08:38:02.215979+00:00'
+  id: round_007
+  completed_at: '2026-05-30T08:38:04.232473+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 素材目录、引用与人工裁剪流程
+- 更细粒度审计、失败分类与 SLO 指标
+- 重试、日志与 DRY_RUN 报告
 next_actions:
-- 推进 Round 8：可观测与运维
+- 推进 Round 9：发布工作台产品化
