@@ -641,7 +641,14 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
     elif round_id == "round_011":
         steps = [([py, "-m", "pytest", "tests/test_agent_gate.py", "-q"], "pytest agent gate")]
     elif round_id == "round_012":
-        return True, "quality gate planning smoke skipped (future round)"
+        steps = [
+            ([py, "scripts/check_rounds_doc.py"], "check_rounds_doc"),
+            ([py, "scripts/check_test_coverage_hints.py"], "coverage hints"),
+            (
+                [py, "-m", "pytest", "tests/test_agent_gate.py", "tests/test_check_rounds_doc.py", "-q"],
+                "pytest gate/docs",
+            ),
+        ]
     elif round_id == "round_013":
         steps = [
             (

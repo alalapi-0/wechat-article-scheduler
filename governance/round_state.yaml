@@ -1,14 +1,13 @@
 current_round:
-  id: round_011
-  name: Round 11 - 路线图执行化与治理编排
+  id: round_012
+  name: Round 12 - 持续演进与质量门禁强化
   status: active
-  updated_at: '2026-05-30T12:57:19.545157+00:00'
+  updated_at: '2026-05-30T12:57:32.663074+00:00'
 last_completed_round:
-  id: round_010
-  completed_at: '2026-05-30T12:57:19.545157+00:00'
+  id: round_011
+  completed_at: '2026-05-30T12:57:32.663074+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- rounds.md 明确每轮目标/范围/验收/风险/回滚
-- ROUND_ORDER / ROUND_META / tests 同步校验
+- 建立后续轮次的最小质量门禁与模板约束
 next_actions:
-- 推进 Round 12：持续演进与质量门禁强化
+- 推进 Round 13：Renderer 内容渲染深化

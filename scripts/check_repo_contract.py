@@ -18,6 +18,9 @@ REQUIRED = [
     "governance/file_role_map.yaml",
     "docs/rounds.md",
     "scripts/agent_gate.py",
+    "scripts/check_rounds_doc.py",
+    "scripts/check_test_coverage_hints.py",
+    "governance/round_smoke_hints.yaml",
     "src/wechat_article_scheduler/cli.py",
 ]
 

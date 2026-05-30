@@ -1,0 +1,24 @@
+# 关键轮次最小冒烟建议（Round 12）；agent_gate round_smoke 的 human-readable 对照。
+# 修改 docs/rounds.md 或 ROUND_ORDER 时须同步 scripts/check_rounds_doc.py。
+
+round_000:
+  - python -m wechat_article_scheduler.cli init-db
+  - python -m wechat_article_scheduler.cli scan
+  - python -m wechat_article_scheduler.cli plan
+  - python -m wechat_article_scheduler.cli run-once
+round_001:
+  - python -m pytest tests/test_workflow.py tests/test_digest_limits.py tests/test_parser.py -q
+round_004:
+  - python scripts/check_repo_contract.py
+round_005:
+  - python -m pytest tests/test_web_app.py -q
+round_010:
+  - python -m pytest tests/test_web_app.py -q
+round_011:
+  - python -m pytest tests/test_agent_gate.py -q
+round_012:
+  - python scripts/check_rounds_doc.py
+  - python scripts/check_test_coverage_hints.py
+  - python -m pytest tests/test_agent_gate.py tests/test_check_rounds_doc.py -q
+round_013:
+  - python -m pytest tests/test_renderer_markdown.py tests/test_parser.py -q
