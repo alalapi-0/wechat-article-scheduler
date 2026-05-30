@@ -21,6 +21,7 @@
     --port 8088        指定临时端口（默认自动挑选）
     --keep-db          保留临时数据库目录（调试用）
     --seed N           种子文章数量（默认 5，0 表示展示空状态）
+    --tag NAME         输出子目录名（如 seeded / empty_state），避免多次运行互相覆盖
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT_DIR = ROOT / "docs" / "reports" / "ui_review"
+OUT_BASE = ROOT / "docs" / "reports" / "ui_review"
 SAMPLE_SOURCE = ROOT / "articles" / "imported"
 VIEWPORTS = [
     ("desktop_1280", 1280, 900),
@@ -97,7 +98,14 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--keep-db", action="store_true")
     parser.add_argument("--seed", type=int, default=5)
+    parser.add_argument(
+        "--tag",
+        default=None,
+        help="输出子目录（默认 seed>0 为 seeded，seed=0 为 empty_state）",
+    )
     args = parser.parse_args()
+    tag = args.tag or ("empty_state" if args.seed == 0 else "seeded")
+    out_dir = OUT_BASE / tag
 
     try:
         from playwright.sync_api import sync_playwright
@@ -105,7 +113,7 @@ def main() -> int:
         print("缺少 playwright，请先： pip install playwright && playwright install chromium")
         return 2
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     tmp_dir = ROOT / ".ui_review_tmp"
     inbox = tmp_dir / "inbox"
     inbox.mkdir(parents=True, exist_ok=True)
@@ -149,7 +157,7 @@ def main() -> int:
                 pg = browser.new_page(viewport={"width": w, "height": h})
                 pg.goto(url, wait_until="networkidle")
                 pg.wait_for_timeout(600)
-                shot = OUT_DIR / f"{name}.png"
+                shot = out_dir / f"{name}.png"
                 pg.screenshot(path=str(shot), full_page=True)
                 info = capture(pg, name)
                 info["screenshot"] = str(shot.relative_to(ROOT))
@@ -168,12 +176,13 @@ def main() -> int:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
     # 写结构快照
-    snapshot = OUT_DIR / "dom_snapshot.md"
+    snapshot = out_dir / "dom_snapshot.md"
     lines = [
         "# Web 工作台 DOM 结构快照（自动生成）",
         "",
         f"- generated_at: {datetime.now(timezone.utc).isoformat()}",
         f"- seed_articles: {args.seed}",
+        f"- tag: {tag}",
         "- generator: tools/browser_automation/ui_review.py",
         "",
     ]
@@ -193,7 +202,9 @@ def main() -> int:
         )
         lines.append("")
     snapshot.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"完成。结构快照：{snapshot.relative_to(ROOT)}；截图目录：{OUT_DIR.relative_to(ROOT)}")
+    print(
+        f"完成。结构快照：{snapshot.relative_to(ROOT)}；截图目录：{out_dir.relative_to(ROOT)}"
+    )
     return 0
 
 

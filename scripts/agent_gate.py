@@ -667,7 +667,12 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
     elif round_id == "round_018":
         steps = [([py, "-m", "pytest", "tests/test_agent_gate.py", "-q"], "pytest agent gate")]
     elif round_id == "round_019":
-        return True, "usability diagnostic smoke: run tools/browser_automation/ui_review.py manually (future round)"
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_ui_review.py", "-q"],
+                "pytest ui review / playwright baseline",
+            ),
+        ]
     elif round_id in {
         "round_020",
         "round_021",

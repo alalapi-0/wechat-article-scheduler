@@ -1,12 +1,13 @@
 # Web 工作台 DOM 结构快照（自动生成）
 
-- generated_at: 2026-05-30T13:15:32.873034+00:00
+- generated_at: 2026-05-30T13:17:37.929369+00:00
 - seed_articles: 0
+- tag: empty_state
 - generator: tools/browser_automation/ui_review.py
 
 ## 视口 desktop_1280
 
-- 截图：`docs/reports/ui_review/desktop_1280.png`
+- 截图：`docs/reports/ui_review/empty_state/desktop_1280.png`
 - 标题：文章调度器基础工作台
 - H1：['微信公众号文章调度器基础工作台 mode: mock']
 - 功能区(h2)：['安全状态', '操作区', '结果区', '状态卡片', '发布队列 / 最近任务', '事件日志', '文档入口']
@@ -17,7 +18,7 @@
 
 ## 视口 tablet_768
 
-- 截图：`docs/reports/ui_review/tablet_768.png`
+- 截图：`docs/reports/ui_review/empty_state/tablet_768.png`
 - 标题：文章调度器基础工作台
 - H1：['微信公众号文章调度器基础工作台 mode: mock']
 - 功能区(h2)：['安全状态', '操作区', '结果区', '状态卡片', '发布队列 / 最近任务', '事件日志', '文档入口']
@@ -28,7 +29,7 @@
 
 ## 视口 mobile_375
 
-- 截图：`docs/reports/ui_review/mobile_375.png`
+- 截图：`docs/reports/ui_review/empty_state/mobile_375.png`
 - 标题：文章调度器基础工作台
 - H1：['微信公众号文章调度器基础工作台 mode: mock']
 - 功能区(h2)：['安全状态', '操作区', '结果区', '状态卡片', '发布队列 / 最近任务', '事件日志', '文档入口']
