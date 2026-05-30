@@ -690,12 +690,18 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
         "round_033",
         "round_034",
     }:
-        # 普通用户友好 Web 轮：实现时以 tests/test_web_app.py / Playwright 为基础冒烟，未实现前优雅 skip
-        return True, f"{round_id} usability smoke skipped (future round; will use tests/test_web_app.py)"
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_web_ordinary_copy.py", "tests/test_web_app.py", "-q"],
+                "pytest web ordinary copy",
+            ),
+        ]
     elif round_id == "round_035":
-        return True, "e2e UI smoke skipped until tests/test_ui_e2e.py exists (future round)"
+        steps = [
+            ([py, "-m", "pytest", "tests/test_ui_e2e.py", "-q"], "pytest ui e2e"),
+        ]
     elif round_id in {"round_036", "round_037", "round_038"}:
-        return True, f"{round_id} usability governance smoke skipped (future round)"
+        steps = [([py, "-m", "pytest", "tests/test_agent_gate.py", "-q"], "pytest agent gate")]
     else:
         return True, "unknown round skipped"
 

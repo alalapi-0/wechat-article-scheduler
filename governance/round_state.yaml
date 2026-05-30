@@ -1,13 +1,13 @@
 current_round:
-  id: round_019
-  name: Round 19 - 普通用户工作台原则与 Playwright 视觉基线
+  id: round_020
+  name: Round 20 - 术语人话化与中文文案标准
   status: active
-  updated_at: '2026-05-30T13:05:08.593441+00:00'
+  updated_at: '2026-05-30T13:17:38.277762+00:00'
 last_completed_round:
-  id: round_018
-  completed_at: '2026-05-30T13:05:08.593441+00:00'
+  id: round_019
+  completed_at: '2026-05-30T13:17:38.277762+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- Playwright 诊断脚本可复跑，普通/详情/高级三层信息边界清晰
+- 普通视图不再直接出现裸内部词，术语映射有单一来源
 next_actions:
-- 推进 Round 20：术语人话化与中文文案标准
+- 推进 Round 21：普通视图信息减法

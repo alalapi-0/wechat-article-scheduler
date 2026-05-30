@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>文章调度工作台</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6fa;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --ok: #166534;
+      --ok-soft: #dcfce7;
+      --warn: #9a3412;
+      --warn-soft: #ffedd5;
+      --err: #991b1b;
+      --err-soft: #fee2e2;
+      --sidebar: #eef2ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: var(--text); background: var(--bg); }
+    .topbar {
+      background: var(--panel); border-bottom: 1px solid var(--line);
+      padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+    }
+    .topbar h1 { margin: 0; font-size: 1.2rem; }
+    .safety-pill {
+      display: inline-flex; align-items: center; gap: 8px; border-radius: 999px;
+      padding: 6px 12px; font-size: 13px; border: 1px solid var(--line); background: #f9fafb;
+    }
+    .safety-pill.mode-safe { background: var(--primary-soft); border-color: #bfdbfe; color: #1e3a8a; }
+    .safety-pill.mode-real { background: var(--warn-soft); border-color: #fdba74; color: var(--warn); }
+    .workbench { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 58px); }
+    @media (max-width: 900px) { .workbench { grid-template-columns: 1fr; } }
+    .sidebar {
+      background: var(--sidebar); border-right: 1px solid var(--line); padding: 16px 14px;
+    }
+    .sidebar nav a {
+      display: block; padding: 8px 10px; margin-bottom: 4px; border-radius: 8px;
+      color: var(--text); text-decoration: none; font-size: 14px;
+    }
+    .sidebar nav a:hover { background: rgba(255,255,255,0.7); }
+    .main { padding: 18px 20px 40px; max-width: 1100px; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 14px;
+    }
+    .panel h2 { margin: 0 0 8px; font-size: 1.05rem; }
+    .helper { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .steps { display: grid; gap: 10px; }
+    .step {
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fafafa;
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+    }
+    .step p { margin: 0; flex: 1 1 200px; font-size: 14px; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    button {
+      border: 1px solid var(--line); background: #fff; color: var(--text);
+      border-radius: 8px; padding: 8px 12px; font-size: 14px; cursor: pointer;
+    }
+    button.primary { background: var(--primary); border-color: #1d4ed8; color: #fff; }
+    button.secondary { background: #f3f4f6; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    button.danger { background: var(--err-soft); border-color: #fca5a5; color: var(--err); }
+    .cards { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+    .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fafafa; }
+    .card strong { display: block; font-size: 1.3rem; overflow-wrap: anywhere; }
+    .card span { color: var(--muted); font-size: 13px; }
+    .alert { border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--line); font-size: 14px; }
+    .alert.info { color: #1e3a8a; background: var(--primary-soft); border-color: #bfdbfe; }
+    .alert.ok { color: var(--ok); background: var(--ok-soft); border-color: #86efac; }
+    .alert.error { color: var(--err); background: var(--err-soft); border-color: #fca5a5; }
+    .result-box { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; background: #fafafa; font-size: 14px; }
+    .result-list { margin: 0; padding-left: 18px; }
+    .grid-2 { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    #jobsArea, #eventsArea { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 8px 6px; vertical-align: top; }
+    th { color: var(--muted); background: #fafafa; }
+    .empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; padding: 12px; background: #fafafa; font-size: 14px; line-height: 1.45; }
+    .pill { display: inline-flex; border-radius: 999px; padding: 2px 8px; font-size: 12px; background: #f3f4f6; border: 1px solid var(--line); }
+    .pill.ok { background: var(--ok-soft); color: var(--ok); }
+    .pill.warn { background: var(--warn-soft); color: var(--warn); }
+    .pill.err { background: var(--err-soft); color: var(--err); }
+    .advanced-only { display: none; }
+    body.show-advanced .advanced-only { display: block; }
+    body.show-advanced tr.advanced-only, body.show-advanced td.advanced-only, body.show-advanced th.advanced-only { display: table-cell; }
+    .toggle-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-top: 12px; }
+    pre { background: #111827; color: #f9fafb; border-radius: 8px; padding: 10px; overflow: auto; font-size: 12px; max-height: 280px; }
+    .doc-links a { color: var(--primary); margin-right: 8px; font-size: 13px; }
+    .status-inline { color: var(--muted); font-size: 13px; min-height: 18px; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1>微信公众号文章调度工作台</h1>
+    <div id="safetyTop" class="safety-pill mode-safe">正在加载安全状态…</div>
+  </header>
+
+  <div class="workbench">
+    <aside class="sidebar">
+      <nav>
+        <a href="#overview">概览</a>
+        <a href="#actions">主操作</a>
+        <a href="#queue">发布队列</a>
+        <a href="#events">操作记录</a>
+        <a href="#help">帮助</a>
+        <a href="/debug">高级排错</a>
+      </nav>
+      <label class="toggle-row">
+        <input type="checkbox" id="toggleAdvanced"/> 显示高级信息（排错用）
+      </label>
+    </aside>
+
+    <main class="main">
+      <div id="alert" class="alert info">正在初始化…</div>
+
+      <section id="overview" class="panel">
+        <h2>当前概况</h2>
+        <p class="helper">这里只显示你需要知道的数量和状态；技术细节请打开「高级排错」或勾选左侧高级开关。</p>
+        <div id="metricCards" class="cards"></div>
+      </section>
+
+      <section id="actions" class="panel">
+        <h2>主操作（按顺序）</h2>
+        <p class="helper">建议从上到下完成三步；「刷新状态」只是查看，不会改动数据。</p>
+        <div id="stepsArea" class="steps"></div>
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="secondary js-action" data-url="/api/status" data-method="GET" data-action="status">刷新状态</button>
+        </div>
+        <div id="opStatus" class="status-inline">空闲</div>
+      </section>
+
+      <section class="panel">
+        <h2>最近结果</h2>
+        <div id="resultBox" class="result-box"><p>等待操作…</p></div>
+      </section>
+
+      <div class="grid-2">
+        <section id="queue" class="panel">
+          <h2>发布队列</h2>
+          <div id="jobsArea" class="empty">正在加载…</div>
+        </section>
+        <section id="events" class="panel">
+          <h2>操作记录</h2>
+          <div id="eventsArea" class="empty">正在加载…</div>
+        </section>
+      </div>
+
+      <section id="help" class="panel">
+        <h2>帮助与文档</h2>
+        <p class="helper">看不懂某个词？先看用户手册；需要排错再进高级页。</p>
+        <div id="docsArea" class="doc-links"></div>
+      </section>
+
+      <section class="panel advanced-only">
+        <h2>高级信息（排错用）</h2>
+        <p class="helper">以下内容含内部字段名，仅供开发/Agent 排错。</p>
+        <div id="advancedSafety" class="cards"></div>
+        <details style="margin-top:10px;">
+          <summary>原始状态 JSON</summary>
+          <pre id="advancedJson">{}</pre>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let COPY = {};
+    let lastOverview = null;
+    let lastActionAt = null;
+    let busy = false;
+
+    const alertEl = document.getElementById('alert');
+    const safetyTopEl = document.getElementById('safetyTop');
+    const metricCardsEl = document.getElementById('metricCards');
+    const stepsAreaEl = document.getElementById('stepsArea');
+    const jobsAreaEl = document.getElementById('jobsArea');
+    const eventsAreaEl = document.getElementById('eventsArea');
+    const docsAreaEl = document.getElementById('docsArea');
+    const resultBoxEl = document.getElementById('resultBox');
+    const opStatusEl = document.getElementById('opStatus');
+    const advancedSafetyEl = document.getElementById('advancedSafety');
+    const advancedJsonEl = document.getElementById('advancedJson');
+    const toggleAdvancedEl = document.getElementById('toggleAdvanced');
+    const buttons = () => Array.from(document.querySelectorAll('.js-action'));
+
+    function L(map, key, fallback) {
+      if (!map) return fallback ?? key ?? '--';
+      return map[key] ?? map[String(key)] ?? fallback ?? key ?? '--';
+    }
+
+    function escapeHtml(v) {
+      return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+    }
+
+    function card(value, label) {
+      return `<div class="card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
+    }
+
+    function setAlert(type, msg) {
+      alertEl.className = 'alert ' + type;
+      alertEl.textContent = msg;
+    }
+
+    function setBusy(next, text) {
+      busy = next;
+      buttons().forEach(b => b.disabled = next);
+      opStatusEl.textContent = text || (next ? '处理中…' : '空闲');
+    }
+
+    function renderSteps() {
+      const actions = [
+        { key: 'scan', url: '/api/scan', method: 'POST', primary: true },
+        { key: 'plan', url: '/api/plan', method: 'POST', primary: true },
+        { key: 'run-once', url: '/api/run-once', method: 'POST', primary: true, confirmReal: true },
+      ];
+      stepsAreaEl.innerHTML = (COPY.steps || []).map((text, i) => {
+        const act = actions[i];
+        if (!act) return `<div class="step"><p>${escapeHtml(text)}</p></div>`;
+        const cls = act.primary ? 'primary' : 'secondary';
+        const label = L(COPY.actions, act.key, act.key);
+        return `<div class="step"><p>${escapeHtml(text)}</p><button class="${cls} js-action" data-url="${act.url}" data-method="${act.method}" data-action="${act.key}" data-confirm-real="${act.confirmReal ? '1' : '0'}">${escapeHtml(label)}</button></div>`;
+      }).join('');
+      bindButtons();
+    }
+
+    function renderSafetyTop(status) {
+      const mode = String(status.wechat_mode || '').toLowerCase();
+      const modeLabel = L(COPY.mode, mode, mode);
+      const publishLabel = L(COPY.publish_switch, String(!!status.wechat_enable_publish), '');
+      safetyTopEl.textContent = `${modeLabel} · ${publishLabel}`;
+      safetyTopEl.className = 'safety-pill ' + (mode === 'real' ? 'mode-real' : 'mode-safe');
+    }
+
+    function renderMetrics(data) {
+      const ac = data.article_counts || {};
+      const jc = data.job_counts || {};
+      metricCardsEl.innerHTML = [
+        card(ac.imported || 0, L(COPY.article_status, 'imported', '已收录')),
+        card(ac.published || 0, L(COPY.article_status, 'published', '已发布')),
+        card(jc.pending || 0, L(COPY.job_status, 'pending', '待发布')),
+        card(jc.done || 0, L(COPY.job_status, 'done', '已完成')),
+        card(jc.failed || 0, L(COPY.job_status, 'failed', '失败')),
+      ].join('');
+    }
+
+    function renderAdvanced(status) {
+      advancedSafetyEl.innerHTML = [
+        card(status.wechat_mode, '内部 mode'),
+        card(status.dry_run ? 'on' : 'off', 'DRY_RUN'),
+        card(status.wechat_enable_publish ? 'true' : 'false', 'wechat_enable_publish'),
+        card(status.database || '--', '数据库路径'),
+      ].join('');
+      advancedJsonEl.textContent = JSON.stringify(status, null, 2);
+    }
+
+    function pillClass(status) {
+      const s = String(status || '').toLowerCase();
+      if (s === 'done' || s === 'published') return 'pill ok';
+      if (s === 'failed') return 'pill err';
+      if (s === 'running' || s === 'pending') return 'pill warn';
+      return 'pill';
+    }
+
+    function renderJobs(rows) {
+      if (!rows || !rows.length) {
+        jobsAreaEl.className = 'empty';
+        jobsAreaEl.textContent = COPY.empty?.jobs || '还没有待发布文章。';
+        return;
+      }
+      jobsAreaEl.className = '';
+      jobsAreaEl.innerHTML = `<table><thead><tr><th>标题</th><th>计划时间</th><th>状态</th><th class="advanced-only">重试</th></tr></thead><tbody>
+        ${rows.map(r => `<tr>
+          <td>${escapeHtml(r.title || '（无标题）')}</td>
+          <td>${escapeHtml(r.scheduled_at || '--')}</td>
+          <td><span class="${pillClass(r.status)}">${escapeHtml(L(COPY.job_status, r.status, r.status))}</span></td>
+          <td class="advanced-only">${escapeHtml(r.retry_count ?? 0)}</td>
+        </tr>`).join('')}
+      </tbody></table>`;
+    }
+
+    function eventSummary(row) {
+      const t = String(row.event_type || '');
+      if (t === 'scan_imported') return '收录了一篇文章';
+      if (t === 'plan_created') return '创建了发布计划';
+      return L(COPY.event_type, t, '系统记录');
+    }
+
+    function renderEvents(rows) {
+      if (!rows || !rows.length) {
+        eventsAreaEl.className = 'empty';
+        eventsAreaEl.textContent = COPY.empty?.events || '还没有操作记录。';
+        return;
+      }
+      eventsAreaEl.className = '';
+      eventsAreaEl.innerHTML = `<table><thead><tr><th>时间</th><th>做了什么</th><th class="advanced-only">原始摘要</th></tr></thead><tbody>
+        ${rows.map(r => `<tr>
+          <td>${escapeHtml(r.created_at || '--')}</td>
+          <td>${escapeHtml(eventSummary(r))}</td>
+          <td class="advanced-only">${escapeHtml(r.payload_json || '')}</td>
+        </tr>`).join('')}
+      </tbody></table>`;
+    }
+
+    function renderDocs(rows) {
+      docsAreaEl.innerHTML = (rows || []).map(r =>
+        `<a href="/${escapeHtml(r.path)}" title="${escapeHtml(r.path)}">${escapeHtml(r.label)}</a>`
+      ).join('');
+    }
+
+    function humanize(action, payload) {
+      if (action === 'scan') return (payload.human || []).length ? payload.human : [`扫描完成`];
+      if (action === 'plan') return (payload.human || []).length ? payload.human : [`排期完成`];
+      if (action === 'run-once') return (payload.human || []).length ? payload.human : [`执行完成`];
+      if (action === 'status') return ['状态已更新'];
+      return ['操作完成'];
+    }
+
+    function renderResult(action, payload, ok) {
+      const title = ok ? `已完成：${L(COPY.actions, action, action)}` : `未完成：${L(COPY.actions, action, action)}`;
+      const points = humanize(action, payload).map(p => `<li>${escapeHtml(p)}</li>`).join('');
+      const err = payload.error ? `<li>${escapeHtml(payload.error)}</li>` : '';
+      resultBoxEl.innerHTML = `<p><strong>${title}</strong></p><ul class="result-list">${points}${err}</ul>`;
+    }
+
+    async function refreshOverview() {
+      const r = await fetch('/api/overview');
+      if (!r.ok) throw new Error('无法加载概况');
+      const data = await r.json();
+      lastOverview = data;
+      renderSafetyTop(data.status);
+      renderMetrics(data);
+      renderAdvanced(data.status);
+      renderJobs(data.recent_jobs);
+      renderEvents(data.recent_events);
+      renderDocs(data.docs);
+      const totalArticles = Object.values(data.article_counts || {}).reduce((a,b)=>a+Number(b),0);
+      const totalJobs = Object.values(data.job_counts || {}).reduce((a,b)=>a+Number(b),0);
+      if (totalArticles === 0 && totalJobs === 0) {
+        setAlert('info', COPY.empty?.overview || '欢迎使用本地工作台');
+      } else {
+        setAlert('ok', `当前有 ${totalArticles} 篇文章、${totalJobs} 个发布任务`);
+      }
+      return data;
+    }
+
+    function needsRealConfirm() {
+      const s = lastOverview?.status || {};
+      return String(s.wechat_mode).toLowerCase() === 'real' && !!s.wechat_enable_publish;
+    }
+
+    async function invoke(url, method, action) {
+      if (busy) return;
+      const btn = event?.target;
+      if (btn?.dataset?.confirmReal === '1' && needsRealConfirm()) {
+        const ok = window.confirm('当前已允许真实发布。确定要执行到点任务吗？这可能会真的发到公众号。');
+        if (!ok) return;
+      }
+      setBusy(true, `正在${L(COPY.actions, action, action)}…`);
+      try {
+        const resp = await fetch(url, { method });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.detail || data.error || `HTTP ${resp.status}`);
+        lastActionAt = new Date();
+        await refreshOverview();
+        renderResult(action, data, true);
+        setAlert('ok', `${L(COPY.actions, action, action)}成功`);
+      } catch (e) {
+        renderResult(action, { error: e.message || String(e) }, false);
+        setAlert('error', `${L(COPY.actions, action, action)}失败：${e.message || e}`);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function bindButtons() {
+      buttons().forEach(btn => {
+        btn.onclick = () => invoke(btn.dataset.url, btn.dataset.method || 'GET', btn.dataset.action || 'unknown');
+      });
+    }
+
+    toggleAdvancedEl.addEventListener('change', () => {
+      document.body.classList.toggle('show-advanced', toggleAdvancedEl.checked);
+    });
+
+    async function boot() {
+      const lr = await fetch('/api/user-labels');
+      COPY = await lr.json();
+      renderSteps();
+      await refreshOverview();
+      renderResult('status', { human: ['页面已就绪，可以开始操作'] }, true);
+    }
+
+    boot().catch(err => {
+      setAlert('error', '页面初始化失败，请确认数据库已初始化');
+      resultBoxEl.innerHTML = `<p>${escapeHtml(err.message || err)}</p>`;
+    });
+  </script>
+</body>
+</html>

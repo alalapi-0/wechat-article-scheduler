@@ -38,12 +38,18 @@ def test_index_html(app_config: AppConfig) -> None:
     client = TestClient(create_app(app_config))
     r = client.get("/")
     assert r.status_code == 200
-    assert "文章调度器" in r.text
-    assert "基础工作台" in r.text
-    assert "安全状态" in r.text
-    assert "发布队列 / 最近任务" in r.text
-    assert "事件日志" in r.text
-    assert "docs/rounds.md" in r.text
+    assert "工作台" in r.text
+    assert "主操作" in r.text
+    assert "发布队列" in r.text
+    assert "操作记录" in r.text
+    assert "高级排错" in r.text
+
+
+def test_user_labels_endpoint(app_config: AppConfig) -> None:
+    client = TestClient(create_app(app_config))
+    r = client.get("/api/user-labels")
+    assert r.status_code == 200
+    assert r.json()["job_status"]["pending"] == "待发布"
 
 
 def test_render_preview_endpoint(app_config: AppConfig) -> None:
