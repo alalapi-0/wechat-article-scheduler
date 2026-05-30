@@ -6,7 +6,7 @@ project:
   primary_language: zh-CN
   output_language: zh-CN
   current_stage: round_development
-  current_round: round_004
+  current_round: round_005
   summary: 本地微信公众号文章发布工作台：扫描、排期、草稿创建与可审计发布。
   long_term_goal: 在人工审核前提下，形成可持续演进的本地发布工作台与治理体系。
 repository:

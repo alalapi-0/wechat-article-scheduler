@@ -1,13 +1,13 @@
 current_round:
-  id: round_004
-  name: Round 4 - 数据迁移体系
+  id: round_005
+  name: Round 5 - Web 控制台增强
   status: active
-  updated_at: '2026-05-30T08:33:23.258853+00:00'
+  updated_at: '2026-05-30T08:35:18.522812+00:00'
 last_completed_round:
-  id: round_003
-  completed_at: '2026-05-30T08:33:23.258853+00:00'
+  id: round_004
+  completed_at: '2026-05-30T08:35:18.522812+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- migrations 版本化、回滚策略与兼容升级路径
+- 轻量鉴权、只读仪表盘与人工确认流
 next_actions:
-- 推进 Round 5：Web 控制台增强
+- 推进 Round 6：渲染与模板扩展
