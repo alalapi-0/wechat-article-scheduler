@@ -1,13 +1,13 @@
 current_round:
-  id: round_027
-  name: Round 27 - 文章列表普通化
+  id: round_028
+  name: Round 28 - 发布队列普通化
   status: active
-  updated_at: '2026-05-30T13:26:09.945507+00:00'
+  updated_at: '2026-05-30T13:26:51.107321+00:00'
 last_completed_round:
-  id: round_026
-  completed_at: '2026-05-30T13:26:09.945507+00:00'
+  id: round_027
+  completed_at: '2026-05-30T13:26:51.107321+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 文章列表展示标题、合集、状态、摘要、封面、更新时间，技术字段默认隐藏
+- 发布队列展示哪篇、什么时候、当前状态、失败原因和可做什么，技术列默认隐藏
 next_actions:
-- 推进 Round 28：发布队列普通化
+- 推进 Round 29：事件日志时间线
