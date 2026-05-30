@@ -1,13 +1,13 @@
 current_round:
-  id: round_037
-  name: Round 37 - Web 控制台 MVP 收口
+  id: round_038
+  name: Round 38 - 后续功能接入规范
   status: active
-  updated_at: '2026-05-30T13:33:03.803488+00:00'
+  updated_at: '2026-05-30T13:33:42.092311+00:00'
 last_completed_round:
-  id: round_036
-  completed_at: '2026-05-30T13:33:03.803488+00:00'
+  id: round_037
+  completed_at: '2026-05-30T13:33:42.092311+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 普通用户能完成扫描、排期、执行演练/草稿路径，并理解状态与失败提示
+- 未来 Web 功能必须定义普通视图、详情视图和高级字段归属
 next_actions:
-- 推进 Round 38：后续功能接入规范
+- 维护 docs/rounds.md 与治理协议；按后续功能接入规范规划 Round 39+
