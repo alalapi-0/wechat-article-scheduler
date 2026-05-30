@@ -16,5 +16,6 @@ acceptance_criteria:
   - "DRY_RUN / MAX_JOB_RETRIES / 日志轮转可用"
 
 next_actions:
-  - "人工配置 WECHAT_APP_ID/SECRET 后在 real 模式联调"
+  - "微信公众平台将本机公网 IP 加入白名单后重试 run-once（WECHAT_ENABLE_PUBLISH=false 仅草稿）"
+  - "公众号后台核对草稿与封面图"
   - "按需为 Web UI 增加鉴权"

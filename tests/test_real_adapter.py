@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from wechat_article_scheduler.adapters.real import RealWechatAdapter
@@ -27,6 +29,31 @@ def test_token_cache_reuses_token() -> None:
     assert cache.get_token(fetcher) == "tok_abc"
     assert cache.get_token(fetcher) == "tok_abc"
     assert calls["n"] == 1
+
+
+def test_upload_thumb_jpg_multipart_metadata(tmp_path: Path) -> None:
+    jpg_path = tmp_path / "cover.jpg"
+    jpg_path.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 64)
+    captured: dict = {}
+
+    def fake_get(url: str, **kwargs) -> dict:  # noqa: ARG001
+        return {"access_token": "ATOKEN", "expires_in": 7200}
+
+    def fake_multipart(url: str, fields: dict, files: dict, **kwargs) -> dict:  # noqa: ARG001
+        captured["files"] = files
+        return {"errcode": 0, "media_id": "thumb_jpg"}
+
+    adapter = RealWechatAdapter(
+        "wxapp",
+        "wxsec",
+        default_thumb_path=str(jpg_path),
+        http_get=fake_get,
+        http_post_multipart_fn=fake_multipart,
+    )
+    assert adapter.upload_thumb_media() == "thumb_jpg"
+    part = captured["files"]["media"]
+    assert part[0] == "thumb.jpg"
+    assert part[2] == "image/jpeg"
 
 
 def test_create_draft_with_mock_http() -> None:

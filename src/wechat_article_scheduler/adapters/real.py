@@ -95,6 +95,18 @@ class RealWechatAdapter(WechatAdapter):
                 return path.read_bytes()
         return _MIN_PNG
 
+    def _thumb_multipart_part(self, thumb_bytes: bytes) -> tuple[str, bytes, str]:
+        """根据路径或文件头返回 multipart 的 (filename, bytes, content_type)。"""
+        if self._default_thumb_path:
+            suffix = Path(self._default_thumb_path).suffix.lower()
+            if suffix in (".jpg", ".jpeg"):
+                return ("thumb.jpg", thumb_bytes, "image/jpeg")
+            if suffix == ".png":
+                return ("thumb.png", thumb_bytes, "image/png")
+        if thumb_bytes[:3] == b"\xff\xd8\xff":
+            return ("thumb.jpg", thumb_bytes, "image/jpeg")
+        return ("thumb.png", thumb_bytes, "image/png")
+
     def upload_thumb_media(self) -> str:
         """
         上传封面 thumb 素材，返回 media_id。
@@ -105,12 +117,16 @@ class RealWechatAdapter(WechatAdapter):
             return self._cached_thumb_media_id
         token = self.get_access_token()
         url = f"{API_BASE}/cgi-bin/material/add_material?access_token={token}&type=thumb"
-        thumb_bytes = self._load_thumb_bytes()
-        logger.info("上传封面素材 thumb（大小 %d 字节）", len(thumb_bytes))
+        filename, thumb_bytes, content_type = self._thumb_multipart_part(self._load_thumb_bytes())
+        logger.info(
+            "上传封面素材 thumb（%s，%d 字节）",
+            content_type,
+            len(thumb_bytes),
+        )
         data = self._http_post_multipart(
             url,
             fields={},
-            files={"media": ("thumb.png", thumb_bytes, "image/png")},
+            files={"media": (filename, thumb_bytes, content_type)},
         )
         media_id = str(data.get("media_id", ""))
         if not media_id:
