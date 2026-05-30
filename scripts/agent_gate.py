@@ -31,7 +31,16 @@ PASS, WARNING, BLOCKED = "PASS", "WARNING", "BLOCKED"
 SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
-ROUND_ORDER = ["round_000", "round_001", "round_002", "round_003", "round_004"]
+ROUND_ORDER = [
+    "round_000",
+    "round_001",
+    "round_002",
+    "round_003",
+    "round_004",
+    "round_005",
+    "round_006",
+    "round_007",
+]
 
 
 @dataclass
@@ -137,6 +146,12 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
         steps = [([py, "-m", "pytest", "tests/test_real_adapter.py", "-q"], "pytest real adapter")]
     elif round_id == "round_004":
         steps = [([py, "scripts/check_repo_contract.py"], "check_repo_contract")]
+    elif round_id == "round_005":
+        steps = [([py, "-m", "pytest", "tests/test_real_adapter.py", "-q"], "pytest real adapter")]
+    elif round_id == "round_006":
+        steps = [([py, "-m", "pytest", "tests/test_web_app.py", "-q"], "pytest web app")]
+    elif round_id == "round_007":
+        steps = [([py, "-m", "pytest", "tests/test_scheduler_hardening.py", "-q"], "pytest hardening")]
     else:
         return True, "unknown round skipped"
 

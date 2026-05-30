@@ -1,17 +1,20 @@
 current_round:
   id: round_007
   name: "Round 7 - 调度加固"
-  status: active
-  updated_at: "2026-05-30"
+  status: completed
+  completed_at: "2026-05-30"
 
 last_completed_round:
-  id: round_006
+  id: round_007
   completed_at: "2026-05-30"
 
 protocol_standard_sync_required: false
 
 acceptance_criteria:
-  - "pytest tests/test_web_app.py 通过"
+  - "pytest 全部通过"
+  - "agent_gate Round 0-7 已定义"
+  - "DRY_RUN / MAX_JOB_RETRIES / 日志轮转可用"
 
 next_actions:
-  - "Round 7: 日志轮转、dry-run、重试上限"
+  - "人工配置 WECHAT_APP_ID/SECRET 后在 real 模式联调"
+  - "按需为 Web UI 增加鉴权"

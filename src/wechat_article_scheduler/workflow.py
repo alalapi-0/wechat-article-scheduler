@@ -46,7 +46,11 @@ def retry_failed_jobs(config: AppConfig) -> int:
         rows = conn.execute("SELECT id FROM publish_jobs WHERE status = 'failed'").fetchall()
         for row in rows:
             conn.execute(
-                "UPDATE publish_jobs SET status = 'pending', updated_at = datetime('now') WHERE id = ?",
+                """
+                UPDATE publish_jobs
+                SET status = 'pending', retry_count = 0, updated_at = datetime('now')
+                WHERE id = ?
+                """,
                 (int(row["id"]),),
             )
             db.log_event(conn, entity_type="publish_job", entity_id=int(row["id"]), event_type="retry_failed")

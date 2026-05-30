@@ -60,10 +60,20 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+def _migrate_schema(conn: sqlite3.Connection) -> None:
+    """轻量 schema 迁移（新增列等）。"""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(publish_jobs)").fetchall()}
+    if "retry_count" not in cols:
+        conn.execute(
+            "ALTER TABLE publish_jobs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0"
+        )
+
+
 def init_db(db_path: Path) -> None:
     """创建表结构（幂等）。"""
     with connect(db_path) as conn:
         conn.executescript(SCHEMA_SQL)
+        _migrate_schema(conn)
         conn.commit()
 
 

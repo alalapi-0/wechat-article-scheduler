@@ -3,23 +3,11 @@ from pathlib import Path
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.workflow import reject_article, retry_failed_jobs
+from tests.conftest import make_test_config
 
 
 def _cfg(root: Path, db_path: Path) -> AppConfig:
-    return AppConfig(
-        root=root,
-        database_path=db_path,
-        inbox_dir=root / "articles" / "inbox",
-        rules_path=root / "config" / "rules.yaml",
-        wechat_mode="mock",
-        schedule_window_days=7,
-        scheduler_poll_seconds=60,
-        max_articles_per_day=2,
-        log_redact_secrets=True,
-        wechat_app_id="",
-        wechat_app_secret="",
-        rules={},
-    )
+    return make_test_config(root, db_path)
 
 
 def test_reject_and_retry(tmp_path: Path) -> None:

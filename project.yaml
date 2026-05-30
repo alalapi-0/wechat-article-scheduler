@@ -6,7 +6,7 @@ project:
   primary_language: zh-CN
   output_language: zh-CN
   current_stage: round_development
-  current_round: round_000
+  current_round: round_007
   summary: "本地优先的微信公众号图文 inbox 扫描、去重、排期与 mock 草稿发布调度 CLI。"
   long_term_goal: "在人工审核前提下，安全地对接微信公众平台草稿/发布 API。"
 
