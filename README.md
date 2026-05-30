@@ -28,6 +28,8 @@ python -m wechat_article_scheduler.cli plan
 python -m wechat_article_scheduler.cli run-once
 ```
 
+仓库已纳入 `articles/imported/`、`articles/published/` 下的章节样稿，供 Agent 与本地测试 scan/plan 流程使用（不提交 `.env` 与运行时数据库）。
+
 ## 运行模式（三种）
 
 1. `mock`（默认）：不联网，生成本地 mock 草稿/发布结果

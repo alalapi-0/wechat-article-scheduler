@@ -1,6 +1,11 @@
 agent_policy:
   mode: conservative_python_cli
   default_wechat_mode: mock
+  roadmap_authority:
+    human: docs/rounds.md
+    machine_registry: scripts/agent_gate.py
+    round_range: round_000..round_009
+    sync_rule: "修改 docs/rounds.md 时须同次提交更新 ROUND_ORDER/ROUND_META 与 tests/test_agent_gate.py"
   allowed_actions:
     - "读取 governance 与 docs/rounds.md"
     - "实现当前 round 范围内的 src/ 与 tests/"
@@ -21,3 +26,12 @@ agent_policy:
   automation_policy:
     gate_entry: scripts/agent_gate.py
     gate_report: docs/reports/agent_gate_report.md
+    commands:
+      status: "python scripts/agent_gate.py status"
+      gate: "python scripts/agent_gate.py gate"
+      advance: "python scripts/agent_gate.py advance --commit"
+    exit_codes:
+      pass: 0
+      warning: 1
+      blocked: 2
+    push_policy: "默认不 push；仅 advance --push 且人工授权时"

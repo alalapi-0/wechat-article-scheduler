@@ -1,6 +1,14 @@
 # Agent Gate Report
 
-- generated_at: 2026-05-30T06:17:45.673201+00:00
+- generated_at: 2026-05-30T08:29:24.833924+00:00
 - verdict: **PASS**
 
-- current_round: round_007
+- current_round: round_001
+- command: gate
+
+## Agent loop
+
+1. `python scripts/agent_gate.py status`
+2. 实现 `next_actions` / `acceptance_criteria`
+3. `python scripts/agent_gate.py gate` (exit 0)
+4. `python scripts/agent_gate.py advance --commit`

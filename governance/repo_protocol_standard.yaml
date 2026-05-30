@@ -816,6 +816,23 @@ versioning_policy:
     major: "Breaking field renames, changed authority order or incompatible reading protocol."
 
 project_specific_extensions:
+  wechat_article_scheduler:
+    project_type: python_cli_project
+    authoritative_roadmap: docs/rounds.md
+    machine_round_registry:
+      script: scripts/agent_gate.py
+      symbols:
+        - ROUND_ORDER
+        - ROUND_META
+    round_ids: round_000..round_009
+    sync_rule: "docs/rounds.md is the human authority; ROUND_ORDER/ROUND_META in scripts/agent_gate.py must stay in sync in the same change set."
+    test_fixtures:
+      directory: articles/
+      purpose: "Committed chapter drafts for scan/plan/run-once agent and CI smoke."
+      examples:
+        - articles/imported/sample_round0.md
+        - articles/imported/chapter_*_cn.md
+        - articles/published/chapter_001_cn.md
   novel_pipeline:
     location: governance/novel_pipeline_contract.yaml
     portability: "Copy only to novel, narrative, content-generation or creative workflow repos. Do not force it onto general software projects."

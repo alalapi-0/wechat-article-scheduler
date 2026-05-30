@@ -1,14 +1,33 @@
 #!/usr/bin/env python3
-"""治理门控 + 多轮自主推进（Round 0-4）。
+"""治理门控 + 多轮自主推进。
 
-用法（仓库根目录）:
-    python scripts/agent_gate.py           # 校验当前轮，通过则提交并推进
-    python scripts/agent_gate.py --check-only  # 仅校验，不 git commit
+Agent 循环（仓库根目录，优先使用 .venv/bin/python）::
+
+    python scripts/agent_gate.py status
+    # 实现 current_round / next_actions 中的任务
+    python scripts/agent_gate.py gate          # exit 0 → 可继续；2 → 修复后重试
+    python scripts/agent_gate.py advance --commit   # 推进 round_state；可选提交
+
+子命令:
+    status   打印当前轮、阶段、next_actions 与建议的下一步命令
+    gate     全量 pytest + 当前轮冒烟 + 安全/协议检查（默认子命令）
+    advance  在 gate 通过后更新 round_state；``--commit`` 时安全提交
+
+兼容:
+    ``--check-only`` 等价于 ``gate``（不 advance、不 commit）
+
+退出码（与 governance/repo_protocol_standard.yaml 一致）:
+    0 PASS — 门控通过，可继续实现或执行 advance
+    1 WARNING — 非阻断，记录后继续低风险治理
+    2 BLOCKED — 必须修复，禁止自主提交/推进
+
+默认不 push；远程推送需显式 ``advance --push``（通常需人工授权）。
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -25,12 +44,14 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = ROOT / "docs" / "reports" / "agent_gate_report.md"
 ROUND_STATE_PATH = ROOT / "governance" / "round_state.yaml"
+PROJECT_PATH = ROOT / "project.yaml"
 ROUNDS_DOC = ROOT / "docs" / "rounds.md"
 
 PASS, WARNING, BLOCKED = "PASS", "WARNING", "BLOCKED"
 SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
+# 权威路线图：docs/rounds.md（Round 0–9）。修改路线图时须同步本表与 tests/test_agent_gate.py。
 ROUND_ORDER = [
     "round_000",
     "round_001",
@@ -40,7 +61,122 @@ ROUND_ORDER = [
     "round_005",
     "round_006",
     "round_007",
+    "round_008",
+    "round_009",
 ]
+
+# 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
+ROUND_META: dict[str, dict[str, Any]] = {
+    "round_000": {
+        "name": "Round 0 - CLI MVP 闭环",
+        "acceptance_criteria": [
+            "init-db / scan / plan / run-once 闭环可运行",
+        ],
+        "next_actions": [
+            "推进 Round 1：治理轮与文档重构",
+        ],
+    },
+    "round_001": {
+        "name": "Round 1 - 治理轮",
+        "acceptance_criteria": [
+            "完成全仓审计与治理文档基线",
+            "digest 120 字约束与测试通过",
+            "目录骨架创建且不破坏现有导入",
+        ],
+        "next_actions": [
+            "推进 Round 2：内容库建模与审核闸门",
+        ],
+    },
+    "round_002": {
+        "name": "Round 2 - 内容库建模",
+        "acceptance_criteria": [
+            "内容集合、标签与审核状态模型落地",
+        ],
+        "next_actions": [
+            "推进 Round 3：调度域模块化",
+        ],
+    },
+    "round_003": {
+        "name": "Round 3 - 调度域模块化",
+        "acceptance_criteria": [
+            "scheduler 领域拆分与执行器分层",
+        ],
+        "next_actions": [
+            "推进 Round 4：数据迁移体系",
+        ],
+    },
+    "round_004": {
+        "name": "Round 4 - 数据迁移体系",
+        "acceptance_criteria": [
+            "migrations 版本化、回滚策略与兼容升级路径",
+        ],
+        "next_actions": [
+            "推进 Round 5：Web 控制台增强",
+        ],
+    },
+    "round_005": {
+        "name": "Round 5 - Web 控制台增强",
+        "acceptance_criteria": [
+            "轻量鉴权、只读仪表盘与人工确认流",
+        ],
+        "next_actions": [
+            "推进 Round 6：渲染与模板扩展",
+        ],
+    },
+    "round_006": {
+        "name": "Round 6 - 渲染与模板扩展",
+        "acceptance_criteria": [
+            "Markdown/HTML 渲染规则与模板策略稳定",
+        ],
+        "next_actions": [
+            "推进 Round 7：封面资产管理",
+        ],
+    },
+    "round_007": {
+        "name": "Round 7 - 封面资产管理",
+        "acceptance_criteria": [
+            "素材目录、引用与人工裁剪流程",
+        ],
+        "next_actions": [
+            "推进 Round 8：可观测与运维",
+        ],
+    },
+    "round_008": {
+        "name": "Round 8 - 可观测与运维",
+        "acceptance_criteria": [
+            "更细粒度审计、失败分类与 SLO 指标",
+            "重试、日志与 DRY_RUN 报告",
+        ],
+        "next_actions": [
+            "推进 Round 9：发布工作台产品化",
+        ],
+    },
+    "round_009": {
+        "name": "Round 9 - 发布工作台产品化",
+        "acceptance_criteria": [
+            "稳定交付、文档收口与长期维护规范",
+        ],
+        "next_actions": [
+            "维护 docs/rounds.md 与治理协议；按需规划 Round 10+",
+        ],
+    },
+}
+
+SECRET_BASENAMES = {
+    ".env",
+    ".env.local",
+    ".env.production",
+    "credentials.json",
+    "secrets.json",
+    "id_rsa",
+    "id_ed25519",
+}
+
+SECRET_PATH_SUFFIXES = (
+    "/.env",
+    "/credentials.json",
+    "/secrets.json",
+)
 
 
 @dataclass
@@ -83,6 +219,10 @@ def load_yaml(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def load_round_state() -> dict[str, Any]:
+    return load_yaml(ROUND_STATE_PATH) or {}
+
+
 def venv_python() -> str:
     vp = ROOT / ".venv" / "bin" / "python"
     return str(vp) if vp.exists() else (sys.executable or "python3")
@@ -90,7 +230,6 @@ def venv_python() -> str:
 
 def run_cmd(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
     proc = subprocess.run(cmd, cwd=cwd or ROOT, capture_output=True, text=True, check=False)
-    out = (proc.stdout or "") + (proc.stderr or "")
     return proc.returncode, proc.stdout or "", proc.stderr or ""
 
 
@@ -98,14 +237,46 @@ def git_tracked() -> list[str]:
     code, out, _ = run_cmd(["git", "ls-files"])
     if code != 0:
         return []
-    return [l for l in out.splitlines() if l]
+    return [line for line in out.splitlines() if line]
+
+
+def is_secret_path(path: str) -> bool:
+    p = path.strip().removeprefix("./")
+    base = Path(p).name
+    if base in SECRET_BASENAMES:
+        return True
+    return any(p.endswith(suffix) for suffix in SECRET_PATH_SUFFIXES)
+
+
+def git_porcelain() -> list[tuple[str, str]]:
+    code, out, _ = run_cmd(["git", "status", "--porcelain"])
+    if code != 0:
+        return []
+    rows: list[tuple[str, str]] = []
+    for line in out.splitlines():
+        if len(line) < 4:
+            continue
+        xy = line[:2]
+        path = line[3:].strip()
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1].strip()
+        rows.append((xy, path))
+    return rows
 
 
 def check_env_tracking(state: GateState, tracked: list[str]) -> None:
     if any(p == ".env" or p.endswith("/.env") for p in tracked):
-        state.block("env_tracking", ".env 被 Git 跟踪，请先 untrack")
+        state.block("env_tracking", ".env 被 Git 跟踪，请先 git rm --cached .env")
     else:
         state.passed("env_tracking", ".env 未被跟踪")
+
+
+def check_staged_secrets(state: GateState) -> None:
+    for _xy, path in git_porcelain():
+        if is_secret_path(path):
+            state.block("secret_staging", f"工作区含敏感路径，禁止提交: {path}")
+            return
+    state.passed("secret_staging", "工作区未发现待提交的敏感路径")
 
 
 def check_wechat_mock_default(state: GateState) -> None:
@@ -121,11 +292,19 @@ def check_wechat_mock_default(state: GateState) -> None:
 
 
 def get_current_round_id() -> str:
-    data = load_yaml(ROUND_STATE_PATH) or {}
+    data = load_round_state()
     cur = data.get("current_round", {})
     if isinstance(cur, dict):
         return str(cur.get("id", "round_000"))
     return "round_000"
+
+
+def get_current_round_status() -> str:
+    data = load_round_state()
+    cur = data.get("current_round", {})
+    if isinstance(cur, dict):
+        return str(cur.get("status", "active"))
+    return "active"
 
 
 def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
@@ -139,7 +318,10 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             ([*base, "run-once"], "run-once"),
         ]
     elif round_id == "round_001":
-        steps = [([py, "-m", "pytest", "tests/test_workflow.py", "-q"], "pytest workflow")]
+        steps = [
+            ([py, "-m", "pytest", "tests/test_workflow.py", "-q"], "pytest workflow"),
+            ([py, "-m", "pytest", "tests/test_digest_limits.py", "tests/test_parser.py", "-q"], "pytest digest/parser"),
+        ]
     elif round_id == "round_002":
         steps = [([*base, "events", "--limit", "5"], "events")]
     elif round_id == "round_003":
@@ -147,11 +329,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
     elif round_id == "round_004":
         steps = [([py, "scripts/check_repo_contract.py"], "check_repo_contract")]
     elif round_id == "round_005":
-        steps = [([py, "-m", "pytest", "tests/test_real_adapter.py", "-q"], "pytest real adapter")]
-    elif round_id == "round_006":
         steps = [([py, "-m", "pytest", "tests/test_web_app.py", "-q"], "pytest web app")]
+    elif round_id == "round_006":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_renderer_markdown.py", "tests/test_parser.py", "-q"],
+                "pytest renderer/parser",
+            ),
+        ]
     elif round_id == "round_007":
+        return True, "cover assets smoke skipped (future round)"
+    elif round_id == "round_008":
         steps = [([py, "-m", "pytest", "tests/test_scheduler_hardening.py", "-q"], "pytest hardening")]
+    elif round_id == "round_009":
+        return True, "productization smoke skipped (future round)"
     else:
         return True, "unknown round skipped"
 
@@ -171,6 +362,76 @@ def run_pytest(py: str) -> tuple[bool, str]:
     return True, so.strip() or "pytest ok"
 
 
+def run_gate_checks(state: GateState, *, py: str | None = None) -> str:
+    """执行门控检查，返回 current_round id。"""
+    tracked = git_tracked()
+    check_env_tracking(state, tracked)
+    check_staged_secrets(state)
+    check_wechat_mock_default(state)
+
+    if not (ROOT / "governance" / "repo_protocol_standard.yaml").exists():
+        state.block("protocol", "governance/repo_protocol_standard.yaml missing")
+    else:
+        state.passed("protocol", "protocol present")
+
+    interpreter = py or venv_python()
+    ok, msg = run_pytest(interpreter)
+    if ok:
+        state.passed("pytest", msg)
+    else:
+        state.block("pytest", msg[:800])
+
+    round_id = get_current_round_id()
+    smoke_ok, smoke_msg = round_smoke(round_id, interpreter)
+    if smoke_ok:
+        state.passed("round_smoke", f"{round_id}: {smoke_msg}")
+    else:
+        state.block("round_smoke", smoke_msg[:800])
+    return round_id
+
+
+def suggest_next_command(round_id: str, status: str) -> str:
+    if status == "completed":
+        return f"python scripts/agent_gate.py advance --commit  # 将 {round_id} 标记完成并进入下一轮"
+    return "python scripts/agent_gate.py gate  # 实现任务后校验；通过后 advance --commit"
+
+
+def cmd_status(*, json_out: bool) -> int:
+    data = load_round_state()
+    round_id = get_current_round_id()
+    cur = data.get("current_round", {}) if isinstance(data.get("current_round"), dict) else {}
+    status = str(cur.get("status", "active"))
+    payload = {
+        "current_round": {
+            "id": round_id,
+            "name": cur.get("name") or ROUND_META.get(round_id, {}).get("name", round_id),
+            "status": status,
+        },
+        "last_completed_round": data.get("last_completed_round"),
+        "next_actions": data.get("next_actions") or ROUND_META.get(round_id, {}).get("next_actions", []),
+        "acceptance_criteria": data.get("acceptance_criteria")
+        or ROUND_META.get(round_id, {}).get("acceptance_criteria", []),
+        "protocol_standard_sync_required": data.get("protocol_standard_sync_required", False),
+        "suggested_command": suggest_next_command(round_id, status),
+        "docs": str(ROUNDS_DOC.relative_to(ROOT)),
+    }
+    if json_out:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        print(f"current_round: {payload['current_round']['id']} ({payload['current_round']['name']})")
+        print(f"status: {status}")
+        if payload["last_completed_round"]:
+            print(f"last_completed_round: {payload['last_completed_round']}")
+        print("acceptance_criteria:")
+        for item in payload["acceptance_criteria"]:
+            print(f"  - {item}")
+        print("next_actions:")
+        for item in payload["next_actions"]:
+            print(f"  - {item}")
+        print(f"suggested: {payload['suggested_command']}")
+    return EXIT_CODE[PASS]
+
+
 def advance_round_state(current_id: str) -> str | None:
     """将 round_state 推进到下一轮；若已是最后一轮则返回 None。"""
     if yaml is None:
@@ -182,32 +443,112 @@ def advance_round_state(current_id: str) -> str | None:
     if idx >= len(ROUND_ORDER) - 1:
         return None
     next_id = ROUND_ORDER[idx + 1]
-    data = load_yaml(ROUND_STATE_PATH) or {}
+    meta = ROUND_META.get(next_id, {})
+    data = load_round_state()
+    now = datetime.now(timezone.utc).isoformat()
     data["current_round"] = {
         "id": next_id,
-        "name": f"Round {idx + 1}",
+        "name": meta.get("name", next_id),
         "status": "active",
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": now,
     }
     data["last_completed_round"] = {
         "id": current_id,
-        "completed_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": now,
     }
+    data["acceptance_criteria"] = meta.get("acceptance_criteria", [])
+    data["next_actions"] = meta.get("next_actions", [])
+    data.setdefault("protocol_standard_sync_required", False)
     ROUND_STATE_PATH.write_text(
         yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
         encoding="utf-8",
     )
+    sync_project_round(next_id)
     return next_id
 
 
-def git_commit_round(round_id: str) -> tuple[bool, str]:
-    run_cmd(["git", "add", "-A"])
+def sync_project_round(round_id: str) -> None:
+    if yaml is None or not PROJECT_PATH.exists():
+        return
+    data = load_yaml(PROJECT_PATH)
+    if not data:
+        return
+    proj = data.get("project")
+    if isinstance(proj, dict):
+        proj["current_round"] = round_id
+        PROJECT_PATH.write_text(
+            yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
+            encoding="utf-8",
+        )
+
+
+def mark_current_round_completed(round_id: str) -> None:
+    if yaml is None:
+        return
+    data = load_round_state()
+    cur = data.get("current_round", {})
+    if not isinstance(cur, dict):
+        cur = {}
+    now = datetime.now(timezone.utc).isoformat()
+    cur["id"] = round_id
+    cur["status"] = "completed"
+    cur["completed_at"] = now.split("T")[0]
+    meta = ROUND_META.get(round_id, {})
+    cur.setdefault("name", meta.get("name", round_id))
+    data["current_round"] = cur
+    ROUND_STATE_PATH.write_text(
+        yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+
+
+def last_gate_commit_for_round(round_id: str) -> bool:
+    code, out, _ = run_cmd(["git", "log", "-1", "--pretty=%s"])
+    if code != 0:
+        return False
+    return f"complete {round_id}" in out
+
+
+def safe_git_add(state: GateState) -> tuple[bool, list[str]]:
+    rows = git_porcelain()
+    if not rows:
+        state.passed("workspace", "工作区干净，无需提交")
+        return True, []
+    to_add: list[str] = []
+    for _xy, path in rows:
+        if is_secret_path(path):
+            state.block("secret_add", f"禁止暂存敏感文件: {path}")
+            return False, []
+        to_add.append(path)
+    if not to_add:
+        return True, []
+    code, so, se = run_cmd(["git", "add", "--"] + to_add)
+    if code != 0:
+        state.block("git_add", se or so)
+        return False, []
+    state.passed("git_add", f"已暂存 {len(to_add)} 个路径")
+    return True, to_add
+
+
+def git_commit_round(round_id: str, state: GateState) -> tuple[bool, str]:
+    if last_gate_commit_for_round(round_id):
+        dirty = git_porcelain()
+        if not dirty:
+            state.passed("git_commit", f"已存在 {round_id} 的门控提交且无新变更，跳过")
+            return True, "duplicate skipped"
+    added_ok, _ = safe_git_add(state)
+    if not added_ok:
+        return False, state.findings[-1].message
     msg = f"chore(agent_gate): complete {round_id}\n\nAutomated round gate commit."
     code, so, se = run_cmd(["git", "commit", "-m", msg])
+    combined = so + se
     if code != 0:
-        if "nothing to commit" in (so + se):
+        if "nothing to commit" in combined:
+            state.passed("git_commit", "nothing to commit")
             return True, "nothing to commit"
-        return False, se or so
+        state.block("git_commit", combined[:500])
+        return False, combined[:500]
+    state.passed("git_commit", "commit ok")
     return True, so.strip()
 
 
@@ -232,69 +573,125 @@ def write_report(state: GateState, extra: dict[str, str]) -> None:
             lines.append(f"- [{f.severity}] {f.check}: {f.message}")
     for k, v in extra.items():
         lines.append(f"- {k}: {v}")
+    lines.append("")
+    lines.append("## Agent loop")
+    lines.append("")
+    lines.append("1. `python scripts/agent_gate.py status`")
+    lines.append("2. 实现 `next_actions` / `acceptance_criteria`")
+    lines.append("3. `python scripts/agent_gate.py gate` (exit 0)")
+    lines.append("4. `python scripts/agent_gate.py advance --commit`")
     REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--check-only", action="store_true", help="不提交、不推进 round")
-    args = parser.parse_args()
-
+def cmd_gate() -> int:
     state = GateState()
-    tracked = git_tracked()
-    check_env_tracking(state, tracked)
-    check_wechat_mock_default(state)
-
-    if not (ROOT / "governance" / "repo_protocol_standard.yaml").exists():
-        state.block("protocol", "governance/repo_protocol_standard.yaml missing")
-    else:
-        state.passed("protocol", "protocol present")
-
-    py = venv_python()
-    ok, msg = run_pytest(py)
-    if ok:
-        state.passed("pytest", msg)
-    else:
-        state.block("pytest", msg[:800])
-
-    round_id = get_current_round_id()
-    smoke_ok, smoke_msg = round_smoke(round_id, py)
-    if smoke_ok:
-        state.passed("round_smoke", f"{round_id}: {smoke_msg}")
-    else:
-        state.block("round_smoke", smoke_msg[:800])
-
-    extra: dict[str, str] = {"current_round": round_id}
+    round_id = run_gate_checks(state)
+    extra: dict[str, str] = {"current_round": round_id, "command": "gate"}
     write_report(state, extra)
-
     print(f"Agent gate: {state.verdict} (round={round_id})")
     if state.verdict == BLOCKED:
+        print("修复上述 BLOCKED 项后重试: python scripts/agent_gate.py gate")
         return EXIT_CODE[BLOCKED]
+    if state.verdict == WARNING:
+        print("存在 WARNING，可继续低风险任务或修复后 gate")
+    else:
+        print(f"门控通过。下一步: {suggest_next_command(round_id, get_current_round_status())}")
+    return EXIT_CODE[state.verdict]
 
-    if args.check_only:
-        return EXIT_CODE[state.verdict]
 
-    # 提交并推进
-    committed, cmsg = git_commit_round(round_id)
-    extra["git_commit"] = cmsg
-    if not committed:
-        state.block("git_commit", cmsg)
+def cmd_advance(*, do_commit: bool, do_push: bool) -> int:
+    state = GateState()
+    round_id = run_gate_checks(state)
+    extra: dict[str, str] = {"current_round": round_id, "command": "advance"}
+
+    print(f"Agent gate (advance): {state.verdict} (round={round_id})")
+    if state.verdict == BLOCKED:
         write_report(state, extra)
+        print("advance 中止：请先通过 gate")
         return EXIT_CODE[BLOCKED]
 
+    if do_commit:
+        committed, cmsg = git_commit_round(round_id, state)
+        extra["git_commit"] = cmsg
+        if not committed:
+            write_report(state, extra)
+            return EXIT_CODE[BLOCKED]
+    else:
+        extra["git_commit"] = "skipped (--commit 未指定)"
+
+    mark_current_round_completed(round_id)
     nxt = advance_round_state(round_id)
     if nxt:
         extra["advanced_to"] = nxt
         print(f"Advanced round: {round_id} -> {nxt}")
+        print(f"下一轮入口: python scripts/agent_gate.py status")
     else:
         extra["advanced_to"] = "complete"
-        print("All rounds complete")
+        print("All scripted rounds complete; 见 docs/rounds.md 维护后续规划")
 
-    push_ok, push_msg = git_push_main()
-    extra["git_push"] = push_msg if push_ok else f"skipped/failed: {push_msg}"
+    if do_push:
+        push_ok, push_msg = git_push_main()
+        extra["git_push"] = push_msg if push_ok else f"failed: {push_msg}"
+        if not push_ok:
+            state.warn("git_push", push_msg[:300])
+    else:
+        extra["git_push"] = "skipped (默认不 push；需远程时用 --push)"
+
     write_report(state, extra)
-
     return EXIT_CODE[state.verdict]
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="治理门控：status / gate / advance",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    parser.add_argument(
+        "--check-only",
+        action="store_true",
+        help="兼容旧参数：等价于子命令 gate",
+    )
+    sub = parser.add_subparsers(dest="command", metavar="command")
+
+    p_status = sub.add_parser("status", help="当前轮次与下一步建议")
+    p_status.add_argument("--json", action="store_true", help="JSON 输出")
+
+    sub.add_parser("gate", help="pytest + 冒烟 + 安全检查（默认）")
+
+    p_adv = sub.add_parser("advance", help="gate 通过后推进 round_state")
+    p_adv.add_argument(
+        "--commit",
+        action="store_true",
+        help="门控通过后执行安全 git commit（无变更则跳过）",
+    )
+    p_adv.add_argument(
+        "--push",
+        action="store_true",
+        help="提交后 push origin main（需人工授权，默认不 push）",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    command = args.command
+    if args.check_only and command is None:
+        command = "gate"
+    if command is None:
+        command = "gate"
+
+    if command == "status":
+        return cmd_status(json_out=getattr(args, "json", False))
+    if command == "gate":
+        return cmd_gate()
+    if command == "advance":
+        return cmd_advance(do_commit=args.commit, do_push=args.push)
+
+    parser.error(f"unknown command: {command}")
+    return EXIT_CODE[BLOCKED]
 
 
 if __name__ == "__main__":
