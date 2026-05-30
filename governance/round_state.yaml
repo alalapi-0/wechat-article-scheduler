@@ -1,15 +1,14 @@
 current_round:
-  id: round_010
-  name: Round 10 - 基础工作台可用性升级
+  id: round_011
+  name: Round 11 - 路线图执行化与治理编排
   status: active
-  updated_at: '2026-05-30T09:24:00+00:00'
+  updated_at: '2026-05-30T12:57:19.545157+00:00'
 last_completed_round:
-  id: round_009
-  completed_at: '2026-05-30T08:38:07.173603+00:00'
+  id: round_010
+  completed_at: '2026-05-30T12:57:19.545157+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 后台页面完成分区布局与操作分组
-- 操作具备 loading、防重复点击与成功/失败反馈
-- 状态展示可读，失败返回下一步建议
+- rounds.md 明确每轮目标/范围/验收/风险/回滚
+- ROUND_ORDER / ROUND_META / tests 同步校验
 next_actions:
-- 推进 Round 11：路线图执行化与治理编排
+- 推进 Round 12：持续演进与质量门禁强化
