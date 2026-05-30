@@ -1,13 +1,13 @@
 current_round:
-  id: round_032
-  name: Round 32 - 错误与恢复指引
+  id: round_033
+  name: Round 33 - 桌面效率优化
   status: active
-  updated_at: '2026-05-30T13:29:34.378214+00:00'
+  updated_at: '2026-05-30T13:30:13.734859+00:00'
 last_completed_round:
-  id: round_031
-  completed_at: '2026-05-30T13:29:34.378214+00:00'
+  id: round_032
+  completed_at: '2026-05-30T13:30:13.734859+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 常见失败用普通用户语言说明原因、影响和下一步
+- 电脑浏览器中可高效筛选、排序、定位文章和发布任务
 next_actions:
-- 推进 Round 33：桌面效率优化
+- 推进 Round 34：窄屏兼容验收

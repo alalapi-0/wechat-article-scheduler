@@ -6,7 +6,7 @@ project:
   primary_language: zh-CN
   output_language: zh-CN
   current_stage: round_development
-  current_round: round_032
+  current_round: round_033
   summary: 本地微信公众号文章发布工作台：CLI 闭环 + 电脑浏览器优先 Web 控制台，支持扫描、排期、草稿创建与可审计发布。
   long_term_goal: 在人工审核前提下，形成可持续演进的本地发布工作台与治理体系；Web 控制台普通视图优先服务非技术用户，默认只展示安全状态、下一步、操作结果和错误恢复建议，同时优先保障桌面端信息密度和操作效率，窄屏只做兼容。
 repository:
