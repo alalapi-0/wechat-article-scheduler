@@ -1,13 +1,13 @@
 current_round:
-  id: round_023
-  name: Round 23 - 人话反馈系统
+  id: round_024
+  name: Round 24 - 空状态与首次使用
   status: active
-  updated_at: '2026-05-30T13:23:29.628693+00:00'
+  updated_at: '2026-05-30T13:24:07.735723+00:00'
 last_completed_round:
-  id: round_022
-  completed_at: '2026-05-30T13:23:29.628693+00:00'
+  id: round_023
+  completed_at: '2026-05-30T13:24:07.735723+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 操作后展示做成了什么、没做成什么、下一步是什么
+- 空数据下首页、文章列表、发布队列和事件日志提供可操作引导
 next_actions:
-- 推进 Round 24：空状态与首次使用
+- 推进 Round 25：安全发布护栏
