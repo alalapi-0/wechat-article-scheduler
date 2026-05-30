@@ -6,8 +6,9 @@
 
 ## 当前状态
 
-- 已实现：`articles` 表可承载基础内容元数据
-- 设计中：`content_library/` 目录骨架，尚未迁移业务逻辑
+- 已实现：`articles` 表承载内容元数据；`collections` / `tags` / `article_tags` 与 `review_status`
+- 已实现：扫描导入时写入默认集合、草稿审核状态与导入批次
+- CLI：`content --limit N` 列出集合与条目
 
 ## 规划能力
 

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.content_library import set_review_status
 
 
 def reject_article(config: AppConfig, article_id: int) -> bool:
@@ -29,6 +30,7 @@ def reject_article(config: AppConfig, article_id: int) -> bool:
             "UPDATE articles SET status = 'rejected', updated_at = datetime('now') WHERE id = ?",
             (article_id,),
         )
+        set_review_status(conn, article_id, "rejected")
         conn.execute(
             "UPDATE publish_jobs SET status = 'cancelled', updated_at = datetime('now') "
             "WHERE article_id = ? AND status IN ('pending', 'running')",

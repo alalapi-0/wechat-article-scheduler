@@ -15,6 +15,6 @@
 
 ## 演进建议
 
-- 增加迁移版本表（如 `schema_migrations`）
+- 已实现：`schema_migrations` 版本表与 `migrations/*.sql` 顺序应用
 - 为 `events` 约定字段级 JSON schema
 - 为 `publish_jobs(status, scheduled_at)` 增加复合索引（按需）

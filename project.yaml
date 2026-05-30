@@ -6,21 +6,20 @@ project:
   primary_language: zh-CN
   output_language: zh-CN
   current_stage: round_development
-  current_round: round_001
-  summary: "本地微信公众号文章发布工作台：扫描、排期、草稿创建与可审计发布。"
-  long_term_goal: "在人工审核前提下，形成可持续演进的本地发布工作台与治理体系。"
-
+  current_round: round_002
+  summary: 本地微信公众号文章发布工作台：扫描、排期、草稿创建与可审计发布。
+  long_term_goal: 在人工审核前提下，形成可持续演进的本地发布工作台与治理体系。
 repository:
   entry_points:
     human:
-      - README.md
-      - docs/user_manual.md
+    - README.md
+    - docs/user_manual.md
     agent:
-      - AGENTS.md
-      - governance/repo_protocol_standard.yaml
-      - governance/round_state.yaml
+    - AGENTS.md
+    - governance/repo_protocol_standard.yaml
+    - governance/round_state.yaml
     runtime:
-      - "python -m wechat_article_scheduler.cli"
+    - python -m wechat_article_scheduler.cli
   authoritative_files:
     cross_repo_standard: governance/repo_protocol_standard.yaml
     project_identity: project.yaml
@@ -29,14 +28,13 @@ repository:
     current_file_roles: governance/file_role_map.yaml
     roadmap: docs/rounds.md
     round_registry: scripts/agent_gate.py
-
 protocol_standard:
-  version: "0.3.0"
+  version: 0.3.0
   source_repo: novel-continuation-agent
   project_overrides:
-    - field: project_specific_extensions.novel_pipeline
-      reason: "非小说项目，无 novel_pipeline_contract"
-      owner: user
-    - field: agent_policy_standard.automation_policy
-      reason: "agent_gate 编排 round_000..round_009 与 pytest/CLI 冒烟，须与 docs/rounds.md 同步"
-      owner: agent
+  - field: project_specific_extensions.novel_pipeline
+    reason: 非小说项目，无 novel_pipeline_contract
+    owner: user
+  - field: agent_policy_standard.automation_policy
+    reason: agent_gate 编排 round_000..round_009 与 pytest/CLI 冒烟，须与 docs/rounds.md 同步
+    owner: agent

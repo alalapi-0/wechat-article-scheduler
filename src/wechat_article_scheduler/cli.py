@@ -10,6 +10,7 @@ from wechat_article_scheduler.config import load_config
 from wechat_article_scheduler.logging_setup import setup_logging
 from wechat_article_scheduler.plan import build_plan
 from wechat_article_scheduler.scanner import scan_inbox
+from wechat_article_scheduler.content_cli import print_content_library
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.scheduler import run_due_jobs, scheduler_loop
 from wechat_article_scheduler.workflow import reject_article, retry_failed_jobs
@@ -32,6 +33,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     events_p = sub.add_parser("events", help="列出最近审计事件 (Round 2)")
     events_p.add_argument("--limit", type=int, default=20)
+
+    content_p = sub.add_parser("content", help="列出内容库集合与条目 (Round 2)")
+    content_p.add_argument("--limit", type=int, default=20)
 
     serve_p = sub.add_parser("serve", help="启动 FastAPI 管理后台 (Round 6)")
     serve_p.add_argument("--host", default=None, help="监听地址，默认 WEB_HOST")
@@ -82,6 +86,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "retry-failed":
         n = retry_failed_jobs(config)
         print(f"已重置 {n} 条 failed 任务为 pending")
+        return 0
+
+    if args.command == "content":
+        print_content_library(config, limit=args.limit)
         return 0
 
     if args.command == "events":

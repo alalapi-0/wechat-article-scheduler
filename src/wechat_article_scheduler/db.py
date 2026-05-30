@@ -1,4 +1,4 @@
-"""SQLite 连接与 schema 初始化。"""
+"""SQLite 连接、schema 初始化与版本化迁移。"""
 
 from __future__ import annotations
 
@@ -6,7 +6,14 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "migrations"
+
 SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS articles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_path TEXT NOT NULL,
@@ -60,8 +67,45 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+def _applied_versions(conn: sqlite3.Connection) -> set[str]:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations ("
+        "version TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (datetime('now')))"
+    )
+    rows = conn.execute("SELECT version FROM schema_migrations").fetchall()
+    return {str(r["version"]) for r in rows}
+
+
+def _discover_migrations() -> list[tuple[str, Path]]:
+    if not MIGRATIONS_DIR.exists():
+        return []
+    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    out: list[tuple[str, Path]] = []
+    for path in files:
+        version = path.stem.split("_", 1)[0]
+        out.append((version, path))
+    return out
+
+
+def apply_migrations(conn: sqlite3.Connection) -> list[str]:
+    """按序应用 migrations/*.sql，返回新应用的版本号。"""
+    applied = _applied_versions(conn)
+    newly_applied: list[str] = []
+    for version, path in _discover_migrations():
+        if version in applied:
+            continue
+        sql = path.read_text(encoding="utf-8")
+        conn.executescript(sql)
+        conn.execute(
+            "INSERT INTO schema_migrations (version) VALUES (?)",
+            (version,),
+        )
+        newly_applied.append(version)
+    return newly_applied
+
+
 def _migrate_schema(conn: sqlite3.Connection) -> None:
-    """轻量 schema 迁移（新增列等）。"""
+    """兼容旧库：在引入 migrations 前已存在的轻量列迁移。"""
     cols = {row[1] for row in conn.execute("PRAGMA table_info(publish_jobs)").fetchall()}
     if "retry_count" not in cols:
         conn.execute(
@@ -70,10 +114,11 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
 
 
 def init_db(db_path: Path) -> None:
-    """创建表结构（幂等）。"""
+    """创建表结构并应用迁移（幂等）。"""
     with connect(db_path) as conn:
         conn.executescript(SCHEMA_SQL)
         _migrate_schema(conn)
+        apply_migrations(conn)
         conn.commit()
 
 

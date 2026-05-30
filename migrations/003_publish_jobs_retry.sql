@@ -1,0 +1,2 @@
+-- 003: publish_jobs 重试计数（旧库兼容；新库由 init 创建）
+-- SQLite 不支持 IF NOT EXISTS 于 ADD COLUMN，由 db._migrate_schema 兜底。

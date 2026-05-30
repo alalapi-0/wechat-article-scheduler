@@ -8,6 +8,7 @@ from typing import Any
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.content_library import register_imported_article
 from wechat_article_scheduler.dedupe import is_duplicate
 from wechat_article_scheduler.parser import parse_file
 
@@ -64,6 +65,7 @@ def scan_inbox(config: AppConfig) -> dict[str, int]:
                     (parsed.source_path, parsed.title, parsed.summary, parsed.body, parsed.content_hash),
                 )
                 article_id = int(cur.lastrowid)
+                register_imported_article(conn, article_id=article_id)
                 dest = imported_dir / path.name
                 shutil.move(str(path), str(dest))
                 conn.execute(
