@@ -1,13 +1,13 @@
 current_round:
-  id: round_005
-  name: Round 5 - Web 控制台增强
+  id: round_006
+  name: Round 6 - 渲染与模板扩展
   status: active
-  updated_at: '2026-05-30T08:35:18.522812+00:00'
+  updated_at: '2026-05-30T08:37:59.458763+00:00'
 last_completed_round:
-  id: round_004
-  completed_at: '2026-05-30T08:35:18.522812+00:00'
+  id: round_005
+  completed_at: '2026-05-30T08:37:59.458763+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 轻量鉴权、只读仪表盘与人工确认流
+- Markdown/HTML 渲染规则与模板策略稳定
 next_actions:
-- 推进 Round 6：渲染与模板扩展
+- 推进 Round 7：封面资产管理
