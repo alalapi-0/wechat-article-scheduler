@@ -18,6 +18,11 @@ from wechat_article_scheduler.scheduler.policies import (
 logger = logging.getLogger(__name__)
 
 
+def requires_publish_approval(config: AppConfig) -> bool:
+    """真实发布路径需文章 review_status=approved。"""
+    return config.wechat_mode == "real" and bool(config.wechat_enable_publish)
+
+
 def run_due_jobs(config: AppConfig) -> dict[str, int]:
     """
     处理 scheduled_at <= now 的 pending 任务：创建草稿、标记完成、移动文章。
@@ -31,6 +36,7 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
         "failed": 0,
         "dry_run": 0,
         "skipped_max_retries": 0,
+        "skipped_not_approved": 0,
     }
     now = datetime.now().isoformat(timespec="seconds")
     published_dir = config.root / "articles" / "published"
@@ -41,7 +47,7 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
         jobs = conn.execute(
             """
             SELECT j.id AS job_id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                   a.title, a.summary, a.body, a.source_path
+                   a.title, a.summary, a.body, a.source_path, a.review_status
             FROM publish_jobs j
             JOIN articles a ON a.id = j.article_id
             WHERE j.status = 'pending'
@@ -63,6 +69,16 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
                     job_id,
                     retry_count,
                     max_retries,
+                )
+                continue
+
+            review_status = (job["review_status"] or "draft").strip()
+            if requires_publish_approval(config) and review_status != "approved":
+                stats["skipped_not_approved"] += 1
+                logger.warning(
+                    "任务 %s 文章未批准（review_status=%s），跳过真实发布",
+                    job_id,
+                    review_status,
                 )
                 continue
 

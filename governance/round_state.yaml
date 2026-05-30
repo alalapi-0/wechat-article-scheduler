@@ -1,13 +1,13 @@
 current_round:
-  id: round_015
-  name: Round 15 - Content Library 与多合集
+  id: round_016
+  name: Round 16 - Scheduler 编排与人工闸门
   status: active
-  updated_at: '2026-05-30T13:04:28.642754+00:00'
+  updated_at: '2026-05-30T13:04:34.096257+00:00'
 last_completed_round:
-  id: round_014
-  completed_at: '2026-05-30T13:04:28.642754+00:00'
+  id: round_015
+  completed_at: '2026-05-30T13:04:34.096257+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 合集、标签、状态视图具备最小查询能力
+- 未批准任务不会进入真实发布路径
 next_actions:
-- 推进 Round 16：Scheduler 编排与人工闸门
+- 推进 Round 17：真实发布安全试运行
