@@ -1,0 +1,23 @@
+agent_policy:
+  mode: conservative_python_cli
+  default_wechat_mode: mock
+  allowed_actions:
+    - "读取 governance 与 docs/rounds.md"
+    - "实现当前 round 范围内的 src/ 与 tests/"
+    - "运行 pytest 与 CLI 冒烟"
+    - "更新 governance/round_state.yaml"
+    - "通过 agent_gate 提交（用户已授权自主多轮）"
+  forbidden_actions:
+    - "读取或打印 .env 中的 secret"
+    - "Cookie 爬取或非官方 API 绕过"
+    - "日志输出 access_token"
+    - "默认启用 WECHAT_MODE=real 的真实 HTTP 调用"
+    - "force push"
+  approval_required:
+    - "删除 articles/ 中用户文稿"
+    - "修改已发布到真实公众号的内容"
+  network_policy:
+    default: "仅文档调研；业务代码默认 mock"
+  automation_policy:
+    gate_entry: scripts/agent_gate.py
+    gate_report: docs/reports/agent_gate_report.md

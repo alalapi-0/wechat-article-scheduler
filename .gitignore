@@ -1,0 +1,14 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+data/app.sqlite3
+data/*.sqlite3
+config/rules.yaml
+.DS_Store
+.idea/
+.cursor/

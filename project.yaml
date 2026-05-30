@@ -1,0 +1,40 @@
+project:
+  name: wechat-article-scheduler
+  type: python_cli_project
+  status: active
+  owner: user
+  primary_language: zh-CN
+  output_language: zh-CN
+  current_stage: round_development
+  current_round: round_000
+  summary: "本地优先的微信公众号图文 inbox 扫描、去重、排期与 mock 草稿发布调度 CLI。"
+  long_term_goal: "在人工审核前提下，安全地对接微信公众平台草稿/发布 API。"
+
+repository:
+  entry_points:
+    human:
+      - README.md
+      - docs/user_manual.md
+    agent:
+      - AGENTS.md
+      - governance/repo_protocol_standard.yaml
+      - governance/round_state.yaml
+    runtime:
+      - "python -m wechat_article_scheduler.cli"
+  authoritative_files:
+    cross_repo_standard: governance/repo_protocol_standard.yaml
+    project_identity: project.yaml
+    current_round_state: governance/round_state.yaml
+    current_agent_policy: governance/agent_policy.yaml
+    current_file_roles: governance/file_role_map.yaml
+
+protocol_standard:
+  version: "0.3.0"
+  source_repo: novel-continuation-agent
+  project_overrides:
+    - field: project_specific_extensions.novel_pipeline
+      reason: "非小说项目，无 novel_pipeline_contract"
+      owner: user
+    - field: agent_policy_standard.automation_policy
+      reason: "agent_gate 额外编排 round 0-4 与 pytest/CLI 冒烟"
+      owner: agent

@@ -1,0 +1,29 @@
+files:
+  - path: governance/repo_protocol_standard.yaml
+    role: cross_repo_standard
+  - path: project.yaml
+    role: project_identity
+  - path: governance/round_state.yaml
+    role: round_state
+  - path: config/rules.example.yaml
+    role: runtime_config_example
+  - path: config/rules.yaml
+    role: runtime_config_local
+    gitignored: true
+  - path: data/app.sqlite3
+    role: local_database
+    gitignored: true
+  - path: src/wechat_article_scheduler/cli.py
+    role: source_code
+  - path: scripts/agent_gate.py
+    role: validation_script
+
+directories:
+  - path: articles/inbox
+    role: user_content_inbox
+  - path: articles/imported
+    role: user_content_imported
+  - path: articles/published
+    role: user_content_published
+  - path: articles/rejected
+    role: user_content_rejected

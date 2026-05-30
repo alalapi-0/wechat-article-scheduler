@@ -1,0 +1,20 @@
+# 去重与扫描规则（复制为 config/rules.yaml 后按需修改）
+
+dedupe:
+  # 按 content_hash 去重；若已存在相同 hash 的 imported 文章则跳过
+  by_content_hash: true
+  # 标题规范化后比对（小写、去空白）
+  by_normalized_title: true
+
+scan:
+  extensions: [".md", ".txt", ".html"]
+  # 摘要最大长度（从正文截取）
+  summary_max_chars: 200
+
+schedule:
+  # 默认每天最多排多少篇
+  max_per_day: 2
+  # 两篇之间最少间隔（小时）
+  min_hours_between: 4
+  # 首选发布时间（24h，本地时区）
+  preferred_hours: [9, 14, 20]
