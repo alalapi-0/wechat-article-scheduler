@@ -1,13 +1,13 @@
 current_round:
-  id: round_029
-  name: Round 29 - 事件日志时间线
+  id: round_030
+  name: Round 30 - 高级信息开关
   status: active
-  updated_at: '2026-05-30T13:27:31.434334+00:00'
+  updated_at: '2026-05-30T13:28:12.570842+00:00'
 last_completed_round:
-  id: round_028
-  completed_at: '2026-05-30T13:27:31.434334+00:00'
+  id: round_029
+  completed_at: '2026-05-30T13:28:12.570842+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 事件日志显示人话时间线，payload 默认隐藏到高级区
+- 数据库路径、原始 JSON、内部字段和调试统计集中于默认隐藏的高级视图
 next_actions:
-- 推进 Round 30：高级信息开关
+- 推进 Round 31：帮助与解释系统
