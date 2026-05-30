@@ -1,13 +1,13 @@
 current_round:
-  id: round_028
-  name: Round 28 - 发布队列普通化
+  id: round_029
+  name: Round 29 - 事件日志时间线
   status: active
-  updated_at: '2026-05-30T13:26:51.107321+00:00'
+  updated_at: '2026-05-30T13:27:31.434334+00:00'
 last_completed_round:
-  id: round_027
-  completed_at: '2026-05-30T13:26:51.107321+00:00'
+  id: round_028
+  completed_at: '2026-05-30T13:27:31.434334+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 发布队列展示哪篇、什么时候、当前状态、失败原因和可做什么，技术列默认隐藏
+- 事件日志显示人话时间线，payload 默认隐藏到高级区
 next_actions:
-- 推进 Round 29：事件日志时间线
+- 推进 Round 30：高级信息开关
