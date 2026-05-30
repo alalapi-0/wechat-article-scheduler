@@ -1,13 +1,13 @@
 current_round:
-  id: round_026
-  name: Round 26 - 桌面主布局
+  id: round_027
+  name: Round 27 - 文章列表普通化
   status: active
-  updated_at: '2026-05-30T13:25:30.572748+00:00'
+  updated_at: '2026-05-30T13:26:09.945507+00:00'
 last_completed_round:
-  id: round_025
-  completed_at: '2026-05-30T13:25:30.572748+00:00'
+  id: round_026
+  completed_at: '2026-05-30T13:26:09.945507+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 桌面首屏具备顶部安全状态、导航、主内容区、次级内容区和高级入口
+- 文章列表展示标题、合集、状态、摘要、封面、更新时间，技术字段默认隐藏
 next_actions:
-- 推进 Round 27：文章列表普通化
+- 推进 Round 28：发布队列普通化
