@@ -3,7 +3,7 @@
 ## 现状
 
 - 已实现：单进程轮询调度、到期任务执行、失败重试计数
-- 已实现：`DRY_RUN` 报告输出、最大重试上限控制
+- 已实现：`scheduler/policies.py`（重试/DRY_RUN）、`scheduler/domain.py`（任务执行）、`scheduler/runtime.py`（轮询入口）
 - 风险：无多实例互斥、无分布式锁、无任务抢占
 
 ## 目标架构

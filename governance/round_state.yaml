@@ -1,13 +1,13 @@
 current_round:
-  id: round_002
-  name: Round 2 - 内容库建模
+  id: round_003
+  name: Round 3 - 调度域模块化
   status: active
-  updated_at: '2026-05-30T08:32:16.247203+00:00'
+  updated_at: '2026-05-30T08:33:15.411594+00:00'
 last_completed_round:
-  id: round_001
-  completed_at: '2026-05-30T08:32:16.247203+00:00'
+  id: round_002
+  completed_at: '2026-05-30T08:33:15.411594+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 内容集合、标签与审核状态模型落地
+- scheduler 领域拆分与执行器分层
 next_actions:
-- 推进 Round 3：调度域模块化
+- 推进 Round 4：数据迁移体系
