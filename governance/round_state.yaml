@@ -1,13 +1,13 @@
 current_round:
-  id: round_022
-  name: Round 22 - 三步操作主流程
+  id: round_023
+  name: Round 23 - 人话反馈系统
   status: active
-  updated_at: '2026-05-30T13:22:51.329315+00:00'
+  updated_at: '2026-05-30T13:23:29.628693+00:00'
 last_completed_round:
-  id: round_021
-  completed_at: '2026-05-30T13:22:51.329315+00:00'
+  id: round_022
+  completed_at: '2026-05-30T13:23:29.628693+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- scan/plan/run-once 被组织为找文章、安排时间、执行到点文章三步主流程
+- 操作后展示做成了什么、没做成什么、下一步是什么
 next_actions:
-- 推进 Round 23：人话反馈系统
+- 推进 Round 24：空状态与首次使用
