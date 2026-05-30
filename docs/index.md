@@ -5,6 +5,7 @@
 - [架构](architecture.md)
 - [开发轮次](rounds.md)
 - [Web 控制台设计](web_console_design.md)
+- [Web 工作台可用性诊断（桌面浏览器优先）](web_console_usability_review.md)
 - [调度设计](scheduler_design.md)
 - [数据库设计](database_design.md)
 - [内容库设计](content_library_design.md)

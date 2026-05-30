@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -37,14 +38,40 @@ def test_round_order_contains_governance_round(ag):
     assert ag.ROUND_META["round_001"]["next_actions"]
 
 
-def test_round_order_covers_round_0_through_9(ag):
-    assert len(ag.ROUND_ORDER) == 10
+def test_round_order_covers_round_0_through_38(ag):
+    assert len(ag.ROUND_ORDER) == 39
     assert ag.ROUND_ORDER[0] == "round_000"
-    assert ag.ROUND_ORDER[-1] == "round_009"
+    assert ag.ROUND_ORDER[-1] == "round_038"
     for round_id in ag.ROUND_ORDER:
         assert round_id in ag.ROUND_META
         assert ag.ROUND_META[round_id]["name"]
         assert ag.ROUND_META[round_id]["next_actions"]
+
+
+def test_round_order_matches_rounds_doc_headings(ag):
+    text = (ROOT / "docs" / "rounds.md").read_text(encoding="utf-8")
+    headings = re.findall(r"^### Round (\d+) - (.+)$", text, flags=re.MULTILINE)
+    doc_ids = [f"round_{int(num):03d}" for num, _title in headings]
+    assert doc_ids == ag.ROUND_ORDER
+    for num, title in headings:
+        round_id = f"round_{int(num):03d}"
+        assert title in ag.ROUND_META[round_id]["name"]
+
+
+def test_rounds_doc_has_required_execution_fields(ag):
+    text = (ROOT / "docs" / "rounds.md").read_text(encoding="utf-8")
+    required = ["目标", "非目标", "验收标准", "建议测试/冒烟命令", "退出标准", "交付项"]
+    for index, round_id in enumerate(ag.ROUND_ORDER):
+        heading = ag.ROUND_META[round_id]["name"].replace(" - ", " - ", 1)
+        start = text.index(f"### {heading}")
+        if index + 1 < len(ag.ROUND_ORDER):
+            next_heading = ag.ROUND_META[ag.ROUND_ORDER[index + 1]]["name"]
+            end = text.index(f"### {next_heading}", start + 1)
+        else:
+            end = text.index("## 历史说明", start + 1)
+        section = text[start:end]
+        for field in required:
+            assert field in section
 
 
 def test_round_meta_aligns_with_rounds_doc_themes(ag):
@@ -53,6 +80,36 @@ def test_round_meta_aligns_with_rounds_doc_themes(ag):
     assert "封面资产" in ag.ROUND_META["round_007"]["name"]
     assert "可观测" in ag.ROUND_META["round_008"]["name"]
     assert "产品化" in ag.ROUND_META["round_009"]["name"]
+    assert "可用性" in ag.ROUND_META["round_010"]["name"]
+    assert "治理编排" in ag.ROUND_META["round_011"]["name"]
+    assert "质量门禁" in ag.ROUND_META["round_012"]["name"]
+    assert "Renderer" in ag.ROUND_META["round_013"]["name"]
+    assert "Cover" in ag.ROUND_META["round_014"]["name"]
+    assert "Content Library" in ag.ROUND_META["round_015"]["name"]
+    assert "Scheduler" in ag.ROUND_META["round_016"]["name"]
+    assert "真实发布" in ag.ROUND_META["round_017"]["name"]
+    assert "AI 辅助" in ag.ROUND_META["round_018"]["name"]
+    assert "普通用户" in ag.ROUND_META["round_019"]["name"]
+    assert "Playwright" in ag.ROUND_META["round_019"]["name"]
+    assert "术语" in ag.ROUND_META["round_020"]["name"]
+    assert "信息减法" in ag.ROUND_META["round_021"]["name"]
+    assert "三步操作" in ag.ROUND_META["round_022"]["name"]
+    assert "反馈" in ag.ROUND_META["round_023"]["name"]
+    assert "空状态" in ag.ROUND_META["round_024"]["name"]
+    assert "安全发布" in ag.ROUND_META["round_025"]["name"]
+    assert "桌面主布局" in ag.ROUND_META["round_026"]["name"]
+    assert "文章列表" in ag.ROUND_META["round_027"]["name"]
+    assert "发布队列" in ag.ROUND_META["round_028"]["name"]
+    assert "事件日志" in ag.ROUND_META["round_029"]["name"]
+    assert "高级信息" in ag.ROUND_META["round_030"]["name"]
+    assert "帮助" in ag.ROUND_META["round_031"]["name"]
+    assert "错误" in ag.ROUND_META["round_032"]["name"]
+    assert "桌面效率" in ag.ROUND_META["round_033"]["name"]
+    assert "窄屏兼容" in ag.ROUND_META["round_034"]["name"]
+    assert "Playwright E2E" in ag.ROUND_META["round_035"]["name"]
+    assert "非技术用户" in ag.ROUND_META["round_036"]["name"]
+    assert "MVP 收口" in ag.ROUND_META["round_037"]["name"]
+    assert "接入规范" in ag.ROUND_META["round_038"]["name"]
 
 
 def test_suggest_next_command_completed(ag):

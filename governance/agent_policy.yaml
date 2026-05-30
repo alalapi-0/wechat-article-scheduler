@@ -4,8 +4,13 @@ agent_policy:
   roadmap_authority:
     human: docs/rounds.md
     machine_registry: scripts/agent_gate.py
-    round_range: round_000..round_009
-    sync_rule: "修改 docs/rounds.md 时须同次提交更新 ROUND_ORDER/ROUND_META 与 tests/test_agent_gate.py"
+    round_range: round_000..round_038
+    sync_rule: "修改 docs/rounds.md 时须同次更新 ROUND_ORDER/ROUND_META、tests/test_agent_gate.py 与相关治理范围字段"
+  web_console_policy:
+    default_view: ordinary_user_first
+    primary_layout: desktop_first_local_workbench
+    responsive_boundary: "手机/平板只做兼容验收：不横向溢出、关键按钮可点、页面可读"
+    priority: "普通视图只展示安全状态、下一步、操作结果和错误恢复建议；数据库路径、原始 JSON、内部字段、调试统计默认进入高级信息开关；优先电脑浏览器的信息密度、任务队列表格、文章列表、事件日志、左侧导航/顶部状态"
   allowed_actions:
     - "读取 governance 与 docs/rounds.md"
     - "实现当前 round 范围内的 src/ 与 tests/"

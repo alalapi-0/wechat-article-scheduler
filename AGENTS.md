@@ -6,11 +6,13 @@
 
 | 用途 | 文件 |
 |------|------|
-| 人类可读路线图（权威） | `docs/rounds.md`（Round 0–9） |
+| 人类可读路线图（权威） | `docs/rounds.md`（Round 0–38） |
 | 机器可读轮次注册表 | `scripts/agent_gate.py` 的 `ROUND_ORDER` / `ROUND_META` |
 | 当前轮次运行状态 | `governance/round_state.yaml` |
 
 修改路线图时：**先改 `docs/rounds.md`，再同步 `agent_gate.py` 与 `tests/test_agent_gate.py`**。`articles/imported/` 与 `articles/published/` 下的章节文稿已纳入仓库，供 scan/plan 测试使用。
+
+Web 控制台路线图原则：**普通用户视图优先 + Desktop-first local workbench**。普通视图只回答“现在安全吗、下一步做什么、刚才做成了吗、出错了怎么办”；数据库路径、原始 JSON、内部字段、调试统计默认进入高级信息开关。优先电脑浏览器的信息密度、任务队列表格、文章列表、事件日志、左侧导航/顶部状态；手机/平板只做响应式兼容（不横向溢出、关键按钮可点、页面可读），不得作为默认布局目标。
 
 ## 阅读顺序
 

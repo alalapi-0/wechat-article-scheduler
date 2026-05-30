@@ -1,3 +1,5 @@
 PyYAML>=6.0
 python-dotenv>=1.0
 pytest>=8.0
+# 开发/诊断依赖：本地 Web 工作台可用性诊断与截图（需另跑 `playwright install chromium`）
+playwright>=1.40

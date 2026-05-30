@@ -51,7 +51,7 @@ PASS, WARNING, BLOCKED = "PASS", "WARNING", "BLOCKED"
 SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
-# 权威路线图：docs/rounds.md（Round 0–9）。修改路线图时须同步本表与 tests/test_agent_gate.py。
+# 权威路线图：docs/rounds.md（Round 0–38）。修改路线图时须同步本表与 tests/test_agent_gate.py。
 ROUND_ORDER = [
     "round_000",
     "round_001",
@@ -63,6 +63,35 @@ ROUND_ORDER = [
     "round_007",
     "round_008",
     "round_009",
+    "round_010",
+    "round_011",
+    "round_012",
+    "round_013",
+    "round_014",
+    "round_015",
+    "round_016",
+    "round_017",
+    "round_018",
+    "round_019",
+    "round_020",
+    "round_021",
+    "round_022",
+    "round_023",
+    "round_024",
+    "round_025",
+    "round_026",
+    "round_027",
+    "round_028",
+    "round_029",
+    "round_030",
+    "round_031",
+    "round_032",
+    "round_033",
+    "round_034",
+    "round_035",
+    "round_036",
+    "round_037",
+    "round_038",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -157,7 +186,271 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "稳定交付、文档收口与长期维护规范",
         ],
         "next_actions": [
-            "维护 docs/rounds.md 与治理协议；按需规划 Round 10+",
+            "推进 Round 10：基础工作台可用性升级",
+        ],
+    },
+    "round_010": {
+        "name": "Round 10 - 基础工作台可用性升级",
+        "acceptance_criteria": [
+            "后台页面完成分区布局与操作分组",
+            "操作具备 loading、防重复点击与成功/失败反馈",
+            "状态展示可读，失败返回下一步建议",
+        ],
+        "next_actions": [
+            "推进 Round 11：路线图执行化与治理编排",
+        ],
+    },
+    "round_011": {
+        "name": "Round 11 - 路线图执行化与治理编排",
+        "acceptance_criteria": [
+            "rounds.md 明确每轮目标/范围/验收/风险/回滚",
+            "ROUND_ORDER / ROUND_META / tests 同步校验",
+        ],
+        "next_actions": [
+            "推进 Round 12：持续演进与质量门禁强化",
+        ],
+    },
+    "round_012": {
+        "name": "Round 12 - 持续演进与质量门禁强化",
+        "acceptance_criteria": [
+            "建立后续轮次的最小质量门禁与模板约束",
+        ],
+        "next_actions": [
+            "推进 Round 13：Renderer 内容渲染深化",
+        ],
+    },
+    "round_013": {
+        "name": "Round 13 - Renderer 内容渲染深化",
+        "acceptance_criteria": [
+            "渲染规则矩阵、预览样例与回归测试补齐",
+        ],
+        "next_actions": [
+            "推进 Round 14：Cover 封面资产工作流",
+        ],
+    },
+    "round_014": {
+        "name": "Round 14 - Cover 封面资产工作流",
+        "acceptance_criteria": [
+            "封面索引、缺失检查与发布前提示可用",
+        ],
+        "next_actions": [
+            "推进 Round 15：Content Library 与多合集",
+        ],
+    },
+    "round_015": {
+        "name": "Round 15 - Content Library 与多合集",
+        "acceptance_criteria": [
+            "合集、标签、状态视图具备最小查询能力",
+        ],
+        "next_actions": [
+            "推进 Round 16：Scheduler 编排与人工闸门",
+        ],
+    },
+    "round_016": {
+        "name": "Round 16 - Scheduler 编排与人工闸门",
+        "acceptance_criteria": [
+            "未批准任务不会进入真实发布路径",
+        ],
+        "next_actions": [
+            "推进 Round 17：真实发布安全试运行",
+        ],
+    },
+    "round_017": {
+        "name": "Round 17 - 真实发布安全试运行",
+        "acceptance_criteria": [
+            "real draft / publish 试运行流程具备显式安全开关",
+        ],
+        "next_actions": [
+            "推进 Round 18：能力矩阵与 AI 辅助入口",
+        ],
+    },
+    "round_018": {
+        "name": "Round 18 - 能力矩阵与 AI 辅助入口",
+        "acceptance_criteria": [
+            "能力矩阵明确已实现、未来实现与暂不做边界",
+        ],
+        "next_actions": [
+            "推进 Round 19：普通用户工作台原则与 Playwright 视觉基线",
+        ],
+    },
+    "round_019": {
+        "name": "Round 19 - 普通用户工作台原则与 Playwright 视觉基线",
+        "acceptance_criteria": [
+            "Playwright 诊断脚本可复跑，普通/详情/高级三层信息边界清晰",
+        ],
+        "next_actions": [
+            "推进 Round 20：术语人话化与中文文案标准",
+        ],
+    },
+    "round_020": {
+        "name": "Round 20 - 术语人话化与中文文案标准",
+        "acceptance_criteria": [
+            "普通视图不再直接出现裸内部词，术语映射有单一来源",
+        ],
+        "next_actions": [
+            "推进 Round 21：普通视图信息减法",
+        ],
+    },
+    "round_021": {
+        "name": "Round 21 - 普通视图信息减法",
+        "acceptance_criteria": [
+            "首屏默认不出现数据库路径、原始 JSON、内部统计和技术开关原文",
+        ],
+        "next_actions": [
+            "推进 Round 22：三步操作主流程",
+        ],
+    },
+    "round_022": {
+        "name": "Round 22 - 三步操作主流程",
+        "acceptance_criteria": [
+            "scan/plan/run-once 被组织为找文章、安排时间、执行到点文章三步主流程",
+        ],
+        "next_actions": [
+            "推进 Round 23：人话反馈系统",
+        ],
+    },
+    "round_023": {
+        "name": "Round 23 - 人话反馈系统",
+        "acceptance_criteria": [
+            "操作后展示做成了什么、没做成什么、下一步是什么",
+        ],
+        "next_actions": [
+            "推进 Round 24：空状态与首次使用",
+        ],
+    },
+    "round_024": {
+        "name": "Round 24 - 空状态与首次使用",
+        "acceptance_criteria": [
+            "空数据下首页、文章列表、发布队列和事件日志提供可操作引导",
+        ],
+        "next_actions": [
+            "推进 Round 25：安全发布护栏",
+        ],
+    },
+    "round_025": {
+        "name": "Round 25 - 安全发布护栏",
+        "acceptance_criteria": [
+            "普通用户能在首屏判断是否会真的发到公众号，真实发布前必须确认",
+        ],
+        "next_actions": [
+            "推进 Round 26：桌面主布局",
+        ],
+    },
+    "round_026": {
+        "name": "Round 26 - 桌面主布局",
+        "acceptance_criteria": [
+            "桌面首屏具备顶部安全状态、导航、主内容区、次级内容区和高级入口",
+        ],
+        "next_actions": [
+            "推进 Round 27：文章列表普通化",
+        ],
+    },
+    "round_027": {
+        "name": "Round 27 - 文章列表普通化",
+        "acceptance_criteria": [
+            "文章列表展示标题、合集、状态、摘要、封面、更新时间，技术字段默认隐藏",
+        ],
+        "next_actions": [
+            "推进 Round 28：发布队列普通化",
+        ],
+    },
+    "round_028": {
+        "name": "Round 28 - 发布队列普通化",
+        "acceptance_criteria": [
+            "发布队列展示哪篇、什么时候、当前状态、失败原因和可做什么，技术列默认隐藏",
+        ],
+        "next_actions": [
+            "推进 Round 29：事件日志时间线",
+        ],
+    },
+    "round_029": {
+        "name": "Round 29 - 事件日志时间线",
+        "acceptance_criteria": [
+            "事件日志显示人话时间线，payload 默认隐藏到高级区",
+        ],
+        "next_actions": [
+            "推进 Round 30：高级信息开关",
+        ],
+    },
+    "round_030": {
+        "name": "Round 30 - 高级信息开关",
+        "acceptance_criteria": [
+            "数据库路径、原始 JSON、内部字段和调试统计集中于默认隐藏的高级视图",
+        ],
+        "next_actions": [
+            "推进 Round 31：帮助与解释系统",
+        ],
+    },
+    "round_031": {
+        "name": "Round 31 - 帮助与解释系统",
+        "acceptance_criteria": [
+            "用户能从首屏找到关键操作和关键名词的简短解释",
+        ],
+        "next_actions": [
+            "推进 Round 32：错误与恢复指引",
+        ],
+    },
+    "round_032": {
+        "name": "Round 32 - 错误与恢复指引",
+        "acceptance_criteria": [
+            "常见失败用普通用户语言说明原因、影响和下一步",
+        ],
+        "next_actions": [
+            "推进 Round 33：桌面效率优化",
+        ],
+    },
+    "round_033": {
+        "name": "Round 33 - 桌面效率优化",
+        "acceptance_criteria": [
+            "电脑浏览器中可高效筛选、排序、定位文章和发布任务",
+        ],
+        "next_actions": [
+            "推进 Round 34：窄屏兼容验收",
+        ],
+    },
+    "round_034": {
+        "name": "Round 34 - 窄屏兼容验收",
+        "acceptance_criteria": [
+            "375/768 视口不横向溢出、关键按钮可点、文字可读，且不牺牲桌面布局",
+        ],
+        "next_actions": [
+            "推进 Round 35：Playwright E2E 可用性基线",
+        ],
+    },
+    "round_035": {
+        "name": "Round 35 - Playwright E2E 可用性基线",
+        "acceptance_criteria": [
+            "普通视图不裸露内部字段、三步流程可见、安全状态可读、窄屏无溢出具备自动断言",
+        ],
+        "next_actions": [
+            "推进 Round 36：非技术用户走查报告",
+        ],
+    },
+    "round_036": {
+        "name": "Round 36 - 非技术用户走查报告",
+        "acceptance_criteria": [
+            "按看得懂、做得到、知道结果、知道下一步完成核心场景走查",
+        ],
+        "next_actions": [
+            "推进 Round 37：Web 控制台 MVP 收口",
+        ],
+    },
+    "round_037": {
+        "name": "Round 37 - Web 控制台 MVP 收口",
+        "acceptance_criteria": [
+            "普通用户能完成扫描、排期、执行演练/草稿路径，并理解状态与失败提示",
+        ],
+        "next_actions": [
+            "推进 Round 38：后续功能接入规范",
+        ],
+    },
+    "round_038": {
+        "name": "Round 38 - 后续功能接入规范",
+        "acceptance_criteria": [
+            "未来 Web 功能必须定义普通视图、详情视图和高级字段归属",
+        ],
+        "next_actions": [
+            "维护 docs/rounds.md 与治理协议；按后续功能接入规范规划 Round 39+",
         ],
     },
 }
@@ -343,6 +636,54 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
         steps = [([py, "-m", "pytest", "tests/test_scheduler_hardening.py", "-q"], "pytest hardening")]
     elif round_id == "round_009":
         return True, "productization smoke skipped (future round)"
+    elif round_id == "round_010":
+        steps = [([py, "-m", "pytest", "tests/test_web_app.py", "-q"], "pytest web app")]
+    elif round_id == "round_011":
+        steps = [([py, "-m", "pytest", "tests/test_agent_gate.py", "-q"], "pytest agent gate")]
+    elif round_id == "round_012":
+        return True, "quality gate planning smoke skipped (future round)"
+    elif round_id == "round_013":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_renderer_markdown.py", "tests/test_parser.py", "-q"],
+                "pytest renderer/parser",
+            ),
+        ]
+    elif round_id == "round_014":
+        return True, "cover workflow smoke skipped until tests/test_cover_assets.py exists"
+    elif round_id == "round_015":
+        return True, "content library smoke skipped until tests/test_content_library.py exists"
+    elif round_id == "round_016":
+        steps = [([py, "-m", "pytest", "tests/test_scheduler_hardening.py", "-q"], "pytest hardening")]
+    elif round_id == "round_017":
+        steps = [([py, "-m", "pytest", "tests/test_real_adapter.py", "-q"], "pytest real adapter")]
+    elif round_id == "round_018":
+        steps = [([py, "-m", "pytest", "tests/test_agent_gate.py", "-q"], "pytest agent gate")]
+    elif round_id == "round_019":
+        return True, "usability diagnostic smoke: run tools/browser_automation/ui_review.py manually (future round)"
+    elif round_id in {
+        "round_020",
+        "round_021",
+        "round_022",
+        "round_023",
+        "round_024",
+        "round_025",
+        "round_026",
+        "round_027",
+        "round_028",
+        "round_029",
+        "round_030",
+        "round_031",
+        "round_032",
+        "round_033",
+        "round_034",
+    }:
+        # 普通用户友好 Web 轮：实现时以 tests/test_web_app.py / Playwright 为基础冒烟，未实现前优雅 skip
+        return True, f"{round_id} usability smoke skipped (future round; will use tests/test_web_app.py)"
+    elif round_id == "round_035":
+        return True, "e2e UI smoke skipped until tests/test_ui_e2e.py exists (future round)"
+    elif round_id in {"round_036", "round_037", "round_038"}:
+        return True, f"{round_id} usability governance smoke skipped (future round)"
     else:
         return True, "unknown round skipped"
 

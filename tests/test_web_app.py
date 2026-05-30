@@ -26,6 +26,7 @@ def test_status_endpoint(app_config: AppConfig) -> None:
     r = client.get("/api/status")
     assert r.status_code == 200
     assert r.json()["wechat_mode"] == "mock"
+    assert "wechat_enable_publish" in r.json()
 
 
 def test_articles_empty(app_config: AppConfig) -> None:
@@ -38,3 +39,19 @@ def test_index_html(app_config: AppConfig) -> None:
     r = client.get("/")
     assert r.status_code == 200
     assert "文章调度器" in r.text
+    assert "基础工作台" in r.text
+    assert "安全状态" in r.text
+    assert "发布队列 / 最近任务" in r.text
+    assert "事件日志" in r.text
+    assert "docs/rounds.md" in r.text
+
+
+def test_overview_endpoint_empty(app_config: AppConfig) -> None:
+    client = TestClient(create_app(app_config))
+    r = client.get("/api/overview")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"]["wechat_mode"] == "mock"
+    assert data["recent_jobs"] == []
+    assert data["recent_events"] == []
+    assert any(item["path"] == "docs/web_console_design.md" for item in data["docs"])

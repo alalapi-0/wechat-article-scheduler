@@ -824,8 +824,12 @@ project_specific_extensions:
       symbols:
         - ROUND_ORDER
         - ROUND_META
-    round_ids: round_000..round_009
-    sync_rule: "docs/rounds.md is the human authority; ROUND_ORDER/ROUND_META in scripts/agent_gate.py must stay in sync in the same change set."
+    round_ids: round_000..round_038
+    sync_rule: "docs/rounds.md is the human authority; ROUND_ORDER/ROUND_META in scripts/agent_gate.py, tests/test_agent_gate.py, and governance roadmap range fields must stay in sync in the same change set."
+    web_console_policy:
+      primary_layout: desktop_first_local_workbench
+      responsive_boundary: "Narrow screens are compatibility targets only: no page-level horizontal overflow, tappable key actions, readable content."
+      priority: "Desktop browser information density, task queue tables, article lists, event logs, left navigation/top status, and collapsed advanced debug details."
     test_fixtures:
       directory: articles/
       purpose: "Committed chapter drafts for scan/plan/run-once agent and CI smoke."

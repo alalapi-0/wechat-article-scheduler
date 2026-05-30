@@ -1,6 +1,6 @@
 # wechat-article-scheduler
 
-本项目定位为**本地微信公众号文章发布工作台**：以 CLI 为主，围绕本地内容扫描、排期、草稿创建与可审计发布流程构建闭环，默认安全保守。
+本项目定位为**本地微信公众号文章发布工作台**：以 CLI 为主，Web 控制台作为电脑浏览器优先的本地工作台，围绕本地内容扫描、排期、草稿创建与可审计发布流程构建闭环，默认安全保守。
 
 ## 核心特性
 
@@ -8,6 +8,7 @@
 - 默认 `WECHAT_MODE=mock`，不开启真实 API 调用
 - 摘要（digest）统一上限 **120 字**，上传前会再次兜底截断
 - 事件审计可追溯：扫描、排期、执行、失败、截断 warning 均写入 `events`
+- Web 控制台原则：普通用户视图优先 + Desktop-first local workbench；手机/平板只做不横向溢出、关键按钮可点、页面可读的兼容
 
 ## 快速开始
 
@@ -63,6 +64,9 @@ python -m wechat_article_scheduler.cli run-once
 - 架构说明：`docs/architecture.md`
 - 轮次路线图：`docs/rounds.md`
 - 迁移计划：`docs/migration_plan.md`
+- 可用性诊断（面向非技术用户）：`docs/web_console_usability_review.md`
+
+路线图现在按 Phase / Round 0-38 维护，每轮都要求目标、非目标、验收、建议测试与退出标准，并由 `scripts/agent_gate.py` 与 `tests/test_agent_gate.py` 做同步校验。Phase 6 / Phase 7 / Phase 8（Round 19–38）是普通用户友好的 Web 工作台可用性专项：普通视图只展示安全状态、下一步、操作结果和错误恢复建议；数据库路径、原始 JSON、内部字段等进入高级信息开关。电脑浏览器是默认形态，窄屏只作为兼容验收。
 
 ## 安全边界
 
