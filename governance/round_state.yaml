@@ -1,14 +1,13 @@
 current_round:
-  id: round_008
-  name: Round 8 - 可观测与运维
+  id: round_009
+  name: Round 9 - 发布工作台产品化
   status: active
-  updated_at: '2026-05-30T08:38:04.232473+00:00'
+  updated_at: '2026-05-30T08:38:07.173603+00:00'
 last_completed_round:
-  id: round_007
-  completed_at: '2026-05-30T08:38:04.232473+00:00'
+  id: round_008
+  completed_at: '2026-05-30T08:38:07.173603+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 更细粒度审计、失败分类与 SLO 指标
-- 重试、日志与 DRY_RUN 报告
+- 稳定交付、文档收口与长期维护规范
 next_actions:
-- 推进 Round 9：发布工作台产品化
+- 维护 docs/rounds.md 与治理协议；按需规划 Round 10+
