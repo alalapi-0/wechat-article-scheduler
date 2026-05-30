@@ -1,13 +1,13 @@
 current_round:
-  id: round_017
-  name: Round 17 - 真实发布安全试运行
+  id: round_018
+  name: Round 18 - 能力矩阵与 AI 辅助入口
   status: active
-  updated_at: '2026-05-30T13:04:56.971189+00:00'
+  updated_at: '2026-05-30T13:05:04.517010+00:00'
 last_completed_round:
-  id: round_016
-  completed_at: '2026-05-30T13:04:56.971189+00:00'
+  id: round_017
+  completed_at: '2026-05-30T13:05:04.517010+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- real draft / publish 试运行流程具备显式安全开关
+- 能力矩阵明确已实现、未来实现与暂不做边界
 next_actions:
-- 推进 Round 18：能力矩阵与 AI 辅助入口
+- 推进 Round 19：普通用户工作台原则与 Playwright 视觉基线
