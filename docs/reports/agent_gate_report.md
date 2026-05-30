@@ -1,16 +1,15 @@
 # Agent Gate Report
 
-- generated_at: 2026-05-30T13:03:53.481620+00:00
+- generated_at: 2026-05-30T13:04:31.957534+00:00
 - verdict: **PASS**
 
-- current_round: round_013
+- current_round: round_014
 - command: advance
-- git_commit: [main 1db4498] chore(agent_gate): complete round_013
- 12 files changed, 199 insertions(+), 27 deletions(-)
- create mode 100644 docs/renderer_failure_fallback.md
- create mode 100644 docs/renderer_rules.md
- create mode 100644 tests/fixtures/sample_article.md
-- advanced_to: round_014
+- git_commit: [main 68749fb] chore(agent_gate): complete round_014
+ 11 files changed, 210 insertions(+), 35 deletions(-)
+ create mode 100644 src/wechat_article_scheduler/cover_assets/index.py
+ create mode 100644 tests/test_cover_assets.py
+- advanced_to: round_015
 - git_push: 
 
 ## Agent loop
