@@ -7,6 +7,7 @@ import sys
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import load_config
+from wechat_article_scheduler.logging_setup import setup_logging
 from wechat_article_scheduler.plan import build_plan
 from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.events_cli import list_events
@@ -31,12 +32,17 @@ def _build_parser() -> argparse.ArgumentParser:
 
     events_p = sub.add_parser("events", help="列出最近审计事件 (Round 2)")
     events_p.add_argument("--limit", type=int, default=20)
+
+    serve_p = sub.add_parser("serve", help="启动 FastAPI 管理后台 (Round 6)")
+    serve_p.add_argument("--host", default=None, help="监听地址，默认 WEB_HOST")
+    serve_p.add_argument("--port", type=int, default=None, help="端口，默认 WEB_PORT")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     config = load_config()
+    setup_logging(config)
 
     if args.command == "init-db":
         db.init_db(config.database_path)
@@ -85,6 +91,18 @@ def main(argv: list[str] | None = None) -> int:
                 f"[{row['id']}] {row['created_at']} {row['event_type']} "
                 f"{row['entity_type']}#{row['entity_id']} {row['payload_json'] or ''}"
             )
+        return 0
+
+    if args.command == "serve":
+        import uvicorn
+
+        from wechat_article_scheduler.web import create_app
+
+        host = args.host or config.web_host
+        port = args.port or config.web_port
+        app = create_app(config)
+        print(f"管理后台: http://{host}:{port}/ （mode={config.wechat_mode}）")
+        uvicorn.run(app, host=host, port=port, log_level="info")
         return 0
 
     return 1
