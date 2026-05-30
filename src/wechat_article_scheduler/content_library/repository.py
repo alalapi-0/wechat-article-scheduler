@@ -97,18 +97,30 @@ def register_imported_article(
         assign_article_tags(conn, article_id, tag_names)
 
 
-def list_content_items(conn: sqlite3.Connection, *, limit: int = 50) -> list[ContentItem]:
-    rows = conn.execute(
-        """
+def list_content_items(
+    conn: sqlite3.Connection,
+    *,
+    limit: int = 50,
+    collection_slug: str | None = None,
+    review_status: ReviewStatus | None = None,
+) -> list[ContentItem]:
+    sql = """
         SELECT a.id AS article_id, a.title, a.review_status, a.source_path,
                a.content_hash, a.import_batch, COALESCE(c.slug, 'default') AS collection_slug
         FROM articles a
         LEFT JOIN collections c ON c.id = a.collection_id
-        ORDER BY a.id DESC
-        LIMIT ?
-        """,
-        (limit,),
-    ).fetchall()
+        WHERE 1=1
+    """
+    params: list[object] = []
+    if collection_slug:
+        sql += " AND COALESCE(c.slug, 'default') = ?"
+        params.append(collection_slug)
+    if review_status:
+        sql += " AND a.review_status = ?"
+        params.append(review_status)
+    sql += " ORDER BY a.id DESC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
     items: list[ContentItem] = []
     for row in rows:
         tags = conn.execute(

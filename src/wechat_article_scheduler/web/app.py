@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -14,6 +15,8 @@ from wechat_article_scheduler.config import AppConfig, load_config
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.plan import build_plan
 from wechat_article_scheduler.scanner import scan_inbox
+from wechat_article_scheduler.content_library import list_collections, list_content_items
+from wechat_article_scheduler.cover_assets import check_cover_path, index_cover_directory
 from wechat_article_scheduler.renderers import render_markdown_to_html_safe
 from wechat_article_scheduler.scheduler import run_due_jobs
 
@@ -114,6 +117,53 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.post("/api/run-once")
     def trigger_run_once() -> dict[str, Any]:
         return run_due_jobs(cfg)
+
+    @app.get("/api/cover-assets")
+    def cover_assets_index() -> dict[str, Any]:
+        root = cfg.root / "cover_assets"
+        assets = index_cover_directory(root)
+        check = check_cover_path(
+            None,
+            default_thumb=Path(cfg.wechat_default_thumb_path)
+            if cfg.wechat_default_thumb_path
+            else None,
+        )
+        return {
+            "directory": str(root),
+            "assets": [
+                {"path": a.path, "name": a.name, "size_bytes": a.size_bytes}
+                for a in assets
+            ],
+            "publish_check": check,
+        }
+
+    @app.get("/api/content-library")
+    def content_library_view(
+        collection: str | None = None,
+        review_status: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            items = list_content_items(
+                conn,
+                limit=limit,
+                collection_slug=collection,
+                review_status=review_status,  # type: ignore[arg-type]
+            )
+            collections = list_collections(conn)
+        return {
+            "collections": [c.__dict__ for c in collections],
+            "items": [
+                {
+                    "article_id": i.article_id,
+                    "title": i.title,
+                    "review_status": i.review_status,
+                    "collection_slug": i.collection_slug,
+                    "tags": list(i.tags),
+                }
+                for i in items
+            ],
+        }
 
     @app.get("/api/articles/{article_id}/render-preview")
     def article_render_preview(article_id: int) -> dict[str, Any]:

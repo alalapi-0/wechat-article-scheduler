@@ -53,3 +53,16 @@ def test_set_review_status_updates_article(lib_config) -> None:
         items = list_content_items(conn, limit=1)
     assert items[0].review_status == "pending_review"
     assert "专栏" in items[0].tags
+
+
+def test_list_content_items_filter_by_review_status(lib_config) -> None:
+    scan_inbox(lib_config)
+    with db.connect(lib_config.database_path) as conn:
+        aid = int(conn.execute("SELECT id FROM articles LIMIT 1").fetchone()[0])
+        set_review_status(conn, aid, "approved")
+        conn.commit()
+        approved = list_content_items(conn, review_status="approved")
+        draft = list_content_items(conn, review_status="draft")
+    assert len(approved) == 1
+    assert approved[0].review_status == "approved"
+    assert draft == []

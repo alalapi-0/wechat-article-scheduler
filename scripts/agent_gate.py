@@ -657,9 +657,9 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             ),
         ]
     elif round_id == "round_014":
-        return True, "cover workflow smoke skipped until tests/test_cover_assets.py exists"
+        steps = [([py, "-m", "pytest", "tests/test_cover_assets.py", "-q"], "pytest cover assets")]
     elif round_id == "round_015":
-        return True, "content library smoke skipped until tests/test_content_library.py exists"
+        steps = [([py, "-m", "pytest", "tests/test_content_library.py", "-q"], "pytest content library")]
     elif round_id == "round_016":
         steps = [([py, "-m", "pytest", "tests/test_scheduler_hardening.py", "-q"], "pytest hardening")]
     elif round_id == "round_017":

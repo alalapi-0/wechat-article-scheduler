@@ -1,13 +1,13 @@
 current_round:
-  id: round_013
-  name: Round 13 - Renderer 内容渲染深化
+  id: round_014
+  name: Round 14 - Cover 封面资产工作流
   status: active
-  updated_at: '2026-05-30T13:02:52.843492+00:00'
+  updated_at: '2026-05-30T13:03:50.879507+00:00'
 last_completed_round:
-  id: round_012
-  completed_at: '2026-05-30T13:02:52.843492+00:00'
+  id: round_013
+  completed_at: '2026-05-30T13:03:50.879507+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 渲染规则矩阵、预览样例与回归测试补齐
+- 封面索引、缺失检查与发布前提示可用
 next_actions:
-- 推进 Round 14：Cover 封面资产工作流
+- 推进 Round 15：Content Library 与多合集
