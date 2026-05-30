@@ -31,7 +31,8 @@
 ## 本项目策略
 
 - 默认 `WECHAT_MODE=mock`，`MockWechatAdapter` 生成本地 `mock_media_*` id。
-- `RealWechatAdapter` 为骨架：`create_draft` / `submit_publish` 抛出 `NotImplementedError`，避免误调用。
+- `RealWechatAdapter` 在 `WECHAT_MODE=real` 且凭证齐全时调用：token 缓存 → thumb 上传 → `draft/add` → `freepublish/submit`（可通过 `WECHAT_ENABLE_PUBLISH=false` 跳过发布）。
+- 单元测试 mock HTTP，不默认联网。
 - **待人工确认**：订阅号 vs 服务号权限差异、封面 `thumb_media_id` 获取流程、是否需素材库永久 media。
 
 ## 安全

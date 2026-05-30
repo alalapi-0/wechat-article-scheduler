@@ -34,8 +34,18 @@ class AppConfig:
     scheduler_poll_seconds: int
     max_articles_per_day: int
     log_redact_secrets: bool
+    log_file: Path | None
+    log_max_bytes: int
+    log_backup_count: int
+    log_level: str
+    dry_run: bool
+    max_job_retries: int
     wechat_app_id: str
     wechat_app_secret: str
+    wechat_default_thumb_path: str
+    wechat_enable_publish: bool
+    web_host: str
+    web_port: int
     rules: dict[str, Any]
 
 
@@ -82,7 +92,28 @@ def load_config(env_file: Path | None = None) -> AppConfig:
             os.getenv("MAX_ARTICLES_PER_DAY", str(schedule_rules.get("max_per_day", 2)))
         ),
         log_redact_secrets=_env_bool("LOG_REDACT_SECRETS", True),
+        log_file=_resolve_optional_path(os.getenv("LOG_FILE", "data/logs/app.log"), ROOT),
+        log_max_bytes=int(os.getenv("LOG_MAX_BYTES", "1048576")),
+        log_backup_count=int(os.getenv("LOG_BACKUP_COUNT", "3")),
+        log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
+        dry_run=_env_bool("DRY_RUN", False),
+        max_job_retries=int(os.getenv("MAX_JOB_RETRIES", "3")),
         wechat_app_id=os.getenv("WECHAT_APP_ID", "").strip(),
         wechat_app_secret=os.getenv("WECHAT_APP_SECRET", "").strip(),
+        wechat_default_thumb_path=os.getenv("WECHAT_DEFAULT_THUMB_PATH", "").strip(),
+        wechat_enable_publish=_env_bool("WECHAT_ENABLE_PUBLISH", True),
+        web_host=os.getenv("WEB_HOST", "127.0.0.1").strip(),
+        web_port=int(os.getenv("WEB_PORT", "8080")),
         rules=rules,
     )
+
+
+def _resolve_optional_path(raw: str, root: Path) -> Path | None:
+    """解析可选路径；空字符串表示不写文件日志。"""
+    value = raw.strip()
+    if not value or value.lower() in {"none", "off", "false"}:
+        return None
+    path = Path(value)
+    if not path.is_absolute():
+        path = root / path
+    return path

@@ -9,27 +9,28 @@
 | 2 | round_002 | 事件查询与简单报告 | `events` CLI + 事件表测试 |
 | 3 | round_003 | 真实 API 适配器骨架（默认仍 mock） | RealWechatAdapter token 占位 + 文档 |
 | 4 | round_004 | 治理校验脚本与文档收尾 | `check_repo_contract.py` + 全量 pytest |
+| 5 | round_005 | 真实微信 HTTP（token 缓存、素材、draft、发布） | `tests/test_real_adapter.py`（mock HTTP） |
+| 6 | round_006 | FastAPI 管理后台 | `tests/test_web_app.py` + `serve` 命令 |
+| 7 | round_007 | 加固：日志轮转、dry-run、重试上限、调度韧性 | `tests/test_scheduler_hardening.py` |
 
-## Round 0
+## Round 5
 
-- 目录：`articles/inbox|imported|published|rejected`
-- 命令：`init-db`, `scan`, `plan`, `run-once`, `scheduler`
-- `WECHAT_MODE=mock` 默认
+- `RealWechatAdapter`：`TokenCache`、`material/add_material`（thumb）、`draft/add`、`freepublish/submit`
+- 仅 `WECHAT_MODE=real` 且凭证齐全时联网；单元测试 mock HTTP
+- `WECHAT_ENABLE_PUBLISH=false` 可只建草稿不发布
 
-## Round 1
+## Round 6
 
-- `reject --article-id N`：移至 rejected、取消 pending 任务
-- `retry-failed`：将 failed 任务重置为 pending
+- `wechat-scheduler serve` 启动 FastAPI
+- 路由：文章列表、队列、事件、scan/plan/run-once 触发、mock 草稿预览
 
-## Round 2
+## Round 7
 
-- `events --limit N`：打印最近审计事件
+- `RotatingFileHandler` 日志（`LOG_FILE`）
+- `DRY_RUN` 报告写入 `data/reports/dry_run_*.json`
+- `MAX_JOB_RETRIES` 与 `retry_count` 列
+- 调度循环连续异常退避
 
-## Round 3
+## Round 0–4（历史）
 
-- `RealWechatAdapter` 提供 `build_token_request_url()` 等占位，不默认联网
-- 仅在 `WECHAT_MODE=real` 且配置 AppID/Secret 时尝试（仍可能 NotImplemented）
-
-## Round 4
-
-- 治理脚本与 `docs/reports/round_004_completion.md`
+见 git 历史与各 `docs/reports/round_*_completion.md`。
