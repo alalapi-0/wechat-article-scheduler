@@ -46,6 +46,24 @@ def test_index_html(app_config: AppConfig) -> None:
     assert "docs/rounds.md" in r.text
 
 
+def test_render_preview_endpoint(app_config: AppConfig) -> None:
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            "INSERT INTO articles (source_path, title, summary, body, content_hash, status) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            ("/tmp/preview.md", "预览文", "摘要", "# 标题\n\n段落。", "abc123", "imported"),
+        )
+        conn.commit()
+        article_id = conn.execute("SELECT id FROM articles").fetchone()[0]
+    r = client.get(f"/api/articles/{article_id}/render-preview")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["read_only"] is True
+    assert "<h1" in data["html_body"]
+    assert data["render_error"] is None
+
+
 def test_overview_endpoint_empty(app_config: AppConfig) -> None:
     client = TestClient(create_app(app_config))
     r = client.get("/api/overview")

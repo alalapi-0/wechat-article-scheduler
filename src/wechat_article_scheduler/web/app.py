@@ -14,6 +14,7 @@ from wechat_article_scheduler.config import AppConfig, load_config
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.plan import build_plan
 from wechat_article_scheduler.scanner import scan_inbox
+from wechat_article_scheduler.renderers import render_markdown_to_html_safe
 from wechat_article_scheduler.scheduler import run_due_jobs
 
 
@@ -113,6 +114,26 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.post("/api/run-once")
     def trigger_run_once() -> dict[str, Any]:
         return run_due_jobs(cfg)
+
+    @app.get("/api/articles/{article_id}/render-preview")
+    def article_render_preview(article_id: int) -> dict[str, Any]:
+        """只读 HTML 预览（不调用微信 API）。"""
+        with db.connect(cfg.database_path) as conn:
+            row = conn.execute(
+                "SELECT id, title, summary, body FROM articles WHERE id = ?",
+                (article_id,),
+            ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="文章不存在")
+        html_body, render_error = render_markdown_to_html_safe(row["body"] or "")
+        return {
+            "article_id": article_id,
+            "title": (row["title"] or "").strip() or f"文章 {article_id}",
+            "summary": (row["summary"] or "").strip(),
+            "html_body": html_body,
+            "render_error": render_error,
+            "read_only": True,
+        }
 
     @app.get("/api/drafts/preview/{article_id}")
     def draft_preview(article_id: int) -> JSONResponse:

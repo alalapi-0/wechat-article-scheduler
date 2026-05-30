@@ -47,8 +47,8 @@
 | Round 9 | 发布工作台产品化 | 已完成 |
 | Round 10 | 基础工作台可用性升级 | 已完成 |
 | Round 11 | 路线图执行化与治理编排 | 已完成 |
-| Round 12 | 持续演进与质量门禁强化 | 进行中（本次落地） |
-| Round 13 | Renderer 内容渲染深化 | 已规划 |
+| Round 12 | 持续演进与质量门禁强化 | 已完成 |
+| Round 13 | Renderer 内容渲染深化 | 进行中（本次落地） |
 | Round 14 | Cover 封面资产工作流 | 已规划 |
 | Round 15 | Content Library 与多合集 | 已规划 |
 | Round 16 | Scheduler 编排与人工闸门 | 已规划 |
@@ -365,11 +365,11 @@
 - 风险：过度追求排版导致范围膨胀。  
 - 回滚点：降级为 Round 6 最小 Markdown 渲染。  
 - 交付项：
-  - [ ] 渲染规则矩阵文档
-  - [ ] HTML/Markdown fixture 覆盖
-  - [ ] Web 草稿预览只读入口
-  - [ ] 摘要/标题兜底测试
-  - [ ] 渲染失败降级说明
+  - [x] 渲染规则矩阵文档
+  - [x] HTML/Markdown fixture 覆盖
+  - [x] Web 草稿预览只读入口
+  - [x] 摘要/标题兜底测试
+  - [x] 渲染失败降级说明
 
 ### Round 14 - Cover 封面资产工作流
 
