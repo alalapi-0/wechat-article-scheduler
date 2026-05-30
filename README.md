@@ -1,6 +1,13 @@
 # wechat-article-scheduler
 
-本地优先的微信公众号图文 **收件箱 → 排期 → mock 草稿/发布** CLI。默认不调用真实微信 API。
+本项目定位为**本地微信公众号文章发布工作台**：以 CLI 为主，围绕本地内容扫描、排期、草稿创建与可审计发布流程构建闭环，默认安全保守。
+
+## 核心特性
+
+- 保留现有 CLI 闭环：`scan` / `plan` / `run-once` / `scheduler`
+- 默认 `WECHAT_MODE=mock`，不开启真实 API 调用
+- 摘要（digest）统一上限 **120 字**，上传前会再次兜底截断
+- 事件审计可追溯：扫描、排期、执行、失败、截断 warning 均写入 `events`
 
 ## 快速开始
 
@@ -13,7 +20,7 @@ cp config/rules.example.yaml config/rules.yaml
 python -m wechat_article_scheduler.cli init-db
 ```
 
-将 `.md` / `.txt` / `.html` 放入 `articles/inbox/`，然后：
+将 `.md` / `.txt` / `.html` 放入 `articles/inbox/` 后执行：
 
 ```bash
 python -m wechat_article_scheduler.cli scan
@@ -21,30 +28,43 @@ python -m wechat_article_scheduler.cli plan
 python -m wechat_article_scheduler.cli run-once
 ```
 
-## 命令
+## 运行模式（三种）
+
+1. `mock`（默认）：不联网，生成本地 mock 草稿/发布结果
+2. `real + WECHAT_ENABLE_PUBLISH=false`：只创建真实草稿，不提交发布
+3. `real + WECHAT_ENABLE_PUBLISH=true`：创建草稿并提交发布（需人工确认后使用）
+
+## CLI 命令
 
 | 命令 | 说明 |
 |------|------|
 | `init-db` | 初始化 SQLite |
 | `scan` | 扫描 inbox、去重、入库 |
 | `plan` | 生成 `publish_jobs` |
-| `run-once` | 执行到期任务（mock 草稿） |
-| `scheduler` | 后台轮询 |
-| `reject --article-id N` | 驳回 (Round 1) |
-| `retry-failed` | 重试失败任务 (Round 1) |
-| `events --limit N` | 审计事件 (Round 2) |
+| `run-once` | 执行到期任务 |
+| `scheduler` | 后台轮询调度 |
+| `reject --article-id N` | 驳回文章 |
+| `retry-failed` | 重置失败任务为待执行 |
+| `events --limit N` | 查看审计事件 |
+| `serve` | 启动本地 FastAPI 管理页 |
 
-## 配置
+## 配置说明
 
-- `.env`：见 `.env.example`（勿提交）
-- `config/rules.yaml`：去重与排期规则
+- `.env`：环境变量（只放本地，不提交）
+- `config/rules.yaml`：扫描、去重、排期与 `summary_max_chars`（默认 120）
 
-## 治理
+## 文档索引与路线图
 
-见 `governance/`、`docs/rounds.md`、`scripts/agent_gate.py`。
+- 文档入口：`docs/index.md`
+- 当前状态审计：`docs/current_state_audit.md`
+- 产品愿景：`docs/product_vision.md`
+- 架构说明：`docs/architecture.md`
+- 轮次路线图：`docs/rounds.md`
+- 迁移计划：`docs/migration_plan.md`
 
-## 安全
+## 安全边界
 
-- 仓库内无真实密钥
-- 不使用 Cookie 爬取
-- 日志不输出 token
+- 默认不自动发布真实公众号内容（建议先使用 mock 或 real-draft-only）
+- 不提交 `.env`、密钥、token、cookie
+- 不使用网页模拟登录公众号后台
+- 日志不打印 access token / secret

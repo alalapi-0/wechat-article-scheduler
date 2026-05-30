@@ -35,7 +35,7 @@ def scan_inbox(config: AppConfig) -> dict[str, int]:
 
     exts = _allowed_extensions(config.rules)
     scan_rules = config.rules.get("scan", {}) if isinstance(config.rules.get("scan"), dict) else {}
-    summary_max = int(scan_rules.get("summary_max_chars", 200))
+    summary_max = int(scan_rules.get("summary_max_chars", 120))
 
     with db.connect(config.database_path) as conn:
         for path in sorted(inbox.iterdir()):

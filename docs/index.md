@@ -1,7 +1,17 @@
 # 文档索引
 
+- [当前状态审计](current_state_audit.md)
+- [产品愿景](product_vision.md)
 - [架构](architecture.md)
 - [开发轮次](rounds.md)
+- [Web 控制台设计](web_console_design.md)
+- [调度设计](scheduler_design.md)
+- [数据库设计](database_design.md)
+- [内容库设计](content_library_design.md)
+- [渲染器设计](renderer_design.md)
+- [封面资产设计](cover_assets_design.md)
+- [微信能力矩阵](wechat_capability_matrix.md)
+- [迁移计划](migration_plan.md)
 - [用户手册](user_manual.md)
 - [微信 API 调研](api_research.md)
 - [仓库协议（副本）](repo_protocol_standard.yaml)

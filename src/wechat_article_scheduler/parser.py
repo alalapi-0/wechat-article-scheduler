@@ -11,6 +11,7 @@ from pathlib import Path
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 TITLE_RE = re.compile(r"^title:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
 SUMMARY_RE = re.compile(r"^summary:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+DIGEST_MAX_CHARS = 120
 
 
 @dataclass
@@ -68,17 +69,23 @@ def _first_heading_md(text: str) -> str | None:
     return None
 
 
-def make_summary(body: str, max_chars: int = 200) -> str:
+def clamp_summary(text: str, max_chars: int = DIGEST_MAX_CHARS) -> str:
+    """裁剪摘要到固定长度上限。"""
+    normalized = " ".join((text or "").split())
+    if len(normalized) <= max_chars:
+        return normalized
+    return normalized[:max_chars].rstrip()
+
+
+def make_summary(body: str, max_chars: int = DIGEST_MAX_CHARS) -> str:
     """从正文生成简短摘要。"""
     plain = re.sub(r"<[^>]+>", "", body)
     plain = re.sub(r"[#*_>`]", "", plain)
     plain = " ".join(plain.split())
-    if len(plain) <= max_chars:
-        return plain
-    return plain[: max_chars - 1].rstrip() + "…"
+    return clamp_summary(plain, max_chars)
 
 
-def parse_file(path: Path, *, summary_max_chars: int = 200) -> ParsedArticle:
+def parse_file(path: Path, *, summary_max_chars: int = DIGEST_MAX_CHARS) -> ParsedArticle:
     """读取并解析单个文件。"""
     raw = path.read_text(encoding="utf-8", errors="replace")
     suffix = path.suffix.lower()
@@ -86,7 +93,9 @@ def parse_file(path: Path, *, summary_max_chars: int = 200) -> ParsedArticle:
     if suffix in {".md", ".txt"}:
         meta, body = _extract_frontmatter(raw)
         title = meta.get("title") or _first_heading_md(body) or path.stem
-        summary = meta.get("summary") or make_summary(body, summary_max_chars)
+        summary = clamp_summary(meta.get("summary", ""), summary_max_chars) or make_summary(
+            body, summary_max_chars
+        )
     elif suffix == ".html":
         body = raw
         title = _title_from_html(raw) or path.stem

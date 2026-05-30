@@ -25,4 +25,4 @@ def test_content_hash_stable() -> None:
 def test_make_summary_truncates() -> None:
     long_body = "字" * 300
     s = make_summary(long_body, max_chars=50)
-    assert len(s) <= 51
+    assert len(s) <= 50

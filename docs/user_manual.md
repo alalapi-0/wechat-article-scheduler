@@ -27,4 +27,12 @@ python -m wechat_article_scheduler.cli retry-failed
 
 ## 5. 切换真实 API（高级）
 
-在 `.env` 设置 `WECHAT_MODE=real` 并填写 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`。当前代码仍为骨架，需完成 Round 3+ 实现后再用。
+在 `.env` 设置 `WECHAT_MODE=real` 并填写 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`。
+
+- 若 `WECHAT_ENABLE_PUBLISH=false`：仅创建真实草稿，不提交发布。
+- 若 `WECHAT_ENABLE_PUBLISH=true`：会提交发布，建议先做人工核对。
+
+## 6. 摘要与渲染说明
+
+- digest 摘要统一上限 120 字，上传前会自动兜底截断并记录 warning 事件。
+- Markdown 正文会按段落渲染为带 margin 的 `<p>` 标签（最小渲染骨架）。

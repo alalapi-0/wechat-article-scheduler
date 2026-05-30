@@ -11,6 +11,7 @@ from pathlib import Path
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters import get_adapter
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.parser import clamp_summary
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +97,26 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
 
             try:
                 assert adapter is not None
+                raw_summary = (job["summary"] or "").strip() or (job["title"] or "")
+                digest_summary = clamp_summary(raw_summary, 120)
+                if digest_summary != raw_summary:
+                    db.log_event(
+                        conn,
+                        entity_type="publish_job",
+                        entity_id=job_id,
+                        event_type="digest_truncated_warning",
+                        payload=json.dumps(
+                            {
+                                "article_id": article_id,
+                                "from_chars": len(raw_summary),
+                                "to_chars": len(digest_summary),
+                            },
+                            ensure_ascii=False,
+                        ),
+                    )
                 draft = adapter.create_draft(
                     title=job["title"],
-                    summary=job["summary"] or "",
+                    summary=digest_summary,
                     body=job["body"],
                 )
                 conn.execute(

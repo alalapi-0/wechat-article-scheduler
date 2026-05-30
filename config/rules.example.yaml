@@ -9,7 +9,7 @@ dedupe:
 scan:
   extensions: [".md", ".txt", ".html"]
   # 摘要最大长度（从正文截取）
-  summary_max_chars: 200
+  summary_max_chars: 120
 
 schedule:
   # 默认每天最多排多少篇

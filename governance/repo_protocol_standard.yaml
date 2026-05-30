@@ -4,7 +4,7 @@ protocol:
   status: draft
   purpose: "Provide a portable governance standard for AI-agent-readable repositories."
   portability: portable_to_other_repositories
-  last_updated: "2026-05-29"
+  last_updated: "2026-05-30"
   maintained_by:
     - user
     - repo_governance_agent

@@ -1,36 +1,30 @@
-# 开发轮次（Rounds）
+# 开发轮次（Round 0 ~ Round 9）
 
-机器可读状态：`governance/round_state.yaml`。推进前运行 `python scripts/agent_gate.py`。
+机器可读状态见 `governance/round_state.yaml`。  
+本文件用于人类可读路线图，明确“已实现 / 部分实现 / 设计中 / 未来计划”。
 
-| Round | ID | 目标 | 验收 |
-|-------|-----|------|------|
-| 0 | round_000 | SQLite、扫描、计划、mock 草稿、CLI | `pytest` + init-db/scan/plan/run-once 冒烟 |
-| 1 | round_001 | 驳回流程、失败任务重试 | `reject` / `retry-failed` CLI + 测试 |
-| 2 | round_002 | 事件查询与简单报告 | `events` CLI + 事件表测试 |
-| 3 | round_003 | 真实 API 适配器骨架（默认仍 mock） | RealWechatAdapter token 占位 + 文档 |
-| 4 | round_004 | 治理校验脚本与文档收尾 | `check_repo_contract.py` + 全量 pytest |
-| 5 | round_005 | 真实微信 HTTP（token 缓存、素材、draft、发布） | `tests/test_real_adapter.py`（mock HTTP） |
-| 6 | round_006 | FastAPI 管理后台 | `tests/test_web_app.py` + `serve` 命令 |
-| 7 | round_007 | 加固：日志轮转、dry-run、重试上限、调度韧性 | `tests/test_scheduler_hardening.py` |
+| Round | 轮次主题 | 状态 | 主要目标 |
+|------|---------|------|---------|
+| Round 0 | CLI MVP 闭环 | 已实现 | init-db/scan/plan/run-once 基线 |
+| Round 1 | **治理轮（当前）** | 已完成 | 全仓审计、文档重构、120 digest 统一、骨架补齐 |
+| Round 2 | 内容库建模 | 设计中 | 内容集合、标签、审核状态与索引 |
+| Round 3 | 调度域模块化 | 设计中 | scheduler 领域拆分与执行器分层 |
+| Round 4 | 数据迁移体系 | 设计中 | migrations 版本化、回滚策略、兼容升级 |
+| Round 5 | Web 控制台增强 | 未来计划 | 轻量鉴权、只读仪表盘、人工确认流 |
+| Round 6 | 渲染与模板扩展 | 未来计划 | Markdown/HTML 渲染规则与模板策略 |
+| Round 7 | 封面资产管理 | 未来计划 | 素材目录、引用与人工裁剪流程 |
+| Round 8 | 可观测与运维 | 未来计划 | 更细粒度审计、失败分类、SLO 指标 |
+| Round 9 | 发布工作台产品化 | 未来计划 | 稳定交付、文档收口、长期维护规范 |
 
-## Round 5
+## Round 1 交付要点（治理轮）
 
-- `RealWechatAdapter`：`TokenCache`、`material/add_material`（thumb）、`draft/add`、`freepublish/submit`
-- 仅 `WECHAT_MODE=real` 且凭证齐全时联网；单元测试 mock HTTP
-- `WECHAT_ENABLE_PUBLISH=false` 可只建草稿不发布
+- 全量扫描仓库能力与风险，形成 `docs/current_state_audit.md`
+- 项目重定位为“本地微信公众号文章发布工作台”
+- 新增产品愿景、迁移计划、能力矩阵与专题设计文档
+- 创建 `content_library` / `renderers` / `scheduler` / `cover_assets` 等目录骨架
+- 摘要上限统一到 120，上传前自动截断并记录 warning 事件
+- 新增两类最小测试：digest 截断与 Markdown 段落渲染
 
-## Round 6
+## 历史说明
 
-- `wechat-scheduler serve` 启动 FastAPI
-- 路由：文章列表、队列、事件、scan/plan/run-once 触发、mock 草稿预览
-
-## Round 7
-
-- `RotatingFileHandler` 日志（`LOG_FILE`）
-- `DRY_RUN` 报告写入 `data/reports/dry_run_*.json`
-- `MAX_JOB_RETRIES` 与 `retry_count` 列
-- 调度循环连续异常退避
-
-## Round 0–4（历史）
-
-见 git 历史与各 `docs/reports/round_*_completion.md`。
+历史实现细节可参考 `docs/reports/` 下各轮完成报告与 Git 提交记录。

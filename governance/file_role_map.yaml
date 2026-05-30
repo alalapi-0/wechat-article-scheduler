@@ -17,6 +17,16 @@ files:
     role: source_code
   - path: scripts/agent_gate.py
     role: validation_script
+  - path: docs/current_state_audit.md
+    role: governance_audit_report
+  - path: docs/product_vision.md
+    role: product_vision_doc
+  - path: docs/migration_plan.md
+    role: migration_plan_doc
+  - path: src/wechat_article_scheduler/renderers/markdown.py
+    role: source_code
+  - path: src/wechat_article_scheduler/scheduler/__init__.py
+    role: compatibility_shim
 
 directories:
   - path: articles/inbox
@@ -27,3 +37,15 @@ directories:
     role: user_content_published
   - path: articles/rejected
     role: user_content_rejected
+  - path: content/collections
+    role: content_library_root
+  - path: migrations
+    role: database_migrations_root
+  - path: src/wechat_article_scheduler/content_library
+    role: source_code_skeleton
+  - path: src/wechat_article_scheduler/renderers
+    role: source_code_skeleton
+  - path: src/wechat_article_scheduler/scheduler
+    role: source_code_skeleton
+  - path: src/wechat_article_scheduler/cover_assets
+    role: source_code_skeleton
