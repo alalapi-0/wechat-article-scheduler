@@ -1,11 +1,12 @@
 current_round:
   id: round_042
   name: Round 42 - 能力矩阵维护
-  status: active
+  status: completed
   updated_at: '2026-05-31T00:23:33.460461+00:00'
+  completed_at: '2026-05-31'
 last_completed_round:
-  id: round_041
-  completed_at: '2026-05-31T00:23:33.460461+00:00'
+  id: round_042
+  completed_at: '2026-05-31T00:23:57.000000+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - wechat_capability_matrix 与已实现能力同步
