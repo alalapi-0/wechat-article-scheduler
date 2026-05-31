@@ -1,8 +1,9 @@
 current_round:
   id: round_053
   name: Round 53 - 发布前内容质量检查
-  status: active
+  status: completed
   updated_at: '2026-05-31T05:43:46.807081+00:00'
+  completed_at: '2026-05-31'
 last_completed_round:
   id: round_052
   completed_at: '2026-05-31T05:43:46.807081+00:00'
