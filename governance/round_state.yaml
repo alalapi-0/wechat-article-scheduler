@@ -1,14 +1,14 @@
 current_round:
-  id: round_050
-  name: Round 50 - 作品回收站与可逆删除
+  id: round_051
+  name: Round 51 - 清空回收站与彻底删除
   status: active
-  updated_at: '2026-05-31T05:38:33.790169+00:00'
+  updated_at: '2026-05-31T05:42:02.960099+00:00'
 last_completed_round:
-  id: round_049
-  completed_at: '2026-05-31T05:38:33.790169+00:00'
+  id: round_050
+  completed_at: '2026-05-31T05:42:02.960099+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 作品可从页面删除进入回收站，作品库/队列默认隐藏
-- 回收站作品可恢复且不影响未删除作品
+- 清空后数据库和本地文章/封面文件按安全范围彻底删除
+- 危险操作有二次确认且不会删除项目外路径
 next_actions:
-- 推进 Round 51：清空回收站与彻底删除
+- 推进 Round 52：批量管理与删除一致性
