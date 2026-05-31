@@ -6,198 +6,265 @@
 <title>微信公众号文章发布工作台</title>
 <style>
   :root {
-    --bg: #eef2f7;
+    --bg: #fbfbfa;
     --surface: #ffffff;
-    --surface-2: #f8fafc;
-    --sidebar-a: #0f172a;
-    --sidebar-b: #1e293b;
-    --side-fg: #94a3b8;
-    --side-fg-active: #ffffff;
-    --text: #0f172a;
-    --muted: #64748b;
-    --line: #e2e8f0;
-    --accent: #6366f1;
-    --accent-strong: #4f46e5;
-    --accent-soft: #eef2ff;
-    --ok: #15803d; --ok-soft: #dcfce7;
-    --warn: #b45309; --warn-soft: #fef3c7;
-    --err: #b91c1c; --err-soft: #fee2e2;
-    --radius: 14px;
-    --shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.06);
+    --surface-soft: #f6f6f4;
+    --surface-warm: #faf7f0;
+    --text: #202020;
+    --muted: #73726e;
+    --faint: #a8a6a1;
+    --line: #e8e6e1;
+    --line-strong: #d8d5cd;
+    --accent: #2f3437;
+    --accent-hover: #191b1d;
+    --ok: #287a4b; --ok-soft: #edf7f0;
+    --warn: #9a6b17; --warn-soft: #fbf3dd;
+    --err: #a33a32; --err-soft: #faecea;
+    --radius: 10px;
+    --shadow-soft: 0 1px 2px rgba(15, 15, 15, .04);
     color-scheme: light;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     background: var(--bg);
     color: var(--text);
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
   }
-  a { color: var(--accent-strong); text-decoration: none; }
+  a { color: inherit; text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  .layout { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
-
-  /* ---------- Sidebar ---------- */
-  .sidebar {
-    background: linear-gradient(180deg, var(--sidebar-a), var(--sidebar-b));
-    color: var(--side-fg);
-    padding: 22px 16px;
-    display: flex; flex-direction: column; gap: 6px;
-    position: sticky; top: 0; height: 100vh; overflow-y: auto;
-  }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; }
-  .brand .logo {
-    width: 34px; height: 34px; border-radius: 10px;
-    background: linear-gradient(135deg, var(--accent), #22d3ee);
-    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 18px;
-  }
-  .brand .name { color: #fff; font-weight: 700; font-size: 15px; letter-spacing: .2px; }
-  .brand .sub { color: var(--side-fg); font-size: 12px; }
-  .nav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-  .nav a {
-    display: flex; align-items: center; gap: 10px;
-    color: var(--side-fg); padding: 10px 12px; border-radius: 10px;
-    font-size: 14px; font-weight: 500; text-decoration: none;
-  }
-  .nav a:hover { background: rgba(255,255,255,.06); color: #e2e8f0; text-decoration: none; }
-  .nav a.active { background: rgba(99,102,241,.22); color: var(--side-fg-active); }
-  .nav .ico { width: 18px; text-align: center; opacity: .9; }
-  .side-foot { margin-top: auto; padding-top: 18px; font-size: 12px; color: var(--side-fg); }
-  .toggle-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
-  .toggle-row label { font-size: 12.5px; cursor: pointer; }
-
-  /* ---------- Content ---------- */
-  .content { display: flex; flex-direction: column; min-width: 0; }
+  .layout { min-height: 100vh; }
   .topbar {
-    position: sticky; top: 0; z-index: 5;
-    background: rgba(255,255,255,.82); backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 10;
+    display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center;
+    padding: 13px 32px;
+    background: rgba(251, 251, 250, .88);
+    backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--line);
-    padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
   }
-  .topbar h1 { font-size: 17px; margin: 0; font-weight: 700; }
-  .main { padding: 24px 28px 64px; max-width: 1240px; width: 100%; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand .logo {
+    width: 28px; height: 28px; border-radius: 7px;
+    border: 1px solid var(--line-strong);
+    display: grid; place-items: center;
+    background: var(--surface);
+    color: var(--accent);
+    font-size: 14px; font-weight: 700;
+  }
+  .brand .name { font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+  .brand .sub { color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .nav { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+  .nav a {
+    color: var(--muted);
+    padding: 6px 9px;
+    border-radius: 7px;
+    font-size: 13px;
+  }
+  .nav a:hover, .nav a.active { background: var(--surface-soft); color: var(--text); text-decoration: none; }
+  .nav .ico { display: none; }
+  .side-foot { display: none; }
+  .content { min-width: 0; }
+  .main { max-width: 1240px; margin: 0 auto; padding: 28px 32px 64px; }
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: end;
+    margin-bottom: 22px;
+  }
+  .hero h1 { margin: 0; font-size: 26px; line-height: 1.2; letter-spacing: -.035em; font-weight: 720; }
+  .hero p { margin: 7px 0 0; color: var(--muted); font-size: 13.5px; }
+  .hero-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 18px;
+    align-items: start;
+  }
+  .left-stack, .right-stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .right-stack { position: sticky; top: 72px; }
 
   .pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
-    background: var(--accent-soft); color: var(--accent-strong);
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 560;
+    white-space: nowrap;
   }
-  .pill.ok { background: var(--ok-soft); color: var(--ok); }
-  .pill.warn { background: var(--warn-soft); color: var(--warn); }
-  .pill.err { background: var(--err-soft); color: var(--err); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .pill.ok { color: var(--ok); background: var(--ok-soft); border-color: #cfe8d6; }
+  .pill.warn { color: var(--warn); background: var(--warn-soft); border-color: #ead8a6; }
+  .pill.err { color: var(--err); background: var(--err-soft); border-color: #edc9c4; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
-  .section { margin-top: 26px; }
-  .section:first-child { margin-top: 6px; }
-  .section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
-  .section-head h2 { font-size: 15px; margin: 0; font-weight: 700; }
+  .section { margin-top: 0; }
+  .section-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 0 2px 8px;
+  }
+  .section-head h2 { font-size: 14px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
   .section-head .hint { font-size: 12.5px; color: var(--muted); }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+  }
+  .card.pad { padding: 14px; }
+  .muted { color: var(--muted); }
 
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-  .card.pad { padding: 18px 20px; }
+  .alert { padding: 10px 12px; border-radius: 9px; font-size: 13px; border: 1px solid var(--line); margin-bottom: 14px; }
+  .alert.info { background: var(--surface-soft); color: var(--text); }
+  .alert.ok { background: var(--ok-soft); border-color: #cfe8d6; color: var(--ok); }
+  .alert.warn { background: var(--warn-soft); border-color: #ead8a6; color: var(--warn); }
+  .alert.err { background: var(--err-soft); border-color: #edc9c4; color: var(--err); }
 
-  .alert { padding: 12px 16px; border-radius: 12px; font-size: 13.5px; margin-bottom: 4px; }
-  .alert.info { background: var(--accent-soft); color: var(--accent-strong); }
-  .alert.ok { background: var(--ok-soft); color: var(--ok); }
-  .alert.warn { background: var(--warn-soft); color: var(--warn); }
-  .alert.err { background: var(--err-soft); color: var(--err); }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  .stat { padding: 13px 14px; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: 0; }
+  .stat .num { font-size: 22px; font-weight: 700; letter-spacing: -.03em; }
+  .stat .lbl { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .banner {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: var(--surface-warm);
+    border: 1px solid #ebe1cc;
+    font-size: 13px;
+  }
 
-  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
-  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
-  .stat .num { font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
-  .stat .lbl { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-
-  .banner { margin-top: 14px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); border: 1px dashed var(--line); font-size: 13.5px; color: var(--text); }
-
-  /* Upload */
   .dropzone {
-    border: 2px dashed #c7d2fe; border-radius: var(--radius);
-    background: linear-gradient(180deg, #fbfcff, #f5f7ff);
-    padding: 26px; text-align: center; transition: .15s; cursor: pointer;
+    border: 1px dashed var(--line-strong);
+    border-radius: 9px;
+    background: var(--surface-soft);
+    padding: 13px;
+    cursor: pointer;
+    transition: .12s;
   }
-  .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
-  .dropzone .big { font-size: 15px; font-weight: 700; }
-  .dropzone .small { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
-  .upload-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .chip { font-size: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; color: var(--muted); }
+  .dropzone.drag { background: #f1f0ed; border-color: var(--accent); }
+  .dropzone .big { font-size: 13.5px; font-weight: 650; }
+  .dropzone .small { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .upload-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { font-size: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; color: var(--muted); }
 
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
-  .step .n { width: 26px; height: 26px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 800; display: grid; place-items: center; }
-  .step p { margin: 0; font-size: 13px; color: var(--muted); }
-
-  /* Works grid */
-  .works { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .works { display: flex; flex-direction: column; gap: 8px; }
   .work {
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-    overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column;
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
   }
-  .work .thumb { aspect-ratio: 16/9; background: var(--surface-2); display: grid; place-items: center; overflow: hidden; }
-  .work .thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .work .thumb .ph { color: #94a3b8; font-size: 12.5px; }
-  .work .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; }
-  .work .title { font-weight: 700; font-size: 14px; line-height: 1.35; }
-  .work .summary { font-size: 12.5px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .work .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .work .acts { display: flex; gap: 8px; margin-top: 2px; }
+  .work .thumb {
+    width: 86px; aspect-ratio: 16/10; border-radius: 7px; overflow: hidden;
+    border: 1px solid var(--line);
+    background: var(--surface-soft);
+    display: grid; place-items: center;
+  }
+  .work .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .work .thumb .ph { color: var(--faint); font-size: 12px; }
+  .work .body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .work .title { font-size: 14px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .work .summary { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .work .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .work .acts { display: flex; gap: 6px; justify-content: flex-end; }
 
-  /* Buttons */
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .step {
+    display: grid; grid-template-columns: 24px 1fr; gap: 9px; align-items: start;
+    padding: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+  }
+  .step .n {
+    width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center;
+    background: var(--surface-soft); color: var(--muted); font-size: 12px; font-weight: 650;
+  }
+  .step b { font-size: 13px; }
+  .step p { margin: 1px 0 0; font-size: 12px; color: var(--muted); }
+
   button, .btn {
-    font: inherit; cursor: pointer; border: 1px solid transparent; border-radius: 10px;
-    padding: 9px 14px; font-size: 13.5px; font-weight: 600; transition: .12s;
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 560;
+    transition: .12s;
   }
   .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: var(--accent-strong); }
-  .btn-ghost { background: var(--surface); color: var(--text); border-color: var(--line); }
-  .btn-ghost:hover { background: var(--surface-2); }
-  .btn-sm { padding: 6px 10px; font-size: 12.5px; }
-  button:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: var(--surface); color: var(--text); border-color: var(--line-strong); }
+  .btn-ghost:hover { background: var(--surface-soft); }
+  .btn-sm { padding: 5px 8px; font-size: 12px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font-weight: 600; font-size: 12px; background: var(--surface-2); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 560; background: var(--surface-soft); font-size: 12px; }
   tbody tr:last-child td { border-bottom: none; }
-
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .events li { list-style: none; padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: 13px; display: flex; gap: 10px; }
-  .events ul { list-style: none; margin: 0; padding: 0; }
-  .events .when { color: var(--muted); font-size: 12px; white-space: nowrap; }
-  .empty { color: var(--muted); font-size: 13px; padding: 8px 2px; }
+  .queue-box { overflow: hidden; }
+  .events ul { margin: 0; padding: 0; list-style: none; }
+  .events li { list-style: none; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; display: grid; gap: 2px; }
+  .events li:last-child { border-bottom: 0; }
+  .events .when { color: var(--muted); font-size: 11.5px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 10px 2px; }
+  .help-text { font-size: 13px; color: var(--muted); }
+  .help-text p { margin: 8px 0; }
 
   .advanced-only { display: none; }
   body.show-advanced .advanced-only { display: block; }
-  pre { background: #0f172a; color: #e2e8f0; padding: 14px; border-radius: 12px; overflow: auto; font-size: 12px; }
+  .advanced-toggle {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--muted); font-size: 12.5px;
+  }
+  .advanced-toggle input { margin: 0; }
+  pre { background: #1f1f1f; color: #eeeeec; padding: 12px; border-radius: 9px; overflow: auto; font-size: 12px; }
 
-  /* Modal */
-  .modal-back { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: none; place-items: center; z-index: 50; padding: 20px; }
+  .modal-back { position: fixed; inset: 0; background: rgba(20,20,20,.32); display: none; place-items: center; z-index: 50; padding: 20px; }
   .modal-back.open { display: grid; }
-  .modal { background: #fff; border-radius: 16px; max-width: 760px; width: 100%; max-height: 86vh; overflow: auto; padding: 22px 24px; }
-  .modal h3 { margin-top: 0; }
+  .modal { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; max-width: 760px; width: 100%; max-height: 86vh; overflow: auto; padding: 18px 20px; box-shadow: 0 18px 60px rgba(0,0,0,.16); }
+  .modal h3 { margin: 0 0 8px; }
   .modal .close { float: right; }
-  .preview-body { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-top: 12px; }
+  .preview-body { border: 1px solid var(--line); border-radius: 9px; padding: 14px; margin-top: 12px; }
 
-  @media (max-width: 980px) {
-    .layout { grid-template-columns: 1fr; }
-    .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; }
-    .brand { padding: 4px 8px; }
-    .nav { flex-direction: row; flex-wrap: wrap; }
-    .side-foot { margin: 0; padding: 6px; }
+  @media (max-width: 1050px) {
+    .workspace { grid-template-columns: 1fr; }
+    .right-stack { position: static; }
+  }
+  @media (max-width: 760px) {
+    .topbar { grid-template-columns: 1fr; padding: 12px 16px; }
+    .nav { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+    .main { padding: 20px 16px 46px; }
+    .hero { grid-template-columns: 1fr; align-items: start; }
+    .hero-actions { justify-content: flex-start; }
+    .hero h1 { font-size: 22px; }
     .stats { grid-template-columns: repeat(2, 1fr); }
-    .steps { grid-template-columns: 1fr; }
-    .grid-2 { grid-template-columns: 1fr; }
-    .main { padding: 18px 16px 48px; }
-    .topbar { padding: 12px 16px; }
+    .stat { border-right: 0; border-bottom: 1px solid var(--line); }
+    .stat:nth-last-child(-n+1) { border-bottom: 0; }
+    .work { grid-template-columns: 62px minmax(0, 1fr); }
+    .work .thumb { width: 62px; }
+    .work .acts { grid-column: 1 / -1; justify-content: flex-start; }
   }
 </style>
 </head>
 <body>
 <div class="layout">
-  <!-- 左侧导航 -->
-  <aside class="sidebar">
+  <!-- 顶部轻导航 -->
+  <header class="topbar">
     <div class="brand">
       <div class="logo">发</div>
       <div>
@@ -213,97 +280,112 @@
       <a href="#help"><span class="ico">?</span> 帮助</a>
       <a href="/debug"><span class="ico">⚙</span> 高级排错</a>
     </nav>
-    <div class="side-foot">
-      <div class="toggle-row card" style="background:rgba(255,255,255,.06);border:none;">
-        <input type="checkbox" id="advToggle" />
-        <label for="advToggle">显示高级信息（排错用）</label>
-      </div>
-    </div>
-  </aside>
+  </header>
 
   <!-- 主内容 -->
   <div class="content">
-    <header class="topbar">
-      <h1>微信公众号文章发布工作台</h1>
-      <span id="safetyTop" class="pill"><span class="dot"></span> 正在读取运行状态…</span>
-    </header>
-
     <main class="main">
       <div id="alertBox"></div>
 
-      <!-- 概览 -->
-      <section class="section" id="overview">
-        <div class="section-head">
-          <h2>概览</h2>
-          <span class="hint">你的作品和发布任务一眼看清</span>
+      <section class="hero">
+        <div>
+          <h1>微信公众号文章发布工作台</h1>
+          <p>像整理文档一样管理作品：上传、排期、预览、到点发布。默认演练，不会误发。</p>
         </div>
-        <div class="stats" id="statCards"></div>
-        <div class="banner" id="scheduleBanner">读取计划中…</div>
+        <div class="hero-actions">
+          <span id="safetyTop" class="pill"><span class="dot"></span> 正在读取运行状态…</span>
+          <label class="advanced-toggle">
+            <input type="checkbox" id="advToggle" />
+            显示高级信息
+          </label>
+        </div>
       </section>
 
-      <!-- 作品库 + 上传 -->
-      <section class="section" id="works">
-        <div class="section-head">
-          <h2>作品库</h2>
-          <span class="hint">把想发布的文章和封面上传进来，上传即视为待发布</span>
-        </div>
-        <div class="card pad">
-          <div class="dropzone" id="dropzone">
-            <div class="big">拖拽文件到这里上传</div>
-            <div class="small">支持作品文件 md / txt / html 和封面图 jpg / png / gif / webp；封面会按文件名自动绑定到同名作品</div>
-            <div class="upload-actions">
-              <button class="btn-primary" id="pickArticles">选择作品文件</button>
-              <button class="btn-ghost" id="pickCovers">选择封面图</button>
-              <button class="btn-primary" id="doUpload" disabled>开始上传</button>
+      <div class="workspace">
+        <div class="left-stack">
+          <!-- 概览 -->
+          <section class="section" id="overview">
+            <div class="section-head">
+              <h2>概览</h2>
+              <span class="hint">作品与任务</span>
             </div>
-            <div class="chips" id="pendingChips"></div>
-          </div>
-          <input type="file" id="articleInput" multiple accept=".md,.markdown,.txt,.html,.htm" hidden />
-          <input type="file" id="coverInput" multiple accept="image/*" hidden />
-        </div>
-        <div class="works" id="worksGrid" style="margin-top:16px;"></div>
-      </section>
+            <div class="stats" id="statCards"></div>
+          </section>
 
-      <!-- 主操作 -->
-      <section class="section" id="actions">
-        <div class="section-head">
-          <h2>主操作</h2>
-          <span class="hint">按顺序完成三步即可发布</span>
+          <!-- 作品库 + 上传 -->
+          <section class="section" id="works">
+            <div class="section-head">
+              <h2>作品库</h2>
+              <span class="hint">上传即待发布</span>
+            </div>
+            <div class="card pad">
+              <div class="dropzone" id="dropzone">
+                <div class="big">拖拽作品和封面到这里</div>
+                <div class="small">支持 md / txt / html 与 jpg / png / gif / webp；同名封面会自动绑定</div>
+                <div class="upload-actions">
+                  <button class="btn-ghost" id="pickArticles">选择作品</button>
+                  <button class="btn-ghost" id="pickCovers">选择封面</button>
+                  <button class="btn-primary" id="doUpload" disabled>上传</button>
+                </div>
+                <div class="chips" id="pendingChips"></div>
+              </div>
+              <input type="file" id="articleInput" multiple accept=".md,.markdown,.txt,.html,.htm" hidden />
+              <input type="file" id="coverInput" multiple accept="image/*" hidden />
+            </div>
+            <div class="works" id="worksGrid" style="margin-top:10px;"></div>
+          </section>
         </div>
-        <div class="steps" id="stepCards"></div>
-        <div class="upload-actions" style="margin-top:14px;">
-          <button class="btn-primary" id="btnPlan">安排发布时间</button>
-          <button class="btn-primary" id="btnRun">执行到点发布</button>
-          <button class="btn-ghost" id="btnRefresh">刷新状态</button>
-        </div>
-        <div id="resultBox" style="margin-top:12px;"></div>
-      </section>
 
-      <!-- 队列 + 记录 -->
-      <div class="grid-2 section">
-        <section id="queue">
-          <div class="section-head"><h2>发布队列</h2><span class="hint">哪篇、什么时候、现在怎样</span></div>
-          <div class="card"><div id="queueBox" style="padding:4px 4px;"></div></div>
-        </section>
-        <section id="events" class="events">
-          <div class="section-head"><h2>操作记录</h2><span class="hint">你最近做了什么</span></div>
-          <div class="card pad"><div id="eventsBox"></div></div>
-        </section>
+        <aside class="right-stack">
+          <section class="section">
+            <div class="section-head">
+              <h2>发布计划</h2>
+              <span class="hint">下一步</span>
+            </div>
+            <div class="card pad">
+              <div class="banner" id="scheduleBanner">读取计划中…</div>
+              <div class="upload-actions">
+                <button class="btn-primary" id="btnPlan">安排发布时间</button>
+                <button class="btn-primary" id="btnRun">执行到点发布</button>
+                <button class="btn-ghost" id="btnRefresh">刷新</button>
+              </div>
+              <div id="resultBox" style="margin-top:10px;"></div>
+            </div>
+          </section>
+
+          <!-- 主操作 -->
+          <section class="section" id="actions">
+            <div class="section-head">
+              <h2>主操作</h2>
+              <span class="hint">三步完成</span>
+            </div>
+            <div class="steps" id="stepCards"></div>
+          </section>
+
+          <section id="queue" class="section">
+            <div class="section-head"><h2>发布队列</h2><span class="hint">计划中</span></div>
+            <div class="card queue-box"><div id="queueBox"></div></div>
+          </section>
+
+          <section id="events" class="events section">
+            <div class="section-head"><h2>操作记录</h2><span class="hint">最近</span></div>
+            <div class="card pad"><div id="eventsBox"></div></div>
+          </section>
+
+          <!-- 帮助 -->
+          <section class="section" id="help">
+            <div class="section-head"><h2>帮助</h2><span class="hint">快速理解</span></div>
+            <div class="card pad help-text">
+              <p style="margin-top:0;"><b>这是什么？</b> 一个把本地文章批量发布到微信公众号的工作台。默认是「演练」模式，不会真的发到公众号。</p>
+              <p><b>怎么用？</b> ① 上传文章和封面 → ② 安排发布时间 → ③ 到时间后执行到点发布。</p>
+              <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
+            </div>
+          </section>
+        </aside>
       </div>
 
-      <!-- 帮助 -->
-      <section class="section" id="help">
-        <div class="section-head"><h2>帮助</h2><span class="hint">不懂就看这里</span></div>
-        <div class="card pad" style="font-size:13.5px;color:var(--muted);">
-          <p style="margin-top:0;"><b>这是什么？</b> 一个把本地文章批量发布到微信公众号的工作台。默认是「演练」模式，不会真的发到公众号。</p>
-          <p><b>怎么用？</b> ① 在作品库上传文章和封面 → ② 点「安排发布时间」 → ③ 到时间后点「执行到点发布」。</p>
-          <p><b>会不会误发？</b> 顶部状态条会一直显示当前是「演练」还是「真实发布」；真实发布前还会再次确认。</p>
-          <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
-        </div>
-      </section>
-
       <!-- 高级信息（默认隐藏；普通视图测试会剥离本区块） -->
-      <section class="panel advanced-only section" id="advanced">
+      <section class="panel advanced-only section" id="advanced" style="margin-top:18px;">
         <div class="section-head"><h2>高级信息</h2><span class="hint">仅排错用，普通用户可忽略</span></div>
         <div class="card pad">
           <div id="advMeta" style="font-size:13px;color:var(--muted);"></div>
