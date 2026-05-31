@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from wechat_article_scheduler import db
@@ -28,6 +28,14 @@ from wechat_article_scheduler.web.user_copy import (
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
 from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
 from wechat_article_scheduler.web.uploads import handle_upload, save_cover_file
+from wechat_article_scheduler.web.trash import (
+    bulk_restore,
+    bulk_soft_delete,
+    list_trash_articles,
+    purge_trash,
+    restore_article,
+    soft_delete_article,
+)
 
 _TEMPLATE_PATH = Path(__file__).parent / "admin_template.html"
 _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exists() else "<html><body>模板缺失</body></html>"
@@ -77,6 +85,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                        j.adapter_mode, j.updated_at, a.title
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
+                WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
                 ORDER BY j.updated_at DESC, j.id DESC
                 LIMIT 10
                 """
@@ -110,7 +119,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 """
                 SELECT id, title, summary, status, source_path, cover_path,
                        created_at, updated_at
-                FROM articles ORDER BY id DESC LIMIT ?
+                FROM articles
+                WHERE deleted_at IS NULL OR deleted_at = ''
+                ORDER BY id DESC LIMIT ?
                 """,
                 (limit,),
             ).fetchall()
@@ -123,6 +134,54 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             out.append(row)
         return out
 
+    @app.get("/api/trash")
+    def trash_list(limit: int = 50) -> list[dict[str, Any]]:
+        with db.connect(cfg.database_path) as conn:
+            return list_trash_articles(conn, limit=limit)
+
+    @app.post("/api/articles/{article_id}/trash")
+    def trash_article(article_id: int) -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            if not soft_delete_article(conn, article_id):
+                raise HTTPException(status_code=404, detail="作品不存在或已在回收站")
+            conn.commit()
+        return {"ok": True, "article_id": article_id, "human": ["作品已移入回收站，相关待发布任务已取消"]}
+
+    @app.post("/api/articles/{article_id}/restore")
+    def restore_trashed_article(article_id: int) -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            if not restore_article(conn, article_id):
+                raise HTTPException(status_code=404, detail="回收站中未找到该作品")
+            conn.commit()
+        return {"ok": True, "article_id": article_id, "human": ["作品已从回收站恢复"]}
+
+    @app.post("/api/articles/bulk-trash")
+    def bulk_trash_articles(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        ids = [int(x) for x in (payload.get("ids") or [])]
+        with db.connect(cfg.database_path) as conn:
+            stats = bulk_soft_delete(conn, ids)
+            conn.commit()
+        return {"ok": True, **stats, "human": [f"已移入回收站 {stats['deleted']} 篇"]}
+
+    @app.post("/api/articles/bulk-restore")
+    def bulk_restore_articles(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        ids = [int(x) for x in (payload.get("ids") or [])]
+        with db.connect(cfg.database_path) as conn:
+            stats = bulk_restore(conn, ids)
+            conn.commit()
+        return {"ok": True, **stats, "human": [f"已恢复 {stats['restored']} 篇"]}
+
+    @app.post("/api/trash/purge")
+    def purge_trash_bin() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            result = purge_trash(cfg, conn)
+            conn.commit()
+        return {
+            "ok": True,
+            **result,
+            "human": [f"已彻底删除 {result['purged']} 篇回收站作品"],
+        }
+
     @app.get("/api/jobs")
     def jobs(limit: int = 50) -> list[dict[str, Any]]:
         with db.connect(cfg.database_path) as conn:
@@ -132,6 +191,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                        a.title
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
+                WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
+                  AND j.status != 'cancelled'
                 ORDER BY j.scheduled_at ASC
                 LIMIT ?
                 """,

@@ -68,6 +68,7 @@ def build_plan(config: AppConfig) -> dict[str, int]:
             """
             SELECT a.id FROM articles a
             WHERE a.status = 'imported'
+            AND (a.deleted_at IS NULL OR a.deleted_at = '')
             AND NOT EXISTS (
                 SELECT 1 FROM publish_jobs j
                 WHERE j.article_id = a.id AND j.status IN ('pending', 'running')

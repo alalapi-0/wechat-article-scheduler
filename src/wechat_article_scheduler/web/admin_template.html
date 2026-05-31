@@ -291,6 +291,7 @@
       <a href="#works" class="active"><span class="ico">▦</span> 作品库</a>
       <a href="#actions"><span class="ico">▶</span> 主操作</a>
       <a href="#queue"><span class="ico">⧗</span> 发布队列</a>
+      <a href="#trash"><span class="ico">⌫</span> 回收站</a>
       <a href="#events"><span class="ico">≣</span> 操作记录</a>
       <a href="#help"><span class="ico">?</span> 帮助</a>
       <a href="/debug"><span class="ico">⚙</span> 高级排错</a>
@@ -347,7 +348,22 @@
               <input type="file" id="articleInput" multiple accept=".md,.markdown,.txt,.html,.htm" hidden />
               <input type="file" id="coverInput" multiple accept="image/*" hidden />
             </div>
-            <div class="works" id="worksGrid" style="margin-top:10px;"></div>
+            <div class="upload-actions" style="margin-top:10px;">
+              <button class="btn-ghost btn-sm" id="btnBulkTrash" type="button">删除选中</button>
+            </div>
+            <div class="works" id="worksGrid" style="margin-top:8px;"></div>
+          </section>
+
+          <section class="section" id="trash">
+            <div class="section-head">
+              <h2>回收站</h2>
+              <span class="hint">可恢复或彻底删除</span>
+            </div>
+            <div class="upload-actions">
+              <button class="btn-ghost btn-sm" id="btnBulkRestore" type="button">恢复选中</button>
+              <button class="btn-ghost btn-sm" id="btnPurgeTrash" type="button">清空回收站</button>
+            </div>
+            <div class="works" id="trashGrid" style="margin-top:8px;"></div>
           </section>
         </div>
 
@@ -426,6 +442,8 @@
 <script>
 let COPY = {};
 const pending = { articles: [], covers: [] };
+const selectedWorkIds = new Set();
+const selectedTrashIds = new Set();
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function L(map, key, fallback){ if(map && key!=null && map[key]!=null) return map[key]; return fallback!=null?fallback:(key!=null?key:''); }
@@ -445,6 +463,9 @@ async function boot(){
   el('btnPlan').addEventListener('click', () => runAction('plan', '/api/plan'));
   el('btnRun').addEventListener('click', onRun);
   el('btnRefresh').addEventListener('click', refreshAll);
+  el('btnBulkTrash').addEventListener('click', bulkTrashSelected);
+  el('btnBulkRestore').addEventListener('click', bulkRestoreSelected);
+  el('btnPurgeTrash').addEventListener('click', purgeTrashBin);
   el('modalClose').addEventListener('click', () => el('modalBack').classList.remove('open'));
   el('modalBack').addEventListener('click', e => { if(e.target===el('modalBack')) el('modalBack').classList.remove('open'); });
   renderSteps();
@@ -550,9 +571,10 @@ function showResult(lines){
 /* ---------- 刷新与渲染 ---------- */
 async function refreshAll(){
   try {
-    const [ov, arts] = await Promise.all([
+    const [ov, arts, trash] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch('/api/articles')).json(),
+      (await fetch('/api/trash')).json(),
     ]);
     renderSafety(ov.status, ov.publish_preflight);
     renderStats(ov);
@@ -560,6 +582,7 @@ async function refreshAll(){
     renderQueue(ov.recent_jobs);
     renderEvents(ov.recent_events);
     renderWorks(arts);
+    renderTrash(trash);
     renderAdvanced(ov);
   } catch(e){
     setAlert('err', '读取数据失败：' + e);
@@ -625,20 +648,113 @@ function renderWorks(arts){
       : `<div class="ph">未设置封面</div>`;
     const statusLbl = L(COPY.article_status, a.status, a.status);
     const summary = a.has_summary ? esc(a.summary) : '<i>未填写摘要</i>';
+    const checked = selectedWorkIds.has(a.id) ? 'checked' : '';
     return `
       <div class="work">
         <div class="thumb">${thumb}</div>
         <div class="body">
-          <div class="title">${esc(a.title||'（无标题）')}</div>
+          <div class="title"><label><input type="checkbox" data-sel-work="${a.id}" ${checked}/> ${esc(a.title||'（无标题）')}</label></div>
           <div class="summary">${summary}</div>
           <div class="meta"><span class="pill ${a.status==='published'?'ok':''}">${esc(statusLbl)}</span></div>
           <div class="acts">
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
             <button class="btn-ghost btn-sm" onclick="changeCover(${a.id})">换封面</button>
+            <button class="btn-ghost btn-sm" onclick="trashArticle(${a.id})">删除</button>
           </div>
         </div>
       </div>`;
   }).join('');
+  grid.querySelectorAll('input[data-sel-work]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const id = Number(inp.getAttribute('data-sel-work'));
+      if (inp.checked) selectedWorkIds.add(id); else selectedWorkIds.delete(id);
+    });
+  });
+}
+
+function renderTrash(items){
+  const grid = el('trashGrid');
+  if (!items || !items.length) {
+    grid.innerHTML = `<div class="empty">回收站为空</div>`;
+    return;
+  }
+  grid.innerHTML = items.map(a => {
+    const checked = selectedTrashIds.has(a.id) ? 'checked' : '';
+    return `
+      <div class="work">
+        <div class="body" style="grid-column:1/-1;">
+          <div class="title"><label><input type="checkbox" data-sel-trash="${a.id}" ${checked}/> ${esc(a.title||'（无标题）')}</label></div>
+          <div class="summary" style="color:var(--muted);font-size:12px;">删除于 ${esc((a.deleted_at||'').replace('T',' '))}</div>
+          <div class="acts">
+            <button class="btn-ghost btn-sm" onclick="restoreArticle(${a.id})">恢复</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  grid.querySelectorAll('input[data-sel-trash]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const id = Number(inp.getAttribute('data-sel-trash'));
+      if (inp.checked) selectedTrashIds.add(id); else selectedTrashIds.delete(id);
+    });
+  });
+}
+
+async function trashArticle(id){
+  if (!window.confirm('移入回收站？相关待发布任务将取消。')) return;
+  try {
+    const d = await (await fetch(`/api/articles/${id}/trash`, { method:'POST' })).json();
+    selectedWorkIds.delete(id);
+    setAlert('ok', (d.human||['已移入回收站']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '删除失败：'+e); }
+}
+
+async function restoreArticle(id){
+  try {
+    const d = await (await fetch(`/api/articles/${id}/restore`, { method:'POST' })).json();
+    selectedTrashIds.delete(id);
+    setAlert('ok', (d.human||['已恢复']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '恢复失败：'+e); }
+}
+
+async function bulkTrashSelected(){
+  const ids = [...selectedWorkIds];
+  if (!ids.length) { setAlert('warn', '请先勾选要删除的作品'); return; }
+  if (!window.confirm(`将 ${ids.length} 篇作品移入回收站？`)) return;
+  try {
+    const d = await (await fetch('/api/articles/bulk-trash', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ ids }),
+    })).json();
+    selectedWorkIds.clear();
+    setAlert('ok', (d.human||['批量删除完成']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '批量删除失败：'+e); }
+}
+
+async function bulkRestoreSelected(){
+  const ids = [...selectedTrashIds];
+  if (!ids.length) { setAlert('warn', '请先勾选要恢复的作品'); return; }
+  try {
+    const d = await (await fetch('/api/articles/bulk-restore', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ ids }),
+    })).json();
+    selectedTrashIds.clear();
+    setAlert('ok', (d.human||['批量恢复完成']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '批量恢复失败：'+e); }
+}
+
+async function purgeTrashBin(){
+  if (!window.confirm('彻底清空回收站？本地文件与数据库记录将不可恢复。')) return;
+  try {
+    const d = await (await fetch('/api/trash/purge', { method:'POST' })).json();
+    selectedTrashIds.clear();
+    setAlert('ok', (d.human||['回收站已清空']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '清空失败：'+e); }
 }
 
 async function preview(id){

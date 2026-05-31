@@ -22,11 +22,13 @@ def test_init_db_applies_migrations(tmp_path: Path) -> None:
         }
         assert "002" in versions
         assert "004" in versions
+        assert "006" in versions
         cols = {row[1] for row in conn.execute("PRAGMA table_info(articles)").fetchall()}
         # 产品重定位（Round 43）后 review_status 已被迁移 004 删除
         assert "review_status" not in cols
         assert "collection_id" in cols
         assert "cover_path" in cols
+        assert "deleted_at" in cols
 
 
 def test_migrations_are_idempotent(tmp_path: Path) -> None:

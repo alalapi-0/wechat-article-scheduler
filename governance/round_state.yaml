@@ -1,14 +1,14 @@
 current_round:
-  id: round_049
-  name: Round 49 - 公众号效果预览修正
+  id: round_050
+  name: Round 50 - 作品回收站与可逆删除
   status: active
-  updated_at: '2026-05-31T05:37:12.069533+00:00'
+  updated_at: '2026-05-31T05:38:33.790169+00:00'
 last_completed_round:
-  id: round_048
-  completed_at: '2026-05-31T05:37:12.069533+00:00'
+  id: round_049
+  completed_at: '2026-05-31T05:38:33.790169+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 预览弹窗展示可读正文，不显示 HTML 标签源码
-- Web 预览与真实 draft 共用同源渲染入口
+- 作品可从页面删除进入回收站，作品库/队列默认隐藏
+- 回收站作品可恢复且不影响未删除作品
 next_actions:
-- 推进 Round 50：作品回收站与可逆删除
+- 推进 Round 51：清空回收站与彻底删除

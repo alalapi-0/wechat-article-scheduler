@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import Any
 
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.publish_body import publish_body_for
+from wechat_article_scheduler.publish_preview import _maybe_unescape_html
 
 
 def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
@@ -36,6 +38,7 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
         SELECT COUNT(*) AS cnt FROM publish_jobs j
         JOIN articles a ON a.id = j.article_id
         WHERE j.status = 'pending'
+          AND (a.deleted_at IS NULL OR a.deleted_at = '')
           AND (a.cover_path IS NULL OR a.cover_path = '')
         """
     ).fetchone()["cnt"]
@@ -61,6 +64,7 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
         """
         SELECT COUNT(*) AS cnt FROM articles
         WHERE length(summary) > 120
+          AND (deleted_at IS NULL OR deleted_at = '')
         """
     ).fetchone()["cnt"]
     checks.append(
@@ -74,6 +78,38 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             else f"有 {long_digest} 篇文章摘要超过 120 字，发布前会自动截断",
         }
     )
+
+    quality = _content_quality_issues(conn)
+    if quality["duplicate_title"]:
+        checks.append(
+            {
+                "id": "duplicate_title",
+                "ok": False,
+                "required": will_publish,
+                "label": "标题重复",
+                "detail": f"有 {quality['duplicate_title']} 篇待发布作品正文含与标题重复的首标题",
+            }
+        )
+    if quality["empty_body"]:
+        checks.append(
+            {
+                "id": "empty_body",
+                "ok": False,
+                "required": will_publish,
+                "label": "正文为空",
+                "detail": f"有 {quality['empty_body']} 篇待发布作品正文为空",
+            }
+        )
+    if quality["escaped_html"]:
+        checks.append(
+            {
+                "id": "escaped_html",
+                "ok": False,
+                "required": False,
+                "label": "疑似 HTML 源码",
+                "detail": f"有 {quality['escaped_html']} 篇作品正文像转义后的 HTML，预览可能异常",
+            }
+        )
 
     blocking = [c for c in checks if c.get("required") and not c["ok"]]
     human: list[str] = []
@@ -95,4 +131,32 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
         "publish_enabled": publish_on,
         "checks": checks,
         "human": human,
+        "content_quality": quality,
+    }
+
+
+def _content_quality_issues(conn: Any) -> dict[str, int]:
+    rows = conn.execute(
+        """
+        SELECT a.id, a.title, a.body
+        FROM articles a
+        JOIN publish_jobs j ON j.article_id = a.id
+        WHERE j.status = 'pending'
+          AND (a.deleted_at IS NULL OR a.deleted_at = '')
+        """
+    ).fetchall()
+    duplicate_title = empty_body = escaped_html = 0
+    for row in rows:
+        title = (row["title"] or "").strip()
+        body = row["body"] or ""
+        if not body.strip():
+            empty_body += 1
+        if title and publish_body_for(title, body) != body.strip():
+            duplicate_title += 1
+        if "&lt;" in body and _maybe_unescape_html(body) != body:
+            escaped_html += 1
+    return {
+        "duplicate_title": duplicate_title,
+        "empty_body": empty_body,
+        "escaped_html": escaped_html,
     }

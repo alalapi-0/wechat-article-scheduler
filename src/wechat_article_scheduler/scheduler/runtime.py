@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from datetime import datetime
@@ -9,6 +10,7 @@ from datetime import datetime
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.scheduler.domain import execute_due_job, record_dry_run_job
+from wechat_article_scheduler.publish_body import publish_body_for
 from wechat_article_scheduler.scheduler.policies import (
     max_retries_for,
     should_skip_max_retries,
@@ -16,6 +18,16 @@ from wechat_article_scheduler.scheduler.policies import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _content_block_reason(title: str | None, body: str | None) -> str | None:
+    raw_body = body or ""
+    if not raw_body.strip():
+        return "正文为空"
+    t = (title or "").strip()
+    if t and publish_body_for(t, raw_body) != raw_body.strip():
+        return "标题重复"
+    return None
 
 
 def run_due_jobs(config: AppConfig) -> dict[str, int]:
@@ -32,6 +44,7 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
         "failed": 0,
         "dry_run": 0,
         "skipped_max_retries": 0,
+        "skipped_content": 0,
     }
     now = datetime.now().isoformat(timespec="seconds")
     published_dir = config.published_dir
@@ -46,6 +59,7 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
             FROM publish_jobs j
             JOIN articles a ON a.id = j.article_id
             WHERE j.status = 'pending'
+              AND (a.deleted_at IS NULL OR a.deleted_at = '')
             ORDER BY j.scheduled_at ASC
             """
         ).fetchall()
@@ -69,6 +83,23 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
 
             if config.dry_run:
                 record_dry_run_job(conn, job, stats=stats)
+                continue
+
+            block_reason = _content_block_reason(job["title"], job["body"])
+            if (
+                block_reason
+                and config.wechat_mode == "real"
+                and config.wechat_enable_publish
+            ):
+                stats["skipped_content"] += 1
+                logger.warning("任务 %s 因内容质量跳过: %s", job_id, block_reason)
+                db.log_event(
+                    conn,
+                    entity_type="publish_job",
+                    entity_id=job_id,
+                    event_type="publish_blocked_content",
+                    payload=json.dumps({"reason": block_reason}),
+                )
                 continue
 
             execute_due_job(
