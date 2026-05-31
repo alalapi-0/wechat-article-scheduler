@@ -267,7 +267,7 @@ def test_batch_schedule_assign_direct(tmp_path: Path) -> None:
 def test_index_has_schedule_ui(client) -> None:
     c, _cfg = client
     html = c.get("/").text
-    assert "批量安排时间" in html
+    assert "批量发布设置" in html
     assert "scheduleModalBack" in html
     assert "flatpickr" in html
     assert "安排时间" in html

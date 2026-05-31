@@ -39,9 +39,9 @@ def test_round_order_contains_governance_round(ag):
 
 
 def test_round_order_covers_round_0_through_54(ag):
-    assert len(ag.ROUND_ORDER) == 55
+    assert len(ag.ROUND_ORDER) == 56
     assert ag.ROUND_ORDER[0] == "round_000"
-    assert ag.ROUND_ORDER[-1] == "round_054"
+    assert ag.ROUND_ORDER[-1] == "round_055"
     for round_id in ag.ROUND_ORDER:
         assert round_id in ag.ROUND_META
         assert ag.ROUND_META[round_id]["name"]
@@ -125,6 +125,8 @@ def test_round_meta_aligns_with_rounds_doc_themes(ag):
     assert "彻底删除" in ag.ROUND_META["round_051"]["name"]
     assert "批量管理" in ag.ROUND_META["round_052"]["name"]
     assert "内容质量" in ag.ROUND_META["round_053"]["name"]
+    assert "真实微信" in ag.ROUND_META["round_054"]["name"]
+    assert "Auto-Approved" in ag.ROUND_META["round_055"]["name"]
 
 
 def test_suggest_next_command_completed(ag):

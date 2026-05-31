@@ -37,6 +37,12 @@ from wechat_article_scheduler.web.user_copy import (
     humanize_schedule_single_result,
 )
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
+from wechat_article_scheduler.publish_config import (
+    defaults_from_rules,
+    human_publish_config_summary,
+    parse_publish_config,
+    publish_config_from_payload,
+)
 from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
 from wechat_article_scheduler.web.covers import (
     batch_set_cover_from_article,
@@ -84,15 +90,50 @@ def _is_under_any(path: Path, roots: list[Path]) -> bool:
     return False
 
 
+def _job_publish_config(row: Any, config: AppConfig):
+    raw = None
+    try:
+        raw = row["publish_config_json"]
+    except (IndexError, KeyError):
+        pass
+    return parse_publish_config(raw, defaults=defaults_from_rules(config))
+
+
+def _pending_auto_execute_job_count(config: AppConfig) -> int:
+    with db.connect(config.database_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT j.publish_config_json
+            FROM publish_jobs j
+            JOIN articles a ON a.id = j.article_id
+            WHERE j.status = 'pending'
+              AND (a.deleted_at IS NULL OR a.deleted_at = '')
+            """
+        ).fetchall()
+    count = 0
+    for row in rows:
+        pub_cfg = _job_publish_config(row, config)
+        if pub_cfg.auto_execute:
+            count += 1
+    return count
+
+
 def _web_auto_runner_state(config: AppConfig) -> tuple[bool, str]:
-    """Web 工作台到点自动执行开关；真正发布仍要求显式人工路径。"""
+    """Web 工作台到点自动执行：仅处理已勾选「到点自动执行」的任务。"""
     if not getattr(config, "web_auto_run_due", False):
         return False, "WEB_AUTO_RUN_DUE=false"
     if config.dry_run:
         return False, "DRY_RUN=true"
-    if config.wechat_mode == "real" and config.wechat_enable_publish:
-        return False, "真实发布开关已开启，需人工点击执行或使用 CLI scheduler"
-    return True, "已开启"
+    auto_count = _pending_auto_execute_job_count(config)
+    if auto_count <= 0:
+        return False, "暂无到点自动执行任务"
+    if (
+        config.wechat_mode == "real"
+        and config.wechat_enable_publish
+        and not getattr(config, "web_auto_publish", True)
+    ):
+        return False, "WEB_AUTO_PUBLISH=false，真实发布需手动执行到点"
+    return True, f"已开启（{auto_count} 个到点自动执行任务）"
 
 
 def _pending_publish_job_count(config: AppConfig) -> int:
@@ -136,19 +177,19 @@ async def _sync_web_auto_runner(app: FastAPI, config: AppConfig) -> None:
         logger.info("Web 到点自动执行未启动：%s", reason)
         return
 
-    pending_count = _pending_publish_job_count(config)
+    pending_count = _pending_auto_execute_job_count(config)
     if pending_count <= 0:
-        await _stop_web_auto_runner(app, reason="暂无待发布任务")
-        logger.info("Web 到点自动执行已停止：暂无待发布任务")
+        await _stop_web_auto_runner(app, reason="暂无到点自动执行任务")
+        logger.info("Web 到点自动执行已停止：暂无到点自动执行任务")
         return
 
     if _runner_task(app) is not None:
         app.state.web_auto_runner_active = True
-        app.state.web_auto_runner_reason = f"已开启（{pending_count} 个待发布任务）"
+        app.state.web_auto_runner_reason = f"已开启（{pending_count} 个到点自动执行任务）"
         return
 
     app.state.web_auto_runner_active = True
-    app.state.web_auto_runner_reason = f"已开启（{pending_count} 个待发布任务）"
+    app.state.web_auto_runner_reason = f"已开启（{pending_count} 个到点自动执行任务）"
     app.state.web_auto_runner_task = asyncio.create_task(_web_auto_run_loop(config, app))
 
 
@@ -157,22 +198,29 @@ async def _web_auto_run_loop(config: AppConfig, app: FastAPI) -> None:
     logger.info("Web 到点自动执行已启动：每 %ss 检查一次", poll)
     while True:
         try:
-            pending_before = _pending_publish_job_count(config)
+            pending_before = _pending_auto_execute_job_count(config)
             if pending_before <= 0:
-                await _stop_web_auto_runner(app, reason="暂无待发布任务")
+                await _stop_web_auto_runner(app, reason="暂无到点自动执行任务")
                 return
-            stats = run_due_jobs(config)
+            stats = run_due_jobs(config, only_auto_execute=True)
             if any(stats.get(k) for k in ("processed", "drafted", "failed", "dry_run")):
                 logger.info("Web 到点自动执行结果: %s", stats)
-            pending_after = _pending_publish_job_count(config)
+            pending_after = _pending_auto_execute_job_count(config)
             if pending_after <= 0:
-                await _stop_web_auto_runner(app, reason="暂无待发布任务")
+                await _stop_web_auto_runner(app, reason="暂无到点自动执行任务")
                 return
             app.state.web_auto_runner_active = True
-            app.state.web_auto_runner_reason = f"已开启（{pending_after} 个待发布任务）"
+            app.state.web_auto_runner_reason = f"已开启（{pending_after} 个到点自动执行任务）"
         except Exception:  # noqa: BLE001 - 后台循环不应拖垮 Web 工作台
             logger.exception("Web 到点自动执行失败")
         await asyncio.sleep(poll)
+
+
+def _enrich_job_row(row: dict[str, Any], config: AppConfig) -> dict[str, Any]:
+    pub_cfg = parse_publish_config(row.get("publish_config_json"), defaults=defaults_from_rules(config))
+    row["publish_config"] = pub_cfg.normalized().__dict__
+    row["publish_config_label"] = " · ".join(human_publish_config_summary(pub_cfg))
+    return row
 
 
 def create_app(config: AppConfig | None = None) -> FastAPI:
@@ -219,6 +267,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "dry_run": cfg.dry_run,
             "wechat_enable_publish": cfg.wechat_enable_publish,
             "web_auto_run_due": cfg.web_auto_run_due,
+            "web_auto_publish": cfg.web_auto_publish,
             "web_auto_runner_active": bool(getattr(app.state, "web_auto_runner_active", False)),
             "web_auto_runner_reason": str(getattr(app.state, "web_auto_runner_reason", "")),
             "database": str(cfg.database_path),
@@ -237,7 +286,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             recent_jobs = conn.execute(
                 """
                 SELECT j.id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       j.adapter_mode, j.updated_at, a.title
+                       j.adapter_mode, j.updated_at, j.publish_config_json, a.title
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
                 WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
@@ -249,7 +298,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             preflight = build_publish_preflight(cfg, conn)
         recent_jobs_out = []
         for r in recent_jobs:
-            row = dict(r)
+            row = _enrich_job_row(dict(r), cfg)
             row["scheduled_at_label"] = format_scheduled_at(row.get("scheduled_at"))
             recent_jobs_out.append(row)
         return {
@@ -361,7 +410,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             rows = conn.execute(
                 """
                 SELECT j.id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       a.title
+                       j.publish_config_json, a.title
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
                 WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
@@ -373,7 +422,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             ).fetchall()
         out: list[dict[str, Any]] = []
         for r in rows:
-            row = dict(r)
+            row = _enrich_job_row(dict(r), cfg)
             row["scheduled_at_label"] = format_scheduled_at(row.get("scheduled_at"))
             out.append(row)
         return out
@@ -556,7 +605,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         raw = str(payload.get("scheduled_at") or "").strip()
         try:
             when = parse_scheduled_at(raw)
-            result = assign_article_schedule(cfg, article_id, when)
+            pub_cfg = publish_config_from_payload(payload)
+            result = assign_article_schedule(cfg, article_id, when, publish_config=pub_cfg)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         result["ok"] = True
@@ -578,6 +628,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="间隔单位无效")
         try:
             anchor = parse_scheduled_at(raw_anchor)
+            pub_cfg = publish_config_from_payload(payload)
             stats = assign_batch_schedule(
                 cfg,
                 ids,
@@ -585,6 +636,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 sort_order=sort_order,  # type: ignore[arg-type]
                 interval=interval,
                 interval_unit=interval_unit,  # type: ignore[arg-type]
+                publish_config=pub_cfg,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc

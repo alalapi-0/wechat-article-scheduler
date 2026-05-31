@@ -18,3 +18,12 @@ schedule:
   min_hours_between: 4
   # 首选发布时间（24h，本地时区）
   preferred_hours: [9, 14, 20]
+
+publish:
+  # draft = 仅进草稿箱；publish = 到点正式发布（即使 WECHAT_ENABLE_PUBLISH=false 也可按任务覆盖）
+  default_action: draft
+  auto_execute: false
+  need_open_comment: false
+  only_fans_can_comment: false
+  author: ""
+  content_source_url: ""

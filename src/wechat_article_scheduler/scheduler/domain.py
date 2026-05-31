@@ -9,8 +9,14 @@ from pathlib import Path
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters import get_adapter
+from wechat_article_scheduler.adapters.base import DraftOptions
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.parser import clamp_summary
+from wechat_article_scheduler.publish_config import (
+    defaults_from_rules,
+    parse_publish_config,
+    should_submit_publish,
+)
 from wechat_article_scheduler.scheduler.policies import safe_payload
 
 logger = logging.getLogger(__name__)
@@ -63,11 +69,22 @@ def execute_due_job(
                     ensure_ascii=False,
                 ),
             )
+        pub_cfg = parse_publish_config(
+            _row_get(job, "publish_config_json"),
+            defaults=defaults_from_rules(config),
+        )
+        draft_opts = DraftOptions(
+            need_open_comment=1 if pub_cfg.need_open_comment else 0,
+            only_fans_can_comment=1 if pub_cfg.only_fans_can_comment else 0,
+            author=pub_cfg.author,
+            content_source_url=pub_cfg.content_source_url,
+        )
         draft = adapter.create_draft(
             title=job["title"],
             summary=digest_summary,
             body=job["body"],
             cover_path=_row_get(job, "cover_path"),
+            options=draft_opts,
         )
         conn.execute(
             """
@@ -76,7 +93,8 @@ def execute_due_job(
             """,
             (article_id, draft.media_id, safe_payload(draft.raw_response)),
         )
-        pub = adapter.submit_publish(draft.media_id)
+        force_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
+        pub = adapter.submit_publish(draft.media_id, force=force_publish)
         conn.execute(
             "UPDATE publish_jobs SET status = 'done', updated_at = datetime('now') WHERE id = ?",
             (job_id,),

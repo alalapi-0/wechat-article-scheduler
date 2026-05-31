@@ -9,6 +9,11 @@ from datetime import datetime
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.publish_config import (
+    defaults_from_rules,
+    parse_publish_config,
+    should_submit_publish,
+)
 from wechat_article_scheduler.scheduler.domain import execute_due_job, record_dry_run_job
 from wechat_article_scheduler.scheduler.policies import (
     max_retries_for,
@@ -49,12 +54,12 @@ def _job_is_due(raw: str | None, *, now: datetime) -> bool:
     return scheduled.replace(microsecond=0) <= compare_now
 
 
-def run_due_jobs(config: AppConfig) -> dict[str, int]:
+def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[str, int]:
     """
     处理 scheduled_at <= now 的 pending 任务：创建草稿、标记完成、移动文章。
 
+    only_auto_execute=True 时仅处理 publish_config.auto_execute 为真的任务（Web 后台自动执行）。
     DRY_RUN=true 时只记录计划动作，不调用适配器。
-    真实发布是否联网由 WECHAT_MODE / WECHAT_ENABLE_PUBLISH 控制；不再有"审核"闸门。
     返回：processed, skipped_future, failed, dry_run, skipped_max_retries
     """
     stats = {
@@ -65,6 +70,7 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
         "skipped_max_retries": 0,
         "skipped_content": 0,
         "drafted": 0,
+        "skipped_manual": 0,
     }
     now = datetime.now().replace(microsecond=0)
     published_dir = config.published_dir
@@ -75,6 +81,7 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
         jobs = conn.execute(
             """
             SELECT j.id AS job_id, j.article_id, j.scheduled_at, j.status, j.retry_count,
+                   j.publish_config_json,
                    a.title, a.summary, a.body, a.source_path, a.cover_path
             FROM publish_jobs j
             JOIN articles a ON a.id = j.article_id
@@ -90,6 +97,14 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
                 continue
 
             job_id = int(job["job_id"])
+            pub_cfg = parse_publish_config(
+                job["publish_config_json"] if "publish_config_json" in job.keys() else None,
+                defaults=defaults_from_rules(config),
+            )
+            if only_auto_execute and not pub_cfg.auto_execute:
+                stats["skipped_manual"] += 1
+                continue
+
             retry_count = int(job["retry_count"] or 0)
             if should_skip_max_retries(retry_count, max_retries):
                 stats["skipped_max_retries"] += 1
@@ -106,11 +121,8 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
                 continue
 
             block_reason = _content_block_reason(job["title"], job["body"])
-            if (
-                block_reason
-                and config.wechat_mode == "real"
-                and config.wechat_enable_publish
-            ):
+            will_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
+            if block_reason and config.wechat_mode == "real" and will_publish:
                 stats["skipped_content"] += 1
                 logger.warning("任务 %s 因内容质量跳过: %s", job_id, block_reason)
                 db.log_event(

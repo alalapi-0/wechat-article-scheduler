@@ -7,6 +7,11 @@ from typing import Any, Literal
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.publish_config import (
+    PublishConfig,
+    defaults_from_rules,
+    publish_config_to_json,
+)
 
 SortOrder = Literal["asc", "desc"]
 IntervalUnit = Literal["minutes", "hours"]
@@ -39,30 +44,52 @@ def _upsert_pending_job(
     article_id: int,
     scheduled_at: datetime,
     adapter_mode: str,
+    publish_config: PublishConfig | None = None,
 ) -> bool:
     """创建或更新 pending 任务。返回 True 表示新建，False 表示更新。"""
     iso = scheduled_at.isoformat(timespec="seconds")
+    config_json = publish_config_to_json(publish_config) if publish_config else None
     pending = conn.execute(
         "SELECT id FROM publish_jobs WHERE article_id = ? AND status = 'pending' LIMIT 1",
         (article_id,),
     ).fetchone()
     if pending:
+        if config_json is not None:
+            conn.execute(
+                """
+                UPDATE publish_jobs
+                SET scheduled_at = ?, publish_config_json = ?, updated_at = datetime('now')
+                WHERE id = ?
+                """,
+                (iso, config_json, pending["id"]),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE publish_jobs
+                SET scheduled_at = ?, updated_at = datetime('now')
+                WHERE id = ?
+                """,
+                (iso, pending["id"]),
+            )
+        return False
+    if config_json is not None:
         conn.execute(
             """
-            UPDATE publish_jobs
-            SET scheduled_at = ?, updated_at = datetime('now')
-            WHERE id = ?
+            INSERT INTO publish_jobs
+            (article_id, scheduled_at, status, adapter_mode, publish_config_json)
+            VALUES (?, ?, 'pending', ?, ?)
             """,
-            (iso, pending["id"]),
+            (article_id, iso, adapter_mode, config_json),
         )
-        return False
-    conn.execute(
-        """
-        INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
-        VALUES (?, ?, 'pending', ?)
-        """,
-        (article_id, iso, adapter_mode),
-    )
+    else:
+        conn.execute(
+            """
+            INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
+            VALUES (?, ?, 'pending', ?)
+            """,
+            (article_id, iso, adapter_mode),
+        )
     return True
 
 
@@ -72,9 +99,11 @@ def assign_article_schedule(
     scheduled_at: datetime,
     *,
     now: datetime | None = None,
+    publish_config: PublishConfig | None = None,
 ) -> dict[str, Any]:
-    """为单篇文章设定发布时间。"""
+    """为单篇文章设定发布时间与发布配置。"""
     when = ensure_future(scheduled_at, now=now)
+    pub_cfg = publish_config or defaults_from_rules(config)
     with db.connect(config.database_path) as conn:
         row = conn.execute(
             """
@@ -93,6 +122,7 @@ def assign_article_schedule(
             article_id=article_id,
             scheduled_at=when,
             adapter_mode=config.wechat_mode,
+            publish_config=pub_cfg,
         )
         db.log_event(
             conn,
@@ -107,6 +137,7 @@ def assign_article_schedule(
         "title": row["title"],
         "scheduled_at": when.isoformat(timespec="seconds"),
         "created": created,
+        "publish_config": pub_cfg.normalized().__dict__,
     }
 
 
@@ -148,8 +179,10 @@ def assign_batch_schedule(
     interval: int = 5,
     interval_unit: IntervalUnit = "minutes",
     now: datetime | None = None,
+    publish_config: PublishConfig | None = None,
 ) -> dict[str, int]:
-    """批量错峰安排发布时间。"""
+    """批量错峰安排发布时间与统一发布配置。"""
+    pub_cfg = (publish_config or defaults_from_rules(config)).normalized()
     unique_ids = []
     seen: set[int] = set()
     for raw in article_ids:
@@ -191,6 +224,7 @@ def assign_batch_schedule(
                 article_id=article_id,
                 scheduled_at=when,
                 adapter_mode=config.wechat_mode,
+                publish_config=pub_cfg,
             )
             if created:
                 stats["scheduled"] += 1
@@ -204,4 +238,4 @@ def assign_batch_schedule(
             )
         conn.commit()
 
-    return stats
+    return {**stats, "publish_config": pub_cfg.normalized().__dict__}

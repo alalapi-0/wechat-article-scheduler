@@ -1198,6 +1198,25 @@
   - [ ] README / 帮助文案
   - [ ] agent_gate round_054 冒烟
 
+### Round 55 - Auto-Approved Real API Pipeline
+
+- 目标：真实微信 API 生成草稿后默认自动通过（无人工审核等待），并继续 scan/run-once 下游，报告可审计。  
+- 范围：`scripts/auto_approve_pipeline.py`；`real_api_check` 的 auto_approve 元数据；`reports/auto_approve_pipeline/`；环境变量 `AUTO_APPROVE_GENERATIONS` / `REVIEW_MODE`。  
+- 非目标：移除人工发布确认护栏（`WECHAT_ENABLE_PUBLISH=true` 时 UI 仍须确认）；默认自动 freepublish/submit。  
+- 输入：Round 54 real_api_check、本地 `.env`（`WECHAT_MODE=real` + 草稿-only）。  
+- 输出：每轮 pipeline 报告（JSON + Markdown）；样本带 `review_status=auto_approved` 元数据。  
+- 验收标准：`auto_approve_pipeline --round N` 在 real 模式下完成 ≥3 条草稿样本；gate 冒烟通过；不泄露 secret。  
+- 建议测试/冒烟命令：`python3 scripts/auto_approve_pipeline.py --round 1 --samples 3`；`python3 scripts/agent_gate.py gate`。  
+- 退出标准：失败时报告含可读错误；切回人工模式：`REVIEW_MODE=manual` 且 `AUTO_APPROVE_GENERATIONS=false`。  
+- 风险：误创建过多公众号草稿；与历史「审核」概念混淆（本仓库 Round 43 已移除审核，此处仅指 pipeline 元数据）。  
+- 回滚点：仅保留 `real_api_check`，禁用 `auto_approve_pipeline`。  
+- 交付项：
+  - [ ] auto_approve_pipeline 脚本
+  - [ ] real_api_check auto_approve 元数据
+  - [ ] reports/auto_approve_pipeline 报告
+  - [ ] README / .env.example 说明
+  - [ ] agent_gate round_055 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

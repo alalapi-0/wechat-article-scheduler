@@ -319,6 +319,22 @@
   .schedule-form .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .schedule-form .row-inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
   .schedule-form .preview-count { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .publish-config-block {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--surface-2, #fafafa);
+  }
+  .publish-config-block .block-title { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+  .publish-config-block label.row-check {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .publish-config-block label.row-check input { margin: 0; }
   .schedule-form-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
   .flatpickr-input { cursor: pointer; }
 
@@ -421,7 +437,7 @@
               <button class="btn-ghost btn-sm" id="btnDeselectAll" type="button">取消全选</button>
               <span class="sel-count" id="selectedWorkCount">已选 0 篇</span>
               <button class="btn-ghost btn-sm" id="btnBulkCover" type="button" disabled>批量设置封面</button>
-              <button class="btn-ghost btn-sm" id="btnBulkSchedule" type="button" disabled>批量安排时间</button>
+              <button class="btn-ghost btn-sm" id="btnBulkSchedule" type="button" disabled>批量发布设置</button>
               <button class="btn-ghost btn-sm" id="btnBulkTrash" type="button" disabled>删除选中</button>
             </div>
             <div class="works-wrap" id="worksWrap">
@@ -573,6 +589,7 @@
         <span>发布时间</span>
         <input type="text" id="scheduleSingleAt" placeholder="选择日期与时间" />
       </label>
+      <div class="publish-config-block" id="scheduleSinglePublishConfig"></div>
       <div class="schedule-form-actions">
         <button class="btn-primary" id="scheduleSingleApply" type="button">保存</button>
         <button class="btn-ghost" id="scheduleSingleCancel" type="button">取消</button>
@@ -602,6 +619,7 @@
           </div>
         </label>
       </div>
+      <div class="publish-config-block" id="scheduleBatchPublishConfig"></div>
       <p class="preview-count" id="scheduleBatchPreview">将安排 0 篇作品</p>
       <div class="schedule-form-actions">
         <button class="btn-primary" id="scheduleBatchApply" type="button">应用到选中作品</button>
@@ -644,6 +662,54 @@ function flatpickrDefaults(){
   };
 }
 
+function publishConfigHtml(prefix) {
+  return `
+    <p class="block-title">发布配置（批量统一应用）</p>
+    <label>
+      <span>发布方式</span>
+      <select id="${prefix}PublishAction">
+        <option value="draft">仅进草稿箱</option>
+        <option value="publish">正式发布到公众号</option>
+      </select>
+    </label>
+    <label class="row-check">
+      <input type="checkbox" id="${prefix}AutoExecute" checked />
+      <span>到点自动执行（无需手动点「执行到点发布」）</span>
+    </label>
+    <label class="row-check">
+      <input type="checkbox" id="${prefix}OpenComment" />
+      <span>开启留言</span>
+    </label>
+    <label class="row-check">
+      <input type="checkbox" id="${prefix}FansOnlyComment" />
+      <span>仅粉丝可留言</span>
+    </label>
+    <label>
+      <span>作者（可选）</span>
+      <input type="text" id="${prefix}Author" placeholder="留空则不带作者" />
+    </label>
+    <label>
+      <span>原文链接（可选）</span>
+      <input type="text" id="${prefix}SourceUrl" placeholder="https://..." />
+    </label>`;
+}
+
+function readPublishConfig(prefix) {
+  return {
+    publish_action: el(prefix + 'PublishAction').value,
+    auto_execute: el(prefix + 'AutoExecute').checked,
+    need_open_comment: el(prefix + 'OpenComment').checked,
+    only_fans_can_comment: el(prefix + 'FansOnlyComment').checked,
+    author: (el(prefix + 'Author').value || '').trim(),
+    content_source_url: (el(prefix + 'SourceUrl').value || '').trim(),
+  };
+}
+
+function mountPublishConfigForms() {
+  el('scheduleSinglePublishConfig').innerHTML = publishConfigHtml('scheduleSingle');
+  el('scheduleBatchPublishConfig').innerHTML = publishConfigHtml('scheduleBatch');
+}
+
 function initSchedulePickers(){
   if (!window.flatpickr) return;
   const base = flatpickrDefaults();
@@ -684,8 +750,8 @@ function openScheduleModal(mode, articleId){
     el('scheduleModalHint').textContent = art ? `为《${art.title || '（无标题）'}》设定发布时间` : '设定发布时间';
     if (fpSingle) fpSingle.setDate(now, true);
   } else {
-    el('scheduleModalTitle').textContent = '批量安排发布时间';
-    el('scheduleModalHint').textContent = '从起始时间起，按标题排序依次为选中作品排期';
+    el('scheduleModalTitle').textContent = '批量发布设置';
+    el('scheduleModalHint').textContent = '统一设置发布时间、发布方式与其它参数，应用到选中作品';
     if (fpBatch) fpBatch.setDate(now, true);
     updateScheduleBatchPreview();
   }
@@ -698,6 +764,7 @@ function closeScheduleModal(){
 }
 
 function setupScheduleModal(){
+  mountPublishConfigForms();
   initSchedulePickers();
   el('scheduleModalClose').addEventListener('click', closeScheduleModal);
   el('scheduleSingleCancel').addEventListener('click', closeScheduleModal);
@@ -721,7 +788,7 @@ async function submitSingleSchedule(){
     const r = await fetch(`/api/articles/${scheduleSingleArticleId}/schedule`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scheduled_at: raw }),
+      body: JSON.stringify({ scheduled_at: raw, ...readPublishConfig('scheduleSingle') }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || '保存失败');
@@ -748,6 +815,7 @@ async function submitBatchSchedule(){
         sort_order: el('scheduleBatchSort').value,
         interval: Number(el('scheduleBatchInterval').value) || 1,
         interval_unit: el('scheduleBatchUnit').value,
+        ...readPublishConfig('scheduleBatch'),
       }),
     });
     const data = await r.json();
@@ -960,9 +1028,10 @@ function renderQueue(jobs){
     <tr>
       <td>${esc(j.title||'（无标题）')}</td>
       <td>${esc(j.scheduled_at_label||'未安排')}</td>
+      <td>${esc(j.publish_config_label||'—')}</td>
       <td><span class="pill ${pillForJob(j.status)}">${esc(L(COPY.job_status, j.status, j.status))}</span></td>
     </tr>`).join('');
-  el('queueBox').innerHTML = `<table><thead><tr><th>作品</th><th>计划时间</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table>`;
+  el('queueBox').innerHTML = `<table><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function pillForJob(s){ return s==='done'?'ok':(s==='failed'?'err':(s==='running'?'warn':'')); }
 

@@ -95,7 +95,7 @@ def test_real_draft_only_keeps_article_unpublished(tmp_path: Path, monkeypatch: 
         def create_draft(self, **kwargs):  # noqa: ANN001, ANN201
             return DraftResult(media_id="draft-real-1", raw_response={"media_id": "draft-real-1"})
 
-        def submit_publish(self, media_id: str) -> dict:
+        def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
             return {"errcode": 0, "skipped": True, "media_id": media_id}
 
     monkeypatch.setattr(

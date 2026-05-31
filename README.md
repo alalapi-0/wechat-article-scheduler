@@ -38,8 +38,19 @@ python -m wechat_article_scheduler.cli run-once
 ## 运行模式（三种）
 
 1. `mock`（默认）：不联网，生成本地 mock 草稿/发布结果
-2. `real + WECHAT_ENABLE_PUBLISH=false`：只创建真实草稿，不提交发布
-3. `real + WECHAT_ENABLE_PUBLISH=true`：创建草稿并提交发布（需人工确认后使用）
+2. `real + WECHAT_ENABLE_PUBLISH=false`：默认只创建真实草稿；**可在 Web「批量发布设置」里为单篇/批量任务指定「正式发布」**
+3. `real + WECHAT_ENABLE_PUBLISH=true`：全局允许发布；配合任务级「到点自动执行」可无人值守排期发布
+
+### 批量发布设置（Web）
+
+在作品库勾选多篇 → **批量发布设置**，可一次性配置：
+
+- 起始时间与错峰间隔
+- **发布方式**：仅草稿 / 正式发布
+- **到点自动执行**（勾选后 Web 后台会自动跑到期任务，无需手动点「执行到点发布」）
+- 留言开关、仅粉丝可评、作者、原文链接
+
+默认值可在 `config/rules.yaml` 的 `publish:` 段调整。环境变量 `WEB_AUTO_PUBLISH=true` 控制真实发布模式下是否允许 Web 后台自动提交。
 
 ## CLI 命令
 
@@ -78,9 +89,19 @@ python -m wechat_article_scheduler.cli run-once
 
 ```bash
 python3 scripts/real_api_check.py --samples 3
+python3 scripts/auto_approve_pipeline.py --round 1 --samples 3
 ```
 
-报告写入 `reports/real_api_runs/`（JSON + Markdown 摘要，不含 token）。仅 token 探测：
+报告写入 `reports/real_api_runs/` 与 `reports/auto_approve_pipeline/`（JSON + Markdown 摘要，不含 token）。
+
+**Auto-Approved Pipeline Mode**（Agent 推进轮默认）：真实 API 生成后自动标记 `review_status=auto_approved`，不等待人工审核，继续 scan/run-once 下游。切回人工模式：
+
+```bash
+export REVIEW_MODE=manual
+export AUTO_APPROVE_GENERATIONS=false
+```
+
+仅 token 探测：
 
 ```bash
 python3 scripts/real_api_check.py --token-only

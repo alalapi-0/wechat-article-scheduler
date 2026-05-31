@@ -108,6 +108,7 @@ ROUND_ORDER = [
     "round_052",
     "round_053",
     "round_054",
+    "round_055",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -626,7 +627,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "不泄露 token；WECHAT_ENABLE_PUBLISH 关闭时不提交发布",
         ],
         "next_actions": [
-            "维护 docs/rounds.md；按能力矩阵规划 Round 55+",
+            "推进 Round 55：Auto-Approved Real API Pipeline",
+        ],
+    },
+    "round_055": {
+        "name": "Round 55 - Auto-Approved Real API Pipeline",
+        "acceptance_criteria": [
+            "auto_approve_pipeline 在 real 模式下完成真实草稿并自动标记 auto_approved",
+            "报告写入 reports/auto_approve_pipeline/ 与 reports/real_api_runs/",
+            "下游 scan/run-once 可继续执行且不等待人工审核",
+        ],
+        "next_actions": [
+            "维护 docs/rounds.md；按能力矩阵规划 Round 56+",
         ],
     },
 }
@@ -954,6 +966,13 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
     elif round_id == "round_054":
         steps = [
             ([py, "-m", "pytest", "tests/test_real_api_check.py", "-q"], "pytest real_api_check"),
+        ]
+    elif round_id == "round_055":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_auto_approve_pipeline.py", "-q"],
+                "pytest auto_approve_pipeline",
+            ),
         ]
     else:
         return True, "unknown round skipped"

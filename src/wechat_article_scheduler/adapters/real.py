@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any, Callable
 
-from wechat_article_scheduler.adapters.base import DraftResult, WechatAdapter
+from wechat_article_scheduler.adapters.base import DraftOptions, DraftResult, WechatAdapter
 from wechat_article_scheduler.adapters.wechat_http import (
     API_BASE,
     TokenCache,
@@ -155,10 +155,17 @@ class RealWechatAdapter(WechatAdapter):
         return media_id
 
     def create_draft(
-        self, *, title: str, summary: str, body: str, cover_path: str | None = None
+        self,
+        *,
+        title: str,
+        summary: str,
+        body: str,
+        cover_path: str | None = None,
+        options: DraftOptions | None = None,
     ) -> DraftResult:
         """调用 draft/add 创建草稿。"""
         self._ensure_credentials()
+        opts = options or DraftOptions()
         token = self.get_access_token()
         thumb_media_id = self.upload_thumb_media(cover_path)
         url = f"{API_BASE}/cgi-bin/draft/add?access_token={token}"
@@ -166,13 +173,13 @@ class RealWechatAdapter(WechatAdapter):
             "articles": [
                 {
                     "title": title,
-                    "author": "",
+                    "author": opts.author or "",
                     "digest": clamp_summary(summary or title, 120),
                     "content": render_for_publish(title, body),
-                    "content_source_url": "",
+                    "content_source_url": opts.content_source_url or "",
                     "thumb_media_id": thumb_media_id,
-                    "need_open_comment": 0,
-                    "only_fans_can_comment": 0,
+                    "need_open_comment": 1 if opts.need_open_comment else 0,
+                    "only_fans_can_comment": 1 if opts.only_fans_can_comment else 0,
                 }
             ]
         }
@@ -183,10 +190,10 @@ class RealWechatAdapter(WechatAdapter):
             raise WechatApiError(-1, "draft media_id 缺失", endpoint="draft/add")
         return DraftResult(media_id=media_id, raw_response=data)
 
-    def submit_publish(self, media_id: str) -> dict:
+    def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
         """调用 freepublish/submit 提交发布（可通过 enable_publish=False 跳过）。"""
         self._ensure_credentials()
-        if not self._enable_publish:
+        if not self._enable_publish and not force:
             return {
                 "errcode": 0,
                 "errmsg": "ok",

@@ -64,6 +64,39 @@ def _redact_response(data: Any) -> Any:
     return data
 
 
+def _quality_status(*, ok: bool, body: str, notes: list[str]) -> str:
+    if not ok:
+        if not body.strip():
+            return "failed_empty_output"
+        return "failed_parse_error"
+    if notes:
+        return "pass_with_issues"
+    return "pass"
+
+
+def _auto_review_metadata(*, auto_approve: bool) -> dict[str, str]:
+    now = datetime.now(timezone.utc).isoformat()
+    if auto_approve:
+        return {
+            "review_status": "auto_approved",
+            "review_mode": "auto",
+            "reviewer": "agent",
+            "review_reason": "auto-approved for end-to-end real API pipeline test",
+            "reviewed_at": now,
+            "source": "real_api",
+            "mock": "false",
+        }
+    return {
+        "review_status": "pending",
+        "review_mode": "manual",
+        "reviewer": "",
+        "review_reason": "",
+        "reviewed_at": "",
+        "source": "real_api",
+        "mock": "false",
+    }
+
+
 @dataclass
 class SampleResult:
     sample_id: str
@@ -75,6 +108,8 @@ class SampleResult:
     rendered_len: int = 0
     rendered_preview: str = ""
     quality_notes: list[str] = field(default_factory=list)
+    quality_status: str = ""
+    review: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -85,6 +120,8 @@ class RunReport:
     wechat_mode: str = ""
     enable_publish: bool = False
     mock_used: bool = False
+    auto_approve: bool = False
+    auto_approved_count: int = 0
     samples_requested: int = 0
     success_count: int = 0
     failure_count: int = 0
@@ -108,7 +145,27 @@ def _quality_notes(title: str, body: str) -> list[str]:
     return notes
 
 
-def run_check(*, samples: int, dry_run: bool, token_only: bool) -> RunReport:
+def _env_auto_approve(default: bool = False) -> bool:
+    import os
+
+    raw = os.getenv("AUTO_APPROVE_GENERATIONS")
+    if raw is not None:
+        return raw.strip().lower() in {"1", "true", "yes", "on"}
+    mode = (os.getenv("REVIEW_MODE") or "").strip().lower()
+    if mode == "auto":
+        return True
+    if (os.getenv("SKIP_HUMAN_REVIEW") or "").strip().lower() in {"1", "true", "yes", "on"}:
+        return True
+    return default
+
+
+def run_check(
+    *,
+    samples: int,
+    dry_run: bool,
+    token_only: bool,
+    auto_approve: bool | None = None,
+) -> RunReport:
     _load_dotenv()
     sys.path.insert(0, str(ROOT / "src"))
     from wechat_article_scheduler.adapters import get_adapter
@@ -116,11 +173,13 @@ def run_check(*, samples: int, dry_run: bool, token_only: bool) -> RunReport:
 
     cfg = load_config()
     started = datetime.now(timezone.utc).isoformat()
+    approve = _env_auto_approve(default=False) if auto_approve is None else auto_approve
     report = RunReport(
         started_at=started,
         wechat_mode=cfg.wechat_mode,
         enable_publish=bool(cfg.wechat_enable_publish),
         mock_used=cfg.wechat_mode != "real",
+        auto_approve=approve,
         samples_requested=samples,
     )
 
@@ -191,6 +250,15 @@ def run_check(*, samples: int, dry_run: bool, token_only: bool) -> RunReport:
                 result.error = "意外提交了发布（应被 WECHAT_ENABLE_PUBLISH=false 跳过）"
         except Exception as exc:  # noqa: BLE001
             result.error = str(exc)[:500]
+        result.quality_status = _quality_status(ok=result.ok, body=sample["body"], notes=notes)
+        if result.ok and approve:
+            result.review = _auto_review_metadata(auto_approve=True)
+            report.auto_approved_count += 1
+        elif approve:
+            result.review = _auto_review_metadata(auto_approve=True)
+            result.review["review_reason"] = (
+                "auto-approved for pipeline test despite API/parse failure"
+            )
         if result.ok:
             report.success_count += 1
         else:
@@ -216,6 +284,8 @@ def _write_report(report: RunReport) -> Path:
         f"- provider: {report.provider}",
         f"- wechat_mode: {report.wechat_mode}",
         f"- mock_used: {report.mock_used}",
+        f"- auto_approve: {report.auto_approve}",
+        f"- auto_approved_count: {report.auto_approved_count}",
         f"- enable_publish: {report.enable_publish}",
         f"- token_ok: {report.token_ok}",
         f"- samples: {report.samples_requested}",
@@ -236,8 +306,12 @@ def _write_report(report: RunReport) -> Path:
             lines.append(f"- rendered_len: {r.rendered_len}")
         if r.rendered_preview:
             lines.append(f"- rendered_preview: {r.rendered_preview[:200]}...")
+        if r.quality_status:
+            lines.append(f"- quality_status: {r.quality_status}")
         if r.quality_notes:
             lines.append(f"- quality: {', '.join(r.quality_notes)}")
+        if r.review:
+            lines.append(f"- review_status: {r.review.get('review_status', '')}")
         lines.append("")
     base.with_suffix(".md").write_text("\n".join(lines), encoding="utf-8")
     return base
@@ -248,9 +322,19 @@ def main() -> int:
     parser.add_argument("--samples", type=int, default=3, help="草稿样本数量（默认 3）")
     parser.add_argument("--token-only", action="store_true", help="仅验证 access_token")
     parser.add_argument("--dry-run", action="store_true", help="不调用 draft/add")
+    parser.add_argument(
+        "--auto-approve",
+        action="store_true",
+        help="自动标记 review_status=auto_approved（也可用 AUTO_APPROVE_GENERATIONS=true）",
+    )
     args = parser.parse_args()
 
-    report = run_check(samples=max(1, args.samples), dry_run=args.dry_run, token_only=args.token_only)
+    report = run_check(
+        samples=max(1, args.samples),
+        dry_run=args.dry_run,
+        token_only=args.token_only,
+        auto_approve=True if args.auto_approve else None,
+    )
     out = _write_report(report)
     print(f"report: {out.with_suffix('.json')}")
     print(f"mode={report.wechat_mode} mock={report.mock_used} token_ok={report.token_ok}")

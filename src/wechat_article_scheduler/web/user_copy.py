@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from wechat_article_scheduler.publish_config import PublishConfig, human_publish_action_label
 
 # 普通视图禁止直接出现的裸内部词（Round 20 基线检查）
 FORBIDDEN_ORDINARY_TERMS: tuple[str, ...] = (
@@ -160,7 +160,16 @@ def humanize_schedule_single_result(payload: dict[str, Any]) -> list[str]:
     title = (payload.get("title") or "该作品").strip()
     when = payload.get("scheduled_at_label") or payload.get("scheduled_at") or ""
     verb = "已安排" if payload.get("created", True) else "已更新"
-    return [f"《{title}》{verb}发布时间为 {when}"]
+    lines = [f"《{title}》{verb}发布时间为 {when}"]
+    pub = payload.get("publish_config") or {}
+    if pub:
+        cfg = PublishConfig(**{k: pub[k] for k in pub if k in PublishConfig.__dataclass_fields__})
+        action = human_publish_action_label(cfg)
+        if pub.get("auto_execute"):
+            lines.append(f"发布方式：{action}，到点自动执行")
+        else:
+            lines.append(f"发布方式：{action}，需手动执行到点")
+    return lines
 
 
 def humanize_schedule_batch_result(stats: dict[str, Any]) -> list[str]:
@@ -170,7 +179,15 @@ def humanize_schedule_batch_result(stats: dict[str, Any]) -> list[str]:
     total = scheduled + updated
     if not total:
         return ["没有作品被安排（请确认已选中「已收录」作品）"]
-    lines = [f"已为 {total} 篇作品安排发布时间"]
+    lines = [f"已为 {total} 篇作品安排发布时间与配置"]
+    pub = stats.get("publish_config") or {}
+    if pub:
+        cfg = PublishConfig(**{k: pub[k] for k in pub if k in PublishConfig.__dataclass_fields__})
+        action = human_publish_action_label(cfg)
+        if pub.get("auto_execute"):
+            lines.append(f"统一设置：{action}，到点自动执行")
+        else:
+            lines.append(f"统一设置：{action}，需手动执行到点")
     if skipped:
         lines.append(f"跳过 {skipped} 篇（不存在或不可排期）")
     return lines
