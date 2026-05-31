@@ -99,9 +99,9 @@ def test_ordinary_view_e2e_baseline():
             for term in FORBIDDEN_IN_ORDINARY:
                 assert term not in text, f"普通视图可见文本含 {term}"
             assert "主操作" in text
-            assert "扫描收件箱" in text
+            assert "作品库" in text
             assert "安排发布时间" in text
-            assert "执行到点文章" in text
+            assert "执行到点发布" in text
             overflow = page.evaluate(
                 "document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1"
             )

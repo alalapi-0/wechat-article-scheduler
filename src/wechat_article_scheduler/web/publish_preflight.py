@@ -1,11 +1,15 @@
-"""真实发布预检清单（Round 41）。"""
+"""发布前预检清单（替代旧的审核闸门）。
+
+产品重定位后不再有"审核"步骤：用户上传的作品即视为想发布的内容。
+真实发布的安全保障 = 默认演练(mock) + 显式开关(WECHAT_ENABLE_PUBLISH) +
+执行到点前的二次确认 + 这里列出的可读检查项。
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
 from wechat_article_scheduler.config import AppConfig
-from wechat_article_scheduler.scheduler.runtime import requires_publish_approval
 
 
 def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
@@ -13,49 +17,43 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
     mode = (config.wechat_mode or "mock").strip().lower()
     publish_on = bool(config.wechat_enable_publish)
+    will_publish = mode == "real" and publish_on
 
     checks.append(
         {
             "id": "mode",
-            "ok": mode == "mock" or not publish_on,
+            "ok": True,
             "required": False,
             "label": "运行模式",
             "detail": "当前为演练模式，不会真的发布"
             if mode == "mock"
-            else ("真实发布已关闭" if not publish_on else "已连接真实公众号且允许发布"),
+            else ("真实连接已启用，但发布开关关闭，只创建草稿" if not publish_on else "已连接真实公众号且允许发布"),
         }
     )
 
-    unapproved = conn.execute(
+    no_cover = conn.execute(
         """
         SELECT COUNT(*) AS cnt FROM publish_jobs j
         JOIN articles a ON a.id = j.article_id
-        WHERE j.status = 'pending' AND COALESCE(a.review_status, 'draft') != 'approved'
+        WHERE j.status = 'pending'
+          AND (a.cover_path IS NULL OR a.cover_path = '')
         """
     ).fetchone()["cnt"]
-    approval_required = requires_publish_approval(config)
-    checks.append(
-        {
-            "id": "approval",
-            "ok": not approval_required or unapproved == 0,
-            "required": approval_required,
-            "label": "文章审核",
-            "detail": "待发布文章均已审核通过"
-            if unapproved == 0
-            else f"还有 {unapproved} 篇待发布文章未审核通过",
-        }
-    )
-
     has_default_cover = bool(config.wechat_default_thumb_path)
+    cover_ok = has_default_cover or no_cover == 0
     checks.append(
         {
             "id": "cover",
-            "ok": has_default_cover,
-            "required": False,
+            "ok": cover_ok,
+            "required": will_publish and not cover_ok,
             "label": "封面素材",
-            "detail": "已配置默认封面，缺失时会自动使用"
-            if has_default_cover
-            else "未配置默认封面，发布前请确认每篇文章封面",
+            "detail": "待发布作品都已配置封面"
+            if no_cover == 0
+            else (
+                f"有 {no_cover} 篇待发布作品没有单独封面，将使用默认封面"
+                if has_default_cover
+                else f"有 {no_cover} 篇待发布作品缺少封面，且未配置默认封面，请先上传封面"
+            ),
         }
     )
 

@@ -1,4 +1,4 @@
-"""Round 39+ Web 能力：审核闸门、定时发布 UX、真实发布预检。"""
+"""Round 39+ Web 能力：发布前确认、定时发布 UX、真实发布预检（已去审核）。"""
 
 from __future__ import annotations
 
@@ -27,35 +27,24 @@ def client(app_config: AppConfig) -> TestClient:
     return TestClient(create_app(app_config))
 
 
-def _seed_article(conn, *, review_status: str = "draft") -> int:
+def _seed_article(conn) -> int:
     conn.execute(
         """
-        INSERT INTO articles (source_path, title, summary, body, content_hash, status, review_status)
-        VALUES ('a.md', '测试文', '摘要', 'body', 'hash-r39', 'imported', ?)
-        """,
-        (review_status,),
+        INSERT INTO articles (source_path, title, summary, body, content_hash, status)
+        VALUES ('a.md', '测试文', '摘要', 'body', 'hash-r39', 'imported')
+        """
     )
     conn.commit()
     return int(conn.execute("SELECT id FROM articles").fetchone()[0])
 
 
-def test_review_endpoint_approves_article(client: TestClient, app_config: AppConfig) -> None:
+def test_overview_has_no_review_section(client: TestClient, app_config: AppConfig) -> None:
+    """产品重定位后概览不再有审核区块。"""
     with db.connect(app_config.database_path) as conn:
-        aid = _seed_article(conn)
-    r = client.post(f"/api/articles/{aid}/review", json={"status": "approved"})
-    assert r.status_code == 200
-    data = r.json()
-    assert data["review_status"] == "approved"
-    assert data["review_status_label"] == "已通过"
-    assert data["human"]
-
-
-def test_overview_includes_pending_review(client: TestClient, app_config: AppConfig) -> None:
-    with db.connect(app_config.database_path) as conn:
-        _seed_article(conn, review_status="pending_review")
+        _seed_article(conn)
     data = client.get("/api/overview").json()
-    assert len(data["pending_review"]) == 1
-    assert data["pending_review"][0]["review_status_label"] == "待审核"
+    assert "pending_review" not in data
+    assert "publish_preflight" in data
 
 
 def test_schedule_summary_human_labels(client: TestClient, app_config: AppConfig) -> None:

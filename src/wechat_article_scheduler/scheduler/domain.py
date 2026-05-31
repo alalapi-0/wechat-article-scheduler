@@ -16,6 +16,14 @@ from wechat_article_scheduler.scheduler.policies import safe_payload
 logger = logging.getLogger(__name__)
 
 
+def _row_get(row: sqlite3.Row, key: str) -> str | None:
+    """安全读取可选列（行可能不含该列）。"""
+    try:
+        return row[key]
+    except (IndexError, KeyError):
+        return None
+
+
 def execute_due_job(
     conn: sqlite3.Connection,
     job: sqlite3.Row,
@@ -59,6 +67,7 @@ def execute_due_job(
             title=job["title"],
             summary=digest_summary,
             body=job["body"],
+            cover_path=_row_get(job, "cover_path"),
         )
         conn.execute(
             """

@@ -31,7 +31,7 @@ def scan_inbox(config: AppConfig) -> dict[str, int]:
         inbox.mkdir(parents=True, exist_ok=True)
         return stats
 
-    imported_dir = config.root / "articles" / "imported"
+    imported_dir = config.imported_dir
     imported_dir.mkdir(parents=True, exist_ok=True)
 
     exts = _allowed_extensions(config.rules)

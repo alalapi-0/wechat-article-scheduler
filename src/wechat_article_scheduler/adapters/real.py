@@ -58,6 +58,7 @@ class RealWechatAdapter(WechatAdapter):
         self._http_post_json = http_post_json_fn or http_post_json
         self._http_post_multipart = http_post_multipart_fn or http_post_multipart
         self._cached_thumb_media_id: str | None = None
+        self._thumb_cache_by_path: dict[str, str] = {}
 
     def _ensure_credentials(self) -> None:
         if not self._app_id or not self._app_secret:
@@ -89,18 +90,28 @@ class RealWechatAdapter(WechatAdapter):
         """返回缓存或新刷新的 access_token（禁止写入日志）。"""
         return self._token_cache.get_token(self._fetch_access_token)
 
-    def _load_thumb_bytes(self) -> bytes:
+    def _resolve_thumb_path(self, cover_path: str | None) -> str | None:
+        """选择封面：优先单篇 cover_path，回退全局默认封面。"""
+        if cover_path and Path(cover_path).is_file():
+            return cover_path
+        if self._default_thumb_path and Path(self._default_thumb_path).is_file():
+            return self._default_thumb_path
+        return None
+
+    def _load_thumb_bytes(self, thumb_path: str | None) -> bytes:
         """读取封面图字节；未配置时使用内置最小 PNG。"""
-        if self._default_thumb_path:
-            path = Path(self._default_thumb_path)
+        if thumb_path:
+            path = Path(thumb_path)
             if path.is_file():
                 return path.read_bytes()
         return _MIN_PNG
 
-    def _thumb_multipart_part(self, thumb_bytes: bytes) -> tuple[str, bytes, str]:
+    def _thumb_multipart_part(
+        self, thumb_bytes: bytes, thumb_path: str | None
+    ) -> tuple[str, bytes, str]:
         """根据路径或文件头返回 multipart 的 (filename, bytes, content_type)。"""
-        if self._default_thumb_path:
-            suffix = Path(self._default_thumb_path).suffix.lower()
+        if thumb_path:
+            suffix = Path(thumb_path).suffix.lower()
             if suffix in (".jpg", ".jpeg"):
                 return ("thumb.jpg", thumb_bytes, "image/jpeg")
             if suffix == ".png":
@@ -109,17 +120,22 @@ class RealWechatAdapter(WechatAdapter):
             return ("thumb.jpg", thumb_bytes, "image/jpeg")
         return ("thumb.png", thumb_bytes, "image/png")
 
-    def upload_thumb_media(self) -> str:
+    def upload_thumb_media(self, cover_path: str | None = None) -> str:
         """
         上传封面 thumb 素材，返回 media_id。
 
-        同一适配器实例会缓存 thumb media_id，避免重复上传。
+        按封面路径缓存 media_id，避免重复上传；未指定时使用全局默认封面/占位图。
         """
-        if self._cached_thumb_media_id:
+        thumb_path = self._resolve_thumb_path(cover_path)
+        cache_key = thumb_path or "__default__"
+        if cache_key in self._thumb_cache_by_path:
+            return self._thumb_cache_by_path[cache_key]
+        if thumb_path is None and self._cached_thumb_media_id:
             return self._cached_thumb_media_id
         token = self.get_access_token()
         url = f"{API_BASE}/cgi-bin/material/add_material?access_token={token}&type=thumb"
-        filename, thumb_bytes, content_type = self._thumb_multipart_part(self._load_thumb_bytes())
+        thumb_bytes = self._load_thumb_bytes(thumb_path)
+        filename, thumb_bytes, content_type = self._thumb_multipart_part(thumb_bytes, thumb_path)
         logger.info(
             "上传封面素材 thumb（%s，%d 字节）",
             content_type,
@@ -133,14 +149,18 @@ class RealWechatAdapter(WechatAdapter):
         media_id = str(data.get("media_id", ""))
         if not media_id:
             raise WechatApiError(-1, "thumb media_id 缺失", endpoint="material/add_material")
-        self._cached_thumb_media_id = media_id
+        self._thumb_cache_by_path[cache_key] = media_id
+        if thumb_path is None:
+            self._cached_thumb_media_id = media_id
         return media_id
 
-    def create_draft(self, *, title: str, summary: str, body: str) -> DraftResult:
+    def create_draft(
+        self, *, title: str, summary: str, body: str, cover_path: str | None = None
+    ) -> DraftResult:
         """调用 draft/add 创建草稿。"""
         self._ensure_credentials()
         token = self.get_access_token()
-        thumb_media_id = self.upload_thumb_media()
+        thumb_media_id = self.upload_thumb_media(cover_path)
         url = f"{API_BASE}/cgi-bin/draft/add?access_token={token}"
         payload = {
             "articles": [

@@ -7,10 +7,8 @@ import sqlite3
 from datetime import datetime, timezone
 
 from wechat_article_scheduler.content_library.models import (
-    REVIEW_STATUSES,
     Collection,
     ContentItem,
-    ReviewStatus,
     Tag,
 )
 
@@ -56,24 +54,6 @@ def assign_article_tags(conn: sqlite3.Connection, article_id: int, tag_names: li
         )
 
 
-def set_review_status(
-    conn: sqlite3.Connection,
-    article_id: int,
-    review_status: ReviewStatus,
-) -> bool:
-    if review_status not in REVIEW_STATUSES:
-        raise ValueError(f"invalid review_status: {review_status}")
-    cur = conn.execute(
-        """
-        UPDATE articles
-        SET review_status = ?, updated_at = datetime('now')
-        WHERE id = ?
-        """,
-        (review_status, article_id),
-    )
-    return cur.rowcount > 0
-
-
 def register_imported_article(
     conn: sqlite3.Connection,
     *,
@@ -87,7 +67,7 @@ def register_imported_article(
     conn.execute(
         """
         UPDATE articles
-        SET collection_id = ?, review_status = 'draft', import_batch = ?,
+        SET collection_id = ?, import_batch = ?,
             updated_at = datetime('now')
         WHERE id = ?
         """,
@@ -102,10 +82,9 @@ def list_content_items(
     *,
     limit: int = 50,
     collection_slug: str | None = None,
-    review_status: ReviewStatus | None = None,
 ) -> list[ContentItem]:
     sql = """
-        SELECT a.id AS article_id, a.title, a.review_status, a.source_path,
+        SELECT a.id AS article_id, a.title, a.source_path,
                a.content_hash, a.import_batch, COALESCE(c.slug, 'default') AS collection_slug
         FROM articles a
         LEFT JOIN collections c ON c.id = a.collection_id
@@ -115,9 +94,6 @@ def list_content_items(
     if collection_slug:
         sql += " AND COALESCE(c.slug, 'default') = ?"
         params.append(collection_slug)
-    if review_status:
-        sql += " AND a.review_status = ?"
-        params.append(review_status)
     sql += " ORDER BY a.id DESC LIMIT ?"
     params.append(limit)
     rows = conn.execute(sql, params).fetchall()
@@ -132,12 +108,10 @@ def list_content_items(
             """,
             (int(row["article_id"]),),
         ).fetchall()
-        review = row["review_status"] or "draft"
         items.append(
             ContentItem(
                 article_id=int(row["article_id"]),
                 title=row["title"],
-                review_status=review,  # type: ignore[arg-type]
                 collection_slug=row["collection_slug"],
                 tags=tuple(t["name"] for t in tags),
                 source_path=row["source_path"],

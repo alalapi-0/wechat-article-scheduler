@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters import get_adapter
@@ -15,8 +15,7 @@ from wechat_article_scheduler.config import AppConfig, load_config
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.plan import build_plan
 from wechat_article_scheduler.scanner import scan_inbox
-from wechat_article_scheduler.content_library import list_collections, list_content_items, set_review_status
-from wechat_article_scheduler.content_library.models import REVIEW_STATUSES
+from wechat_article_scheduler.content_library import list_collections, list_content_items
 from wechat_article_scheduler.cover_assets import check_cover_path, index_cover_directory
 from wechat_article_scheduler.renderers import render_markdown_to_html_safe
 from wechat_article_scheduler.scheduler import run_due_jobs
@@ -25,10 +24,10 @@ from wechat_article_scheduler.web.user_copy import (
     humanize_plan_result,
     humanize_run_once_result,
     humanize_scan_result,
-    label_review_status,
 )
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
 from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
+from wechat_article_scheduler.web.uploads import handle_upload, save_cover_file
 
 _TEMPLATE_PATH = Path(__file__).parent / "admin_template.html"
 _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exists() else "<html><body>模板缺失</body></html>"
@@ -75,19 +74,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             recent_jobs = conn.execute(
                 """
                 SELECT j.id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       j.adapter_mode, j.updated_at, a.title, a.review_status
+                       j.adapter_mode, j.updated_at, a.title
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
                 ORDER BY j.updated_at DESC, j.id DESC
-                LIMIT 10
-                """
-            ).fetchall()
-            pending_review = conn.execute(
-                """
-                SELECT id, title, review_status, updated_at
-                FROM articles
-                WHERE COALESCE(review_status, 'draft') IN ('draft', 'pending_review', 'rejected')
-                ORDER BY updated_at DESC, id DESC
                 LIMIT 10
                 """
             ).fetchall()
@@ -97,7 +87,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         for r in recent_jobs:
             row = dict(r)
             row["scheduled_at_label"] = format_scheduled_at(row.get("scheduled_at"))
-            row["review_status_label"] = label_review_status(row.get("review_status"))
             recent_jobs_out.append(row)
         return {
             "status": status(),
@@ -105,13 +94,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "job_counts": {str(r["status"]): int(r["count"]) for r in job_rows},
             "recent_jobs": recent_jobs_out,
             "recent_events": [dict(r) for r in list_events(cfg, limit=10)],
-            "pending_review": [
-                {
-                    **dict(r),
-                    "review_status_label": label_review_status(r["review_status"]),
-                }
-                for r in pending_review
-            ],
             "schedule_summary": schedule,
             "publish_preflight": preflight,
             "docs": [
@@ -126,12 +108,20 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         with db.connect(cfg.database_path) as conn:
             rows = conn.execute(
                 """
-                SELECT id, title, status, source_path, created_at, updated_at, review_status
+                SELECT id, title, summary, status, source_path, cover_path,
+                       created_at, updated_at
                 FROM articles ORDER BY id DESC LIMIT ?
                 """,
                 (limit,),
             ).fetchall()
-        return [dict(r) for r in rows]
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            row = dict(r)
+            row["has_cover"] = bool((row.get("cover_path") or "").strip())
+            row["has_summary"] = bool((row.get("summary") or "").strip())
+            row["cover_url"] = f"/media/cover/{row['id']}" if row["has_cover"] else None
+            out.append(row)
+        return out
 
     @app.get("/api/jobs")
     def jobs(limit: int = 50) -> list[dict[str, Any]]:
@@ -139,7 +129,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             rows = conn.execute(
                 """
                 SELECT j.id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       a.title, a.review_status
+                       a.title
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
                 ORDER BY j.scheduled_at ASC
@@ -151,7 +141,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         for r in rows:
             row = dict(r)
             row["scheduled_at_label"] = format_scheduled_at(row.get("scheduled_at"))
-            row["review_status_label"] = label_review_status(row.get("review_status"))
             out.append(row)
         return out
 
@@ -165,33 +154,54 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         with db.connect(cfg.database_path) as conn:
             return summarize_schedule(conn, limit=limit)
 
-    @app.post("/api/articles/{article_id}/review")
-    async def update_article_review(article_id: int, request: Request) -> dict[str, Any]:
-        body = await request.json()
-        status_value = str(body.get("status") or "").strip().lower()
-        if status_value not in REVIEW_STATUSES:
-            raise HTTPException(status_code=400, detail="无效的审核状态")
-        with db.connect(cfg.database_path) as conn:
-            row = conn.execute(
-                "SELECT id, title, review_status FROM articles WHERE id = ?",
-                (article_id,),
-            ).fetchone()
-            if row is None:
-                raise HTTPException(status_code=404, detail="文章不存在")
-            set_review_status(conn, article_id, status_value)  # type: ignore[arg-type]
-            conn.commit()
-        return {
-            "article_id": article_id,
-            "title": row["title"],
-            "review_status": status_value,
-            "review_status_label": label_review_status(status_value),
-            "human": [f"《{row['title'] or '无标题'}》已标记为{label_review_status(status_value)}"],
-        }
-
     @app.get("/api/events")
     def events(limit: int = 30) -> list[dict[str, Any]]:
         rows = list_events(cfg, limit=limit)
         return [dict(r) for r in rows]
+
+    @app.post("/api/upload")
+    async def upload(
+        articles: list[UploadFile] = File(default=[]),
+        covers: list[UploadFile] = File(default=[]),
+    ) -> dict[str, Any]:
+        """批量上传作品文件与封面图（multipart）。"""
+        article_payloads = [(f.filename or "unnamed", await f.read()) for f in articles]
+        cover_payloads = [(f.filename or "unnamed", await f.read()) for f in covers]
+        return handle_upload(cfg, articles=article_payloads, covers=cover_payloads)
+
+    @app.post("/api/articles/{article_id}/cover")
+    async def set_article_cover(article_id: int, cover: UploadFile = File(...)) -> dict[str, Any]:
+        """为单篇作品替换/设置封面。"""
+        with db.connect(cfg.database_path) as conn:
+            row = conn.execute("SELECT id, title FROM articles WHERE id = ?", (article_id,)).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="作品不存在")
+        data = await cover.read()
+        dest = save_cover_file(cfg, cover.filename or f"cover_{article_id}.png", data)
+        with db.connect(cfg.database_path) as conn:
+            conn.execute(
+                "UPDATE articles SET cover_path = ?, updated_at = datetime('now') WHERE id = ?",
+                (str(dest), article_id),
+            )
+            conn.commit()
+        return {
+            "article_id": article_id,
+            "cover_url": f"/media/cover/{article_id}",
+            "human": [f"《{row['title'] or '无标题'}》的封面已更新"],
+        }
+
+    @app.get("/media/cover/{article_id}")
+    def media_cover(article_id: int) -> FileResponse:
+        """返回作品封面图（仅本地文件）。"""
+        with db.connect(cfg.database_path) as conn:
+            row = conn.execute(
+                "SELECT cover_path FROM articles WHERE id = ?", (article_id,)
+            ).fetchone()
+        cover_path = (row["cover_path"] if row else None) or ""
+        path = Path(cover_path)
+        if not cover_path or not path.is_file():
+            raise HTTPException(status_code=404, detail="封面不存在")
+        return FileResponse(str(path))
 
     @app.post("/api/scan")
     def trigger_scan() -> dict[str, Any]:
@@ -233,7 +243,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/api/content-library")
     def content_library_view(
         collection: str | None = None,
-        review_status: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
@@ -241,7 +250,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 conn,
                 limit=limit,
                 collection_slug=collection,
-                review_status=review_status,  # type: ignore[arg-type]
             )
             collections = list_collections(conn)
         return {
@@ -250,7 +258,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 {
                     "article_id": i.article_id,
                     "title": i.title,
-                    "review_status": i.review_status,
                     "collection_slug": i.collection_slug,
                     "tags": list(i.tags),
                 }

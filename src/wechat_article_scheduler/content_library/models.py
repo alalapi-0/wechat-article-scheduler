@@ -3,16 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
-
-ReviewStatus = Literal["draft", "pending_review", "approved", "rejected"]
-
-REVIEW_STATUSES: tuple[ReviewStatus, ...] = (
-    "draft",
-    "pending_review",
-    "approved",
-    "rejected",
-)
 
 
 @dataclass(frozen=True)
@@ -34,7 +24,6 @@ class Tag:
 class ContentItem:
     article_id: int
     title: str
-    review_status: ReviewStatus
     collection_slug: str
     tags: tuple[str, ...]
     source_path: str

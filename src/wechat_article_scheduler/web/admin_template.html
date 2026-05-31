@@ -1,488 +1,583 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>文章调度工作台</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #f4f6fa;
-      --panel: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --line: #e5e7eb;
-      --primary: #2563eb;
-      --primary-soft: #dbeafe;
-      --ok: #166534;
-      --ok-soft: #dcfce7;
-      --warn: #9a3412;
-      --warn-soft: #ffedd5;
-      --err: #991b1b;
-      --err-soft: #fee2e2;
-      --sidebar: #eef2ff;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: var(--text); background: var(--bg); }
-    .topbar {
-      background: var(--panel); border-bottom: 1px solid var(--line);
-      padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
-    }
-    .topbar h1 { margin: 0; font-size: 1.2rem; }
-    .safety-pill {
-      display: inline-flex; align-items: center; gap: 8px; border-radius: 999px;
-      padding: 6px 12px; font-size: 13px; border: 1px solid var(--line); background: #f9fafb;
-    }
-    .safety-pill.mode-safe { background: var(--primary-soft); border-color: #bfdbfe; color: #1e3a8a; }
-    .safety-pill.mode-real { background: var(--warn-soft); border-color: #fdba74; color: var(--warn); }
-    .workbench { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 58px); }
-    @media (max-width: 900px) { .workbench { grid-template-columns: 1fr; } }
-    .sidebar {
-      background: var(--sidebar); border-right: 1px solid var(--line); padding: 16px 14px;
-    }
-    .sidebar nav a {
-      display: block; padding: 8px 10px; margin-bottom: 4px; border-radius: 8px;
-      color: var(--text); text-decoration: none; font-size: 14px;
-    }
-    .sidebar nav a:hover { background: rgba(255,255,255,0.7); }
-    .main { padding: 18px 20px 40px; max-width: 1100px; }
-    .panel {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-      padding: 14px 16px; margin-bottom: 14px;
-    }
-    .panel h2 { margin: 0 0 8px; font-size: 1.05rem; }
-    .helper { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.45; }
-    .steps { display: grid; gap: 10px; }
-    .step {
-      border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fafafa;
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
-    }
-    .step p { margin: 0; flex: 1 1 200px; font-size: 14px; }
-    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    button {
-      border: 1px solid var(--line); background: #fff; color: var(--text);
-      border-radius: 8px; padding: 8px 12px; font-size: 14px; cursor: pointer;
-    }
-    button.primary { background: var(--primary); border-color: #1d4ed8; color: #fff; }
-    button.secondary { background: #f3f4f6; }
-    button:disabled { opacity: 0.55; cursor: not-allowed; }
-    button.danger { background: var(--err-soft); border-color: #fca5a5; color: var(--err); }
-    .cards { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
-    .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fafafa; }
-    .card strong { display: block; font-size: 1.3rem; overflow-wrap: anywhere; }
-    .card span { color: var(--muted); font-size: 13px; }
-    .alert { border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--line); font-size: 14px; }
-    .alert.info { color: #1e3a8a; background: var(--primary-soft); border-color: #bfdbfe; }
-    .alert.ok { color: var(--ok); background: var(--ok-soft); border-color: #86efac; }
-    .alert.error { color: var(--err); background: var(--err-soft); border-color: #fca5a5; }
-    .result-box { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; background: #fafafa; font-size: 14px; }
-    .result-list { margin: 0; padding-left: 18px; }
-    .grid-2 { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-    #jobsArea, #eventsArea { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 8px 6px; vertical-align: top; }
-    th { color: var(--muted); background: #fafafa; }
-    .empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; padding: 12px; background: #fafafa; font-size: 14px; line-height: 1.45; }
-    .pill { display: inline-flex; border-radius: 999px; padding: 2px 8px; font-size: 12px; background: #f3f4f6; border: 1px solid var(--line); }
-    .pill.ok { background: var(--ok-soft); color: var(--ok); }
-    .pill.warn { background: var(--warn-soft); color: var(--warn); }
-    .pill.err { background: var(--err-soft); color: var(--err); }
-    .advanced-only { display: none; }
-    body.show-advanced .advanced-only { display: block; }
-    body.show-advanced tr.advanced-only, body.show-advanced td.advanced-only, body.show-advanced th.advanced-only { display: table-cell; }
-    .toggle-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-top: 12px; }
-    pre { background: #111827; color: #f9fafb; border-radius: 8px; padding: 10px; overflow: auto; font-size: 12px; max-height: 280px; }
-    .doc-links a { color: var(--primary); margin-right: 8px; font-size: 13px; }
-    .status-inline { color: var(--muted); font-size: 13px; min-height: 18px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>微信公众号文章发布工作台</title>
+<style>
+  :root {
+    --bg: #eef2f7;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --sidebar-a: #0f172a;
+    --sidebar-b: #1e293b;
+    --side-fg: #94a3b8;
+    --side-fg-active: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --accent: #6366f1;
+    --accent-strong: #4f46e5;
+    --accent-soft: #eef2ff;
+    --ok: #15803d; --ok-soft: #dcfce7;
+    --warn: #b45309; --warn-soft: #fef3c7;
+    --err: #b91c1c; --err-soft: #fee2e2;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.06);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-strong); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .layout { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    background: linear-gradient(180deg, var(--sidebar-a), var(--sidebar-b));
+    color: var(--side-fg);
+    padding: 22px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; }
+  .brand .logo {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #22d3ee);
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 18px;
+  }
+  .brand .name { color: #fff; font-weight: 700; font-size: 15px; letter-spacing: .2px; }
+  .brand .sub { color: var(--side-fg); font-size: 12px; }
+  .nav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+  .nav a {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--side-fg); padding: 10px 12px; border-radius: 10px;
+    font-size: 14px; font-weight: 500; text-decoration: none;
+  }
+  .nav a:hover { background: rgba(255,255,255,.06); color: #e2e8f0; text-decoration: none; }
+  .nav a.active { background: rgba(99,102,241,.22); color: var(--side-fg-active); }
+  .nav .ico { width: 18px; text-align: center; opacity: .9; }
+  .side-foot { margin-top: auto; padding-top: 18px; font-size: 12px; color: var(--side-fg); }
+  .toggle-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
+  .toggle-row label { font-size: 12.5px; cursor: pointer; }
+
+  /* ---------- Content ---------- */
+  .content { display: flex; flex-direction: column; min-width: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(255,255,255,.82); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  .main { padding: 24px 28px 64px; max-width: 1240px; width: 100%; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    background: var(--accent-soft); color: var(--accent-strong);
+  }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.err { background: var(--err-soft); color: var(--err); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .section { margin-top: 26px; }
+  .section:first-child { margin-top: 6px; }
+  .section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .section-head h2 { font-size: 15px; margin: 0; font-weight: 700; }
+  .section-head .hint { font-size: 12.5px; color: var(--muted); }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card.pad { padding: 18px 20px; }
+
+  .alert { padding: 12px 16px; border-radius: 12px; font-size: 13.5px; margin-bottom: 4px; }
+  .alert.info { background: var(--accent-soft); color: var(--accent-strong); }
+  .alert.ok { background: var(--ok-soft); color: var(--ok); }
+  .alert.warn { background: var(--warn-soft); color: var(--warn); }
+  .alert.err { background: var(--err-soft); color: var(--err); }
+
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .stat .num { font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
+  .stat .lbl { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+  .banner { margin-top: 14px; padding: 12px 16px; border-radius: 12px; background: var(--surface-2); border: 1px dashed var(--line); font-size: 13.5px; color: var(--text); }
+
+  /* Upload */
+  .dropzone {
+    border: 2px dashed #c7d2fe; border-radius: var(--radius);
+    background: linear-gradient(180deg, #fbfcff, #f5f7ff);
+    padding: 26px; text-align: center; transition: .15s; cursor: pointer;
+  }
+  .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone .big { font-size: 15px; font-weight: 700; }
+  .dropzone .small { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .upload-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-size: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; color: var(--muted); }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
+  .step .n { width: 26px; height: 26px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-strong); font-weight: 800; display: grid; place-items: center; }
+  .step p { margin: 0; font-size: 13px; color: var(--muted); }
+
+  /* Works grid */
+  .works { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .work {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column;
+  }
+  .work .thumb { aspect-ratio: 16/9; background: var(--surface-2); display: grid; place-items: center; overflow: hidden; }
+  .work .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .work .thumb .ph { color: #94a3b8; font-size: 12.5px; }
+  .work .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 7px; }
+  .work .title { font-weight: 700; font-size: 14px; line-height: 1.35; }
+  .work .summary { font-size: 12.5px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .work .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .work .acts { display: flex; gap: 8px; margin-top: 2px; }
+
+  /* Buttons */
+  button, .btn {
+    font: inherit; cursor: pointer; border: 1px solid transparent; border-radius: 10px;
+    padding: 9px 14px; font-size: 13.5px; font-weight: 600; transition: .12s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-strong); }
+  .btn-ghost { background: var(--surface); color: var(--text); border-color: var(--line); }
+  .btn-ghost:hover { background: var(--surface-2); }
+  .btn-sm { padding: 6px 10px; font-size: 12.5px; }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; background: var(--surface-2); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .events li { list-style: none; padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: 13px; display: flex; gap: 10px; }
+  .events ul { list-style: none; margin: 0; padding: 0; }
+  .events .when { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 2px; }
+
+  .advanced-only { display: none; }
+  body.show-advanced .advanced-only { display: block; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 14px; border-radius: 12px; overflow: auto; font-size: 12px; }
+
+  /* Modal */
+  .modal-back { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: none; place-items: center; z-index: 50; padding: 20px; }
+  .modal-back.open { display: grid; }
+  .modal { background: #fff; border-radius: 16px; max-width: 760px; width: 100%; max-height: 86vh; overflow: auto; padding: 22px 24px; }
+  .modal h3 { margin-top: 0; }
+  .modal .close { float: right; }
+  .preview-body { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-top: 12px; }
+
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .brand { padding: 4px 8px; }
+    .nav { flex-direction: row; flex-wrap: wrap; }
+    .side-foot { margin: 0; padding: 6px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .steps { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .main { padding: 18px 16px 48px; }
+    .topbar { padding: 12px 16px; }
+  }
+</style>
 </head>
 <body>
-  <header class="topbar">
-    <h1>微信公众号文章调度工作台</h1>
-    <div id="safetyTop" class="safety-pill mode-safe">正在加载安全状态…</div>
-  </header>
+<div class="layout">
+  <!-- 左侧导航 -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">发</div>
+      <div>
+        <div class="name">发布工作台</div>
+        <div class="sub">本地 · 安全发布</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#works" class="active"><span class="ico">▦</span> 作品库</a>
+      <a href="#actions"><span class="ico">▶</span> 主操作</a>
+      <a href="#queue"><span class="ico">⧗</span> 发布队列</a>
+      <a href="#events"><span class="ico">≣</span> 操作记录</a>
+      <a href="#help"><span class="ico">?</span> 帮助</a>
+      <a href="/debug"><span class="ico">⚙</span> 高级排错</a>
+    </nav>
+    <div class="side-foot">
+      <div class="toggle-row card" style="background:rgba(255,255,255,.06);border:none;">
+        <input type="checkbox" id="advToggle" />
+        <label for="advToggle">显示高级信息（排错用）</label>
+      </div>
+    </div>
+  </aside>
 
-  <div class="workbench">
-    <aside class="sidebar">
-      <nav>
-        <a href="#overview">概览</a>
-        <a href="#review">文章审核</a>
-        <a href="#actions">主操作</a>
-        <a href="#queue">发布队列</a>
-        <a href="#events">操作记录</a>
-        <a href="#help">帮助</a>
-        <a href="/debug">高级排错</a>
-      </nav>
-      <label class="toggle-row">
-        <input type="checkbox" id="toggleAdvanced"/> 显示高级信息（排错用）
-      </label>
-    </aside>
+  <!-- 主内容 -->
+  <div class="content">
+    <header class="topbar">
+      <h1>微信公众号文章发布工作台</h1>
+      <span id="safetyTop" class="pill"><span class="dot"></span> 正在读取运行状态…</span>
+    </header>
 
     <main class="main">
-      <div id="alert" class="alert info">正在初始化…</div>
+      <div id="alertBox"></div>
 
-      <section id="overview" class="panel">
-        <h2>当前概况</h2>
-        <p class="helper">这里只显示你需要知道的数量和状态；技术细节请打开「高级排错」或勾选左侧高级开关。</p>
-        <div id="metricCards" class="cards"></div>
-        <div id="scheduleBanner" class="alert info" style="margin-top:12px;display:none;"></div>
-      </section>
-
-      <section id="review" class="panel">
-        <h2>文章审核</h2>
-        <p class="helper">真实发布前，请先把文章标记为「已通过」。演练模式不受此限制。</p>
-        <div id="reviewArea" class="empty">正在加载…</div>
-      </section>
-
-      <section id="actions" class="panel">
-        <h2>主操作（按顺序）</h2>
-        <p class="helper">建议从上到下完成三步；「刷新状态」只是查看，不会改动数据。</p>
-        <div id="stepsArea" class="steps"></div>
-        <div class="btn-row" style="margin-top:12px;">
-          <button class="secondary js-action" data-url="/api/status" data-method="GET" data-action="status">刷新状态</button>
+      <!-- 概览 -->
+      <section class="section" id="overview">
+        <div class="section-head">
+          <h2>概览</h2>
+          <span class="hint">你的作品和发布任务一眼看清</span>
         </div>
-        <div id="opStatus" class="status-inline">空闲</div>
+        <div class="stats" id="statCards"></div>
+        <div class="banner" id="scheduleBanner">读取计划中…</div>
       </section>
 
-      <section class="panel">
-        <h2>最近结果</h2>
-        <div id="resultBox" class="result-box"><p>等待操作…</p></div>
+      <!-- 作品库 + 上传 -->
+      <section class="section" id="works">
+        <div class="section-head">
+          <h2>作品库</h2>
+          <span class="hint">把想发布的文章和封面上传进来，上传即视为待发布</span>
+        </div>
+        <div class="card pad">
+          <div class="dropzone" id="dropzone">
+            <div class="big">拖拽文件到这里上传</div>
+            <div class="small">支持作品文件 md / txt / html 和封面图 jpg / png / gif / webp；封面会按文件名自动绑定到同名作品</div>
+            <div class="upload-actions">
+              <button class="btn-primary" id="pickArticles">选择作品文件</button>
+              <button class="btn-ghost" id="pickCovers">选择封面图</button>
+              <button class="btn-primary" id="doUpload" disabled>开始上传</button>
+            </div>
+            <div class="chips" id="pendingChips"></div>
+          </div>
+          <input type="file" id="articleInput" multiple accept=".md,.markdown,.txt,.html,.htm" hidden />
+          <input type="file" id="coverInput" multiple accept="image/*" hidden />
+        </div>
+        <div class="works" id="worksGrid" style="margin-top:16px;"></div>
       </section>
 
-      <div class="grid-2">
-        <section id="queue" class="panel">
-          <h2>发布队列</h2>
-          <div id="jobsArea" class="empty">正在加载…</div>
+      <!-- 主操作 -->
+      <section class="section" id="actions">
+        <div class="section-head">
+          <h2>主操作</h2>
+          <span class="hint">按顺序完成三步即可发布</span>
+        </div>
+        <div class="steps" id="stepCards"></div>
+        <div class="upload-actions" style="margin-top:14px;">
+          <button class="btn-primary" id="btnPlan">安排发布时间</button>
+          <button class="btn-primary" id="btnRun">执行到点发布</button>
+          <button class="btn-ghost" id="btnRefresh">刷新状态</button>
+        </div>
+        <div id="resultBox" style="margin-top:12px;"></div>
+      </section>
+
+      <!-- 队列 + 记录 -->
+      <div class="grid-2 section">
+        <section id="queue">
+          <div class="section-head"><h2>发布队列</h2><span class="hint">哪篇、什么时候、现在怎样</span></div>
+          <div class="card"><div id="queueBox" style="padding:4px 4px;"></div></div>
         </section>
-        <section id="events" class="panel">
-          <h2>操作记录</h2>
-          <div id="eventsArea" class="empty">正在加载…</div>
+        <section id="events" class="events">
+          <div class="section-head"><h2>操作记录</h2><span class="hint">你最近做了什么</span></div>
+          <div class="card pad"><div id="eventsBox"></div></div>
         </section>
       </div>
 
-      <section id="help" class="panel">
-        <h2>帮助与文档</h2>
-        <p class="helper">看不懂某个词？先看用户手册；需要排错再进高级页。</p>
-        <div id="docsArea" class="doc-links"></div>
+      <!-- 帮助 -->
+      <section class="section" id="help">
+        <div class="section-head"><h2>帮助</h2><span class="hint">不懂就看这里</span></div>
+        <div class="card pad" style="font-size:13.5px;color:var(--muted);">
+          <p style="margin-top:0;"><b>这是什么？</b> 一个把本地文章批量发布到微信公众号的工作台。默认是「演练」模式，不会真的发到公众号。</p>
+          <p><b>怎么用？</b> ① 在作品库上传文章和封面 → ② 点「安排发布时间」 → ③ 到时间后点「执行到点发布」。</p>
+          <p><b>会不会误发？</b> 顶部状态条会一直显示当前是「演练」还是「真实发布」；真实发布前还会再次确认。</p>
+          <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
+        </div>
       </section>
 
-      <section class="panel advanced-only">
-        <h2>高级信息（排错用）</h2>
-        <p class="helper">以下内容含内部字段名，仅供开发/Agent 排错。</p>
-        <div id="advancedSafety" class="cards"></div>
-        <details style="margin-top:10px;">
-          <summary>原始状态 JSON</summary>
-          <pre id="advancedJson">{}</pre>
-        </details>
+      <!-- 高级信息（默认隐藏；普通视图测试会剥离本区块） -->
+      <section class="panel advanced-only section" id="advanced">
+        <div class="section-head"><h2>高级信息</h2><span class="hint">仅排错用，普通用户可忽略</span></div>
+        <div class="card pad">
+          <div id="advMeta" style="font-size:13px;color:var(--muted);"></div>
+          <pre id="advRaw">…</pre>
+        </div>
       </section>
     </main>
   </div>
+</div>
 
-  <script>
-    let COPY = {};
-    let lastOverview = null;
-    let lastActionAt = null;
-    let busy = false;
+<!-- 预览弹窗 -->
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <button class="btn-ghost btn-sm close" id="modalClose">关闭</button>
+    <h3 id="modalTitle">预览</h3>
+    <div id="modalSummary" style="color:var(--muted);font-size:13px;"></div>
+    <div class="preview-body" id="modalBody"></div>
+  </div>
+</div>
 
-    const alertEl = document.getElementById('alert');
-    const safetyTopEl = document.getElementById('safetyTop');
-    const metricCardsEl = document.getElementById('metricCards');
-    const scheduleBannerEl = document.getElementById('scheduleBanner');
-    const reviewAreaEl = document.getElementById('reviewArea');
-    const stepsAreaEl = document.getElementById('stepsArea');
-    const jobsAreaEl = document.getElementById('jobsArea');
-    const eventsAreaEl = document.getElementById('eventsArea');
-    const docsAreaEl = document.getElementById('docsArea');
-    const resultBoxEl = document.getElementById('resultBox');
-    const opStatusEl = document.getElementById('opStatus');
-    const advancedSafetyEl = document.getElementById('advancedSafety');
-    const advancedJsonEl = document.getElementById('advancedJson');
-    const toggleAdvancedEl = document.getElementById('toggleAdvanced');
-    const buttons = () => Array.from(document.querySelectorAll('.js-action'));
+<script>
+let COPY = {};
+const pending = { articles: [], covers: [] };
 
-    function L(map, key, fallback) {
-      if (!map) return fallback ?? key ?? '--';
-      return map[key] ?? map[String(key)] ?? fallback ?? key ?? '--';
-    }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function L(map, key, fallback){ if(map && key!=null && map[key]!=null) return map[key]; return fallback!=null?fallback:(key!=null?key:''); }
+function el(id){ return document.getElementById(id); }
 
-    function escapeHtml(v) {
-      return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-    }
+function setAlert(kind, msg){
+  el('alertBox').innerHTML = msg ? `<div class="alert ${kind}">${esc(msg)}</div>` : '';
+}
 
-    function card(value, label) {
-      return `<div class="card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
-    }
+async function boot(){
+  try { COPY = await (await fetch('/api/user-labels')).json(); } catch(e){ COPY = {}; }
+  el('advToggle').addEventListener('change', e => {
+    document.body.classList.toggle('show-advanced', e.target.checked);
+  });
+  setupNav();
+  setupUpload();
+  el('btnPlan').addEventListener('click', () => runAction('plan', '/api/plan'));
+  el('btnRun').addEventListener('click', onRun);
+  el('btnRefresh').addEventListener('click', refreshAll);
+  el('modalClose').addEventListener('click', () => el('modalBack').classList.remove('open'));
+  el('modalBack').addEventListener('click', e => { if(e.target===el('modalBack')) el('modalBack').classList.remove('open'); });
+  renderSteps();
+  await refreshAll();
+}
 
-    function setAlert(type, msg) {
-      alertEl.className = 'alert ' + type;
-      alertEl.textContent = msg;
-    }
+function setupNav(){
+  const links = document.querySelectorAll('.nav a[href^="#"]');
+  links.forEach(a => a.addEventListener('click', () => {
+    links.forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+  }));
+}
 
-    function setBusy(next, text) {
-      busy = next;
-      buttons().forEach(b => b.disabled = next);
-      opStatusEl.textContent = text || (next ? '处理中…' : '空闲');
-    }
+function renderSteps(){
+  const steps = (COPY.steps && COPY.steps.length===3) ? COPY.steps : [
+    '1 上传作品：把文章和封面拖进来，自动收录',
+    '2 安排时间：为作品设定发布时间',
+    '3 执行到点：到时间后执行发布或演练'
+  ];
+  el('stepCards').innerHTML = steps.map((s,i) => {
+    const txt = s.replace(/^\d+\s*/, '');
+    return `<div class="step"><div class="n">${i+1}</div><div><b>${esc(txt.split('：')[0])}</b><p>${esc(txt.split('：')[1]||'')}</p></div></div>`;
+  }).join('');
+}
 
-    function renderSteps() {
-      const actions = [
-        { key: 'scan', url: '/api/scan', method: 'POST', primary: true },
-        { key: 'plan', url: '/api/plan', method: 'POST', primary: true },
-        { key: 'run-once', url: '/api/run-once', method: 'POST', primary: true, confirmReal: true },
-      ];
-      stepsAreaEl.innerHTML = (COPY.steps || []).map((text, i) => {
-        const act = actions[i];
-        if (!act) return `<div class="step"><p>${escapeHtml(text)}</p></div>`;
-        const cls = act.primary ? 'primary' : 'secondary';
-        const label = L(COPY.actions, act.key, act.key);
-        return `<div class="step"><p>${escapeHtml(text)}</p><button class="${cls} js-action" data-url="${act.url}" data-method="${act.method}" data-action="${act.key}" data-confirm-real="${act.confirmReal ? '1' : '0'}">${escapeHtml(label)}</button></div>`;
-      }).join('');
-      bindButtons();
-    }
+/* ---------- 上传 ---------- */
+function setupUpload(){
+  const dz = el('dropzone');
+  el('pickArticles').addEventListener('click', e => { e.stopPropagation(); el('articleInput').click(); });
+  el('pickCovers').addEventListener('click', e => { e.stopPropagation(); el('coverInput').click(); });
+  el('doUpload').addEventListener('click', e => { e.stopPropagation(); submitUpload(); });
+  el('articleInput').addEventListener('change', e => addFiles('articles', e.target.files));
+  el('coverInput').addEventListener('change', e => addFiles('covers', e.target.files));
+  dz.addEventListener('click', () => el('articleInput').click());
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', e => {
+    const imgRe = /\.(jpg|jpeg|png|gif|webp)$/i;
+    [...e.dataTransfer.files].forEach(f => addFiles(imgRe.test(f.name)?'covers':'articles', [f]));
+  });
+}
 
-    function renderSafetyTop(status) {
-      const mode = String(status.wechat_mode || '').toLowerCase();
-      const modeLabel = L(COPY.mode, mode, mode);
-      const publishLabel = L(COPY.publish_switch, String(!!status.wechat_enable_publish), '');
-      safetyTopEl.textContent = `${modeLabel} · ${publishLabel}`;
-      safetyTopEl.className = 'safety-pill ' + (mode === 'real' ? 'mode-real' : 'mode-safe');
-    }
+function addFiles(kind, fileList){
+  [...fileList].forEach(f => pending[kind].push(f));
+  renderChips();
+}
+function renderChips(){
+  const items = [
+    ...pending.articles.map(f => ({n:f.name, t:'作品'})),
+    ...pending.covers.map(f => ({n:f.name, t:'封面'})),
+  ];
+  el('pendingChips').innerHTML = items.map(i => `<span class="chip">${esc(i.t)}·${esc(i.n)}</span>`).join('');
+  el('doUpload').disabled = items.length === 0;
+}
 
-    function renderScheduleBanner(data) {
-      const summary = data.schedule_summary || {};
-      const text = summary.next_summary;
-      if (!text || summary.pending_count === 0) {
-        scheduleBannerEl.style.display = 'none';
-        return;
-      }
-      scheduleBannerEl.style.display = 'block';
-      scheduleBannerEl.className = summary.due_now_count > 0 ? 'alert warn' : 'alert info';
-      scheduleBannerEl.textContent = text;
-    }
+async function submitUpload(){
+  const fd = new FormData();
+  pending.articles.forEach(f => fd.append('articles', f, f.name));
+  pending.covers.forEach(f => fd.append('covers', f, f.name));
+  el('doUpload').disabled = true;
+  setAlert('info', '正在上传…');
+  try {
+    const data = await (await fetch('/api/upload', { method:'POST', body: fd })).json();
+    setAlert('ok', (data.human||['上传完成']).join('；'));
+    pending.articles = []; pending.covers = []; renderChips();
+  } catch(e){
+    setAlert('err', '上传失败：' + e);
+  } finally {
+    el('doUpload').disabled = pending.articles.length+pending.covers.length === 0;
+    await refreshAll();
+  }
+}
 
-    function renderReview(rows) {
-      if (!rows || !rows.length) {
-        reviewAreaEl.className = 'empty';
-        reviewAreaEl.textContent = '当前没有待审核文章。扫描新文章后，可在这里标记为「已通过」。';
-        return;
-      }
-      reviewAreaEl.className = '';
-      reviewAreaEl.innerHTML = `<table><thead><tr><th>标题</th><th>审核状态</th><th>操作</th></tr></thead><tbody>
-        ${rows.map(r => `<tr>
-          <td>${escapeHtml(r.title || '（无标题）')}</td>
-          <td><span class="pill warn">${escapeHtml(r.review_status_label || L(COPY.review_status, r.review_status, r.review_status))}</span></td>
-          <td class="btn-row">
-            <button class="primary js-review" data-id="${r.id}" data-status="approved">标记通过</button>
-            <button class="secondary js-review" data-id="${r.id}" data-status="pending_review">待审核</button>
-            <button class="danger js-review" data-id="${r.id}" data-status="rejected">驳回</button>
-          </td>
-        </tr>`).join('')}
-      </tbody></table>`;
-      reviewAreaEl.querySelectorAll('.js-review').forEach(btn => {
-        btn.onclick = () => submitReview(btn.dataset.id, btn.dataset.status);
-      });
-    }
+/* ---------- 主操作 ---------- */
+async function runAction(name, url){
+  setAlert('info', '正在' + L(COPY.actions, name, '处理') + '…');
+  try {
+    const data = await (await fetch(url, { method:'POST' })).json();
+    showResult(data.human || ['完成']);
+  } catch(e){ setAlert('err', '操作失败：' + e); }
+  await refreshAll();
+}
 
-    async function submitReview(articleId, status) {
-      if (busy) return;
-      setBusy(true, '正在更新审核状态…');
-      try {
-        const resp = await fetch(`/api/articles/${articleId}/review`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status }),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
-        await refreshOverview();
-        renderResult('review', data, true);
-        setAlert('ok', (data.human || ['审核状态已更新'])[0]);
-      } catch (e) {
-        renderResult('review', { error: e.message || String(e) }, false);
-        setAlert('error', `审核更新失败：${e.message || e}`);
-      } finally {
-        setBusy(false);
-      }
-    }
+async function onRun(){
+  let st = {};
+  try { st = await (await fetch('/api/status')).json(); } catch(e){}
+  if (st.wechat_mode === 'real' && st.wechat_enable_publish) {
+    let pf = '';
+    try {
+      const p = await (await fetch('/api/publish-preflight')).json();
+      pf = '\n\n' + (p.human||[]).join('\n');
+    } catch(e){}
+    if (!window.confirm('当前是「真实发布」模式，执行后会真的发到公众号。确定继续吗？' + pf)) return;
+  }
+  await runAction('run-once', '/api/run-once');
+}
 
-    function renderPreflight(preflight, status) {
-      if (!preflight || String(status.wechat_mode).toLowerCase() !== 'real') return;
-      const lines = (preflight.human || []).join(' ');
-      if (lines) {
-        safetyTopEl.title = lines;
-      }
-    }
+function showResult(lines){
+  el('resultBox').innerHTML = `<div class="alert ok">${lines.map(esc).join('<br/>')}</div>`;
+}
 
-    function renderMetrics(data) {
-      const ac = data.article_counts || {};
-      const jc = data.job_counts || {};
-      metricCardsEl.innerHTML = [
-        card(ac.imported || 0, L(COPY.article_status, 'imported', '已收录')),
-        card(ac.published || 0, L(COPY.article_status, 'published', '已发布')),
-        card(jc.pending || 0, L(COPY.job_status, 'pending', '待发布')),
-        card(jc.done || 0, L(COPY.job_status, 'done', '已完成')),
-        card(jc.failed || 0, L(COPY.job_status, 'failed', '失败')),
-      ].join('');
-    }
+/* ---------- 刷新与渲染 ---------- */
+async function refreshAll(){
+  try {
+    const [ov, arts] = await Promise.all([
+      (await fetch('/api/overview')).json(),
+      (await fetch('/api/articles')).json(),
+    ]);
+    renderSafety(ov.status, ov.publish_preflight);
+    renderStats(ov);
+    renderSchedule(ov.schedule_summary);
+    renderQueue(ov.recent_jobs);
+    renderEvents(ov.recent_events);
+    renderWorks(arts);
+    renderAdvanced(ov);
+  } catch(e){
+    setAlert('err', '读取数据失败：' + e);
+  }
+}
 
-    function renderAdvanced(status) {
-      advancedSafetyEl.innerHTML = [
-        card(status.wechat_mode, '内部 mode'),
-        card(status.dry_run ? 'on' : 'off', 'DRY_RUN'),
-        card(status.wechat_enable_publish ? 'true' : 'false', 'wechat_enable_publish'),
-        card(status.database || '--', '数据库路径'),
-      ].join('');
-      advancedJsonEl.textContent = JSON.stringify(status, null, 2);
-    }
+function renderSafety(status, preflight){
+  const pill = el('safetyTop');
+  const mode = status ? status.wechat_mode : 'mock';
+  if (mode === 'real' && status.wechat_enable_publish) {
+    pill.className = 'pill err'; pill.innerHTML = '<span class="dot"></span> 真实发布 · 会真的发到公众号';
+  } else if (mode === 'real') {
+    pill.className = 'pill warn'; pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿，不会发布';
+  } else {
+    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 不会真的发到公众号';
+  }
+}
 
-    function pillClass(status) {
-      const s = String(status || '').toLowerCase();
-      if (s === 'done' || s === 'published') return 'pill ok';
-      if (s === 'failed') return 'pill err';
-      if (s === 'running' || s === 'pending') return 'pill warn';
-      return 'pill';
-    }
+function renderStats(ov){
+  const ac = ov.article_counts || {}, jc = ov.job_counts || {};
+  const cards = [
+    { num: (ac.imported||0), lbl: '已收录作品' },
+    { num: (ac.published||0), lbl: '已发布' },
+    { num: (jc.pending||0), lbl: '待发布' },
+    { num: (jc.done||0), lbl: '已完成' },
+    { num: (jc.failed||0), lbl: '失败' },
+  ];
+  el('statCards').innerHTML = cards.map(c => `<div class="stat"><div class="num">${c.num}</div><div class="lbl">${esc(c.lbl)}</div></div>`).join('');
+}
 
-    function renderJobs(rows) {
-      if (!rows || !rows.length) {
-        jobsAreaEl.className = 'empty';
-        jobsAreaEl.textContent = COPY.empty?.jobs || '还没有待发布文章。';
-        return;
-      }
-      jobsAreaEl.className = '';
-      jobsAreaEl.innerHTML = `<table><thead><tr><th>标题</th><th>计划时间</th><th>状态</th><th>审核</th><th class="advanced-only">重试</th></tr></thead><tbody>
-        ${rows.map(r => `<tr>
-          <td>${escapeHtml(r.title || '（无标题）')}</td>
-          <td>${escapeHtml(r.scheduled_at_label || r.scheduled_at || '--')}</td>
-          <td><span class="${pillClass(r.status)}">${escapeHtml(L(COPY.job_status, r.status, r.status))}</span></td>
-          <td>${escapeHtml(r.review_status_label || L(COPY.review_status, r.review_status, '--'))}</td>
-          <td class="advanced-only">${escapeHtml(r.retry_count ?? 0)}</td>
-        </tr>`).join('')}
-      </tbody></table>`;
-    }
+function renderSchedule(s){
+  if (!s) { el('scheduleBanner').textContent = '暂无发布计划'; return; }
+  el('scheduleBanner').textContent = s.next_summary || '暂无发布计划';
+}
 
-    function eventSummary(row) {
-      const t = String(row.event_type || '');
-      if (t === 'scan_imported') return '收录了一篇文章';
-      if (t === 'plan_created') return '创建了发布计划';
-      return L(COPY.event_type, t, '系统记录');
-    }
+function renderQueue(jobs){
+  if (!jobs || !jobs.length) { el('queueBox').innerHTML = `<div class="empty" style="padding:14px;">${esc(L(COPY.empty,'jobs','还没有待发布作品'))}</div>`; return; }
+  const rows = jobs.map(j => `
+    <tr>
+      <td>${esc(j.title||'（无标题）')}</td>
+      <td>${esc(j.scheduled_at_label||'未安排')}</td>
+      <td><span class="pill ${pillForJob(j.status)}">${esc(L(COPY.job_status, j.status, j.status))}</span></td>
+    </tr>`).join('');
+  el('queueBox').innerHTML = `<table><thead><tr><th>作品</th><th>计划时间</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function pillForJob(s){ return s==='done'?'ok':(s==='failed'?'err':(s==='running'?'warn':'')); }
 
-    function renderEvents(rows) {
-      if (!rows || !rows.length) {
-        eventsAreaEl.className = 'empty';
-        eventsAreaEl.textContent = COPY.empty?.events || '还没有操作记录。';
-        return;
-      }
-      eventsAreaEl.className = '';
-      eventsAreaEl.innerHTML = `<table><thead><tr><th>时间</th><th>做了什么</th><th class="advanced-only">原始摘要</th></tr></thead><tbody>
-        ${rows.map(r => `<tr>
-          <td>${escapeHtml(r.created_at || '--')}</td>
-          <td>${escapeHtml(eventSummary(r))}</td>
-          <td class="advanced-only">${escapeHtml(r.payload_json || '')}</td>
-        </tr>`).join('')}
-      </tbody></table>`;
-    }
+function renderEvents(events){
+  if (!events || !events.length) { el('eventsBox').innerHTML = `<div class="empty">${esc(L(COPY.empty,'events','还没有操作记录'))}</div>`; return; }
+  const items = events.map(e => {
+    const label = L(COPY.event_type, e.event_type, e.event_type || '系统事件');
+    return `<li><span class="when">${esc((e.created_at||'').replace('T',' '))}</span><span>${esc(label)}</span></li>`;
+  }).join('');
+  el('eventsBox').innerHTML = `<ul>${items}</ul>`;
+}
 
-    function renderDocs(rows) {
-      docsAreaEl.innerHTML = (rows || []).map(r =>
-        `<a href="/${escapeHtml(r.path)}" title="${escapeHtml(r.path)}">${escapeHtml(r.label)}</a>`
-      ).join('');
-    }
+function renderWorks(arts){
+  const grid = el('worksGrid');
+  if (!arts || !arts.length) { grid.innerHTML = `<div class="empty">${esc(L(COPY.empty,'articles','作品库还是空的'))}</div>`; return; }
+  grid.innerHTML = arts.map(a => {
+    const thumb = a.has_cover
+      ? `<img src="${esc(a.cover_url)}" alt="封面" loading="lazy"/>`
+      : `<div class="ph">未设置封面</div>`;
+    const statusLbl = L(COPY.article_status, a.status, a.status);
+    const summary = a.has_summary ? esc(a.summary) : '<i>未填写摘要</i>';
+    return `
+      <div class="work">
+        <div class="thumb">${thumb}</div>
+        <div class="body">
+          <div class="title">${esc(a.title||'（无标题）')}</div>
+          <div class="summary">${summary}</div>
+          <div class="meta"><span class="pill ${a.status==='published'?'ok':''}">${esc(statusLbl)}</span></div>
+          <div class="acts">
+            <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
+            <button class="btn-ghost btn-sm" onclick="changeCover(${a.id})">换封面</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
 
-    function humanize(action, payload) {
-      if (action === 'scan') return (payload.human || []).length ? payload.human : [`扫描完成`];
-      if (action === 'plan') return (payload.human || []).length ? payload.human : [`排期完成`];
-      if (action === 'run-once') return (payload.human || []).length ? payload.human : [`执行完成`];
-      if (action === 'status') return ['状态已更新'];
-      if (action === 'review') return (payload.human || []).length ? payload.human : ['审核状态已更新'];
-      return ['操作完成'];
-    }
+async function preview(id){
+  el('modalBack').classList.add('open');
+  el('modalTitle').textContent = '预览';
+  el('modalBody').innerHTML = '加载中…';
+  el('modalSummary').textContent = '';
+  try {
+    const d = await (await fetch(`/api/articles/${id}/render-preview`)).json();
+    el('modalTitle').textContent = d.title || '预览';
+    el('modalSummary').textContent = d.summary || '';
+    el('modalBody').innerHTML = d.render_error ? esc('渲染失败：'+d.render_error) : (d.html_body || '（空）');
+  } catch(e){ el('modalBody').textContent = '预览失败：' + e; }
+}
 
-    function renderResult(action, payload, ok) {
-      const title = ok ? `已完成：${L(COPY.actions, action, action)}` : `未完成：${L(COPY.actions, action, action)}`;
-      const points = humanize(action, payload).map(p => `<li>${escapeHtml(p)}</li>`).join('');
-      const err = payload.error ? `<li>${escapeHtml(payload.error)}</li>` : '';
-      resultBoxEl.innerHTML = `<p><strong>${title}</strong></p><ul class="result-list">${points}${err}</ul>`;
-    }
+function changeCover(id){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.addEventListener('change', async () => {
+    if (!inp.files.length) return;
+    const fd = new FormData(); fd.append('cover', inp.files[0], inp.files[0].name);
+    setAlert('info', '正在更新封面…');
+    try {
+      const d = await (await fetch(`/api/articles/${id}/cover`, { method:'POST', body: fd })).json();
+      setAlert('ok', (d.human||['封面已更新']).join('；'));
+    } catch(e){ setAlert('err', '更新封面失败：'+e); }
+    await refreshAll();
+  });
+  inp.click();
+}
 
-    async function refreshOverview() {
-      const r = await fetch('/api/overview');
-      if (!r.ok) throw new Error('无法加载概况');
-      const data = await r.json();
-      lastOverview = data;
-      renderSafetyTop(data.status);
-      renderMetrics(data);
-      renderScheduleBanner(data);
-      renderReview(data.pending_review);
-      renderPreflight(data.publish_preflight, data.status);
-      renderAdvanced(data.status);
-      renderJobs(data.recent_jobs);
-      renderEvents(data.recent_events);
-      renderDocs(data.docs);
-      const totalArticles = Object.values(data.article_counts || {}).reduce((a,b)=>a+Number(b),0);
-      const totalJobs = Object.values(data.job_counts || {}).reduce((a,b)=>a+Number(b),0);
-      if (totalArticles === 0 && totalJobs === 0) {
-        setAlert('info', COPY.empty?.overview || '欢迎使用本地工作台');
-      } else {
-        setAlert('ok', `当前有 ${totalArticles} 篇文章、${totalJobs} 个发布任务`);
-      }
-      return data;
-    }
+function renderAdvanced(ov){
+  const st = ov.status || {};
+  el('advMeta').innerHTML = `运行模式 mode=${esc(st.wechat_mode)} · DRY_RUN=${esc(st.dry_run)} · 发布开关 wechat_enable_publish=${esc(st.wechat_enable_publish)}<br/>数据库 ${esc(st.database)}`;
+  el('advRaw').textContent = JSON.stringify(ov, null, 2);
+}
 
-    function needsRealConfirm() {
-      const s = lastOverview?.status || {};
-      return String(s.wechat_mode).toLowerCase() === 'real' && !!s.wechat_enable_publish;
-    }
-
-    async function invoke(url, method, action) {
-      if (busy) return;
-      const btn = event?.target;
-      if (btn?.dataset?.confirmReal === '1' && needsRealConfirm()) {
-        const pf = lastOverview?.publish_preflight;
-        const hint = pf && !pf.ready ? '\n\n预检提示：' + (pf.human || []).join(' ') : '';
-        const ok = window.confirm('当前已允许真实发布。确定要执行到点任务吗？这可能会真的发到公众号。' + hint);
-        if (!ok) return;
-      }
-      setBusy(true, `正在${L(COPY.actions, action, action)}…`);
-      try {
-        const resp = await fetch(url, { method });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data.detail || data.error || `HTTP ${resp.status}`);
-        lastActionAt = new Date();
-        await refreshOverview();
-        renderResult(action, data, true);
-        setAlert('ok', `${L(COPY.actions, action, action)}成功`);
-      } catch (e) {
-        renderResult(action, { error: e.message || String(e) }, false);
-        setAlert('error', `${L(COPY.actions, action, action)}失败：${e.message || e}`);
-      } finally {
-        setBusy(false);
-      }
-    }
-
-    function bindButtons() {
-      buttons().forEach(btn => {
-        btn.onclick = () => invoke(btn.dataset.url, btn.dataset.method || 'GET', btn.dataset.action || 'unknown');
-      });
-    }
-
-    toggleAdvancedEl.addEventListener('change', () => {
-      document.body.classList.toggle('show-advanced', toggleAdvancedEl.checked);
-    });
-
-    async function boot() {
-      const lr = await fetch('/api/user-labels');
-      COPY = await lr.json();
-      renderSteps();
-      await refreshOverview();
-      renderResult('status', { human: ['页面已就绪，可以开始操作'] }, true);
-    }
-
-    boot().catch(err => {
-      setAlert('error', '页面初始化失败，请确认数据库已初始化');
-      resultBoxEl.innerHTML = `<p>${escapeHtml(err.message || err)}</p>`;
-    });
-  </script>
+boot();
+</script>
 </body>
 </html>

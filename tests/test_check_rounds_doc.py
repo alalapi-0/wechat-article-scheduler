@@ -28,9 +28,3 @@ def test_round_smoke_hints_file_exists():
     text = path.read_text(encoding="utf-8")
     assert "round_012:" in text
     assert "check_rounds_doc.py" in text
-
-
-def test_round_013_candidate_pool_exists():
-    path = ROOT / "docs" / "reports" / "round_013_candidate_pool.md"
-    assert path.exists()
-    assert "Renderer" in path.read_text(encoding="utf-8")

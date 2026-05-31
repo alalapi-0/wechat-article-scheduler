@@ -48,6 +48,27 @@ class AppConfig:
     web_port: int
     rules: dict[str, Any]
 
+    @property
+    def articles_dir(self) -> Path:
+        """文章工作目录（inbox 的上级），隔离测试时只需改 ARTICLES_INBOX。"""
+        return self.inbox_dir.parent
+
+    @property
+    def imported_dir(self) -> Path:
+        return self.articles_dir / "imported"
+
+    @property
+    def published_dir(self) -> Path:
+        return self.articles_dir / "published"
+
+    @property
+    def rejected_dir(self) -> Path:
+        return self.articles_dir / "rejected"
+
+    @property
+    def covers_dir(self) -> Path:
+        return self.articles_dir / "covers"
+
 
 def load_rules(path: Path) -> dict[str, Any]:
     """加载 YAML 规则文件。"""

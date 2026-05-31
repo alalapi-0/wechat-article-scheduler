@@ -34,13 +34,6 @@ JOB_STATUS: dict[str, str] = {
     "cancelled": "已取消",
 }
 
-REVIEW_STATUS: dict[str, str] = {
-    "draft": "草稿",
-    "pending_review": "待审核",
-    "approved": "已通过",
-    "rejected": "已驳回",
-}
-
 EVENT_TYPE: dict[str, str] = {
     "scan_imported": "收录文章",
     "plan_created": "创建发布计划",
@@ -67,23 +60,24 @@ DRY_RUN_LABELS: dict[bool, str] = {
 }
 
 ACTION_LABELS: dict[str, str] = {
+    "upload": "上传作品与封面",
     "scan": "扫描收件箱",
     "plan": "安排发布时间",
-    "run-once": "执行到点文章",
+    "run-once": "执行到点发布",
     "status": "刷新状态",
 }
 
 STEP_LABELS: tuple[str, str, str] = (
-    "1 找文章：扫描收件箱，把新文章收进来",
-    "2 安排时间：为文章设定发布时间",
+    "1 上传作品：把文章和封面拖进来，自动收录",
+    "2 安排时间：为作品设定发布时间",
     "3 执行到点：到时间后执行发布或演练",
 )
 
 EMPTY_MESSAGES: dict[str, str] = {
-    "jobs": "还没有待发布文章。请先把文章放进收件箱，再点「扫描收件箱」，然后「安排发布时间」。",
-    "events": "还没有操作记录。完成扫描、排期或执行后，这里会显示你刚才做了什么。",
-    "articles": "还没有收录文章。请把 Markdown 文章放进收件箱文件夹，再点「扫描收件箱」。",
-    "overview": "欢迎使用本地工作台。建议按上方三步开始：先把文章放进收件箱，再扫描、排期。",
+    "jobs": "还没有待发布作品。先在上方上传作品，再点「安排发布时间」。",
+    "events": "还没有操作记录。完成上传、排期或执行后，这里会显示你刚才做了什么。",
+    "articles": "作品库还是空的。把文章（md/txt/html）和封面图拖到上传区，或点「选择文件」即可收录。",
+    "overview": "欢迎使用本地发布工作台。建议按三步开始：先上传作品，再安排时间，最后到点执行。",
 }
 
 
@@ -95,11 +89,6 @@ def label_article_status(status: str | None) -> str:
 def label_job_status(status: str | None) -> str:
     key = (status or "").strip().lower()
     return JOB_STATUS.get(key, status or "未知")
-
-
-def label_review_status(status: str | None) -> str:
-    key = (status or "").strip().lower()
-    return REVIEW_STATUS.get(key, status or "未知")
 
 
 def label_event_type(event_type: str | None) -> str:
@@ -136,15 +125,12 @@ def humanize_plan_result(payload: dict[str, Any]) -> list[str]:
 def humanize_run_once_result(payload: dict[str, Any]) -> list[str]:
     processed = int(payload.get("processed") or 0)
     skipped = int(payload.get("skipped_future") or 0)
-    skipped_approval = int(payload.get("skipped_not_approved") or 0)
     failed = int(payload.get("failed") or 0)
     lines: list[str] = []
     if processed:
         lines.append(f"已处理 {processed} 个到点任务")
     if skipped:
         lines.append(f"有 {skipped} 个任务还没到发布时间")
-    if skipped_approval:
-        lines.append(f"有 {skipped_approval} 个任务因未审核通过而跳过")
     if failed:
         lines.append(f"有 {failed} 个任务失败，请查看发布队列")
     if not lines:
@@ -157,7 +143,6 @@ def export_labels_json() -> dict[str, Any]:
     return {
         "article_status": ARTICLE_STATUS,
         "job_status": JOB_STATUS,
-        "review_status": REVIEW_STATUS,
         "event_type": EVENT_TYPE,
         "mode": MODE_LABELS,
         "publish_switch": {str(k): v for k, v in PUBLISH_SWITCH.items()},

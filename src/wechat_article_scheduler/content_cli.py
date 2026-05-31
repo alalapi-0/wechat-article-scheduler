@@ -20,7 +20,7 @@ def print_content_library(config: AppConfig, *, limit: int = 20) -> int:
         tags = ",".join(item.tags) if item.tags else "-"
         batch = item.import_batch or "-"
         print(
-            f"  #{item.article_id} [{item.review_status}] {item.title!r} "
+            f"  #{item.article_id} {item.title!r} "
             f"col={item.collection_slug} tags={tags} batch={batch}"
         )
     return len(items)

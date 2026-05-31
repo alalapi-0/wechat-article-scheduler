@@ -22,7 +22,7 @@ def summarize_schedule(conn: Any, *, limit: int = 5) -> dict[str, Any]:
     """汇总最近待发布任务与下一篇到点文章。"""
     rows = conn.execute(
         """
-        SELECT j.id, j.scheduled_at, j.status, a.title, a.review_status
+        SELECT j.id, j.scheduled_at, j.status, a.title
         FROM publish_jobs j
         JOIN articles a ON a.id = j.article_id
         WHERE j.status = 'pending'

@@ -7,12 +7,11 @@ from pathlib import Path
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
-from wechat_article_scheduler.content_library import set_review_status
 
 
 def reject_article(config: AppConfig, article_id: int) -> bool:
-    """将文章标为 rejected 并移到 articles/rejected。"""
-    rejected_dir = config.root / "articles" / "rejected"
+    """将文章从发布流程中移除（标为 rejected）并移到 articles/rejected。"""
+    rejected_dir = config.rejected_dir
     rejected_dir.mkdir(parents=True, exist_ok=True)
 
     with db.connect(config.database_path) as conn:
@@ -30,7 +29,6 @@ def reject_article(config: AppConfig, article_id: int) -> bool:
             "UPDATE articles SET status = 'rejected', updated_at = datetime('now') WHERE id = ?",
             (article_id,),
         )
-        set_review_status(conn, article_id, "rejected")
         conn.execute(
             "UPDATE publish_jobs SET status = 'cancelled', updated_at = datetime('now') "
             "WHERE article_id = ? AND status IN ('pending', 'running')",

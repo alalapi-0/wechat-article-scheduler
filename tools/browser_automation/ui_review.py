@@ -82,8 +82,9 @@ def capture(page, name: str) -> dict:
     info: dict = {"viewport": name}
     info["title"] = page.title()
     info["h1"] = [t.strip() for t in page.locator("h1").all_inner_texts()]
-    info["panels"] = [t.strip() for t in page.locator(".panel h2").all_inner_texts()]
-    info["alert"] = page.locator("#alert").inner_text().strip()
+    info["panels"] = [t.strip() for t in page.locator(".section-head h2").all_inner_texts()]
+    safety = page.locator("#safetyTop")
+    info["alert"] = safety.inner_text().strip() if safety.count() else ""
     info["buttons"] = [t.strip() for t in page.locator("button").all_inner_texts()]
     info["tables"] = page.locator("table").count()
     # 是否出现横向滚动（布局溢出信号）

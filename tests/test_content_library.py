@@ -10,7 +10,6 @@ from wechat_article_scheduler import db
 from wechat_article_scheduler.content_library import (
     list_content_items,
     register_imported_article,
-    set_review_status,
 )
 from wechat_article_scheduler.scanner import scan_inbox
 from tests.conftest import make_test_config
@@ -27,18 +26,17 @@ def lib_config(tmp_path: Path):
     return cfg
 
 
-def test_scan_registers_default_collection_and_draft_status(lib_config) -> None:
+def test_scan_registers_default_collection(lib_config) -> None:
     stats = scan_inbox(lib_config)
     assert stats["imported"] == 1
     with db.connect(lib_config.database_path) as conn:
         items = list_content_items(conn, limit=5)
     assert len(items) == 1
-    assert items[0].review_status == "draft"
     assert items[0].collection_slug == "default"
     assert items[0].import_batch is not None
 
 
-def test_set_review_status_updates_article(lib_config) -> None:
+def test_register_imported_article_assigns_tags(lib_config) -> None:
     with db.connect(lib_config.database_path) as conn:
         conn.execute(
             """
@@ -49,20 +47,15 @@ def test_set_review_status_updates_article(lib_config) -> None:
         aid = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
         register_imported_article(conn, article_id=aid, tag_names=["专栏", "测试"])
         conn.commit()
-        set_review_status(conn, aid, "pending_review")
         items = list_content_items(conn, limit=1)
-    assert items[0].review_status == "pending_review"
+    assert items[0].article_id == aid
     assert "专栏" in items[0].tags
 
 
-def test_list_content_items_filter_by_review_status(lib_config) -> None:
+def test_list_content_items_filter_by_collection(lib_config) -> None:
     scan_inbox(lib_config)
     with db.connect(lib_config.database_path) as conn:
-        aid = int(conn.execute("SELECT id FROM articles LIMIT 1").fetchone()[0])
-        set_review_status(conn, aid, "approved")
-        conn.commit()
-        approved = list_content_items(conn, review_status="approved")
-        draft = list_content_items(conn, review_status="draft")
-    assert len(approved) == 1
-    assert approved[0].review_status == "approved"
-    assert draft == []
+        default_items = list_content_items(conn, collection_slug="default")
+        missing = list_content_items(conn, collection_slug="nonexistent")
+    assert len(default_items) == 1
+    assert missing == []

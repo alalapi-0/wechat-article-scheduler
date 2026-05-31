@@ -51,7 +51,7 @@ PASS, WARNING, BLOCKED = "PASS", "WARNING", "BLOCKED"
 SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
-# 权威路线图：docs/rounds.md（Round 0–42）。修改路线图时须同步本表与 tests/test_agent_gate.py。
+# 权威路线图：docs/rounds.md（Round 0–46）。修改路线图时须同步本表与 tests/test_agent_gate.py。
 ROUND_ORDER = [
     "round_000",
     "round_001",
@@ -96,6 +96,10 @@ ROUND_ORDER = [
     "round_040",
     "round_041",
     "round_042",
+    "round_043",
+    "round_044",
+    "round_045",
+    "round_046",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -458,10 +462,10 @@ ROUND_META: dict[str, dict[str, Any]] = {
         ],
     },
     "round_039": {
-        "name": "Round 39 - Web 审核闸门",
+        "name": "Round 39 - Web 发布前确认入口",
         "acceptance_criteria": [
-            "Web 可标记文章审核状态，真实发布路径尊重 review_status",
-            "普通视图展示人话审核状态，不裸露 review_status 枚举",
+            "Web 执行到点前给出可读发布确认与预检提示",
+            "真实发布需显式开关与确认，普通视图不裸露内部枚举",
         ],
         "next_actions": [
             "推进 Round 40：定时发布 UX",
@@ -494,7 +498,47 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "路线图 Phase 9 维护轮次可 gate 校验",
         ],
         "next_actions": [
-            "维护 docs/rounds.md；按矩阵规划 Round 43+",
+            "推进 Round 43：产品重定位与审核概念移除",
+        ],
+    },
+    "round_043": {
+        "name": "Round 43 - 产品重定位与审核概念移除",
+        "acceptance_criteria": [
+            "全仓 src 无 review_status 引用，init-db 后 articles 表无该列",
+            "scan/plan/run-once 与 mock 路径不受影响",
+        ],
+        "next_actions": [
+            "推进 Round 44：网页批量上传作品与封面",
+        ],
+    },
+    "round_044": {
+        "name": "Round 44 - 网页批量上传作品与封面",
+        "acceptance_criteria": [
+            "POST /api/upload 支持多文件上传文章与封面",
+            "封面按文件名绑定到对应作品，mock 全流程可发布",
+        ],
+        "next_actions": [
+            "推进 Round 45：工作台界面与配色重构",
+        ],
+    },
+    "round_045": {
+        "name": "Round 45 - 工作台界面与配色重构",
+        "acceptance_criteria": [
+            "首屏以作品库与上传区为中心，移除审核区块",
+            "普通视图不裸露内部字段，窄屏无整页横向溢出",
+        ],
+        "next_actions": [
+            "推进 Round 46：发布确认护栏与能力矩阵收口",
+        ],
+    },
+    "round_046": {
+        "name": "Round 46 - 发布确认护栏与能力矩阵收口",
+        "acceptance_criteria": [
+            "发布前二次确认与预检替代审核门禁",
+            "能力矩阵与文档同步，受影响测试全绿",
+        ],
+        "next_actions": [
+            "维护 docs/rounds.md；按矩阵规划 Round 47+",
         ],
     },
 }
@@ -759,6 +803,29 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
         steps = [([py, "-m", "pytest", "tests/test_web_round39_plus.py", "tests/test_web_app.py", "-q"], "pytest preflight")]
     elif round_id == "round_042":
         steps = [([py, "-m", "pytest", "tests/test_agent_gate.py", "-q"], "pytest agent gate")]
+    elif round_id == "round_043":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_migrations.py", "tests/test_content_library.py", "tests/test_scheduler_hardening.py", "-q"],
+                "pytest review removal",
+            ),
+        ]
+    elif round_id == "round_044":
+        steps = [([py, "-m", "pytest", "tests/test_web_upload.py", "-q"], "pytest web upload")]
+    elif round_id == "round_045":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_web_app.py", "tests/test_web_ordinary_copy.py", "-q"],
+                "pytest web ui",
+            ),
+        ]
+    elif round_id == "round_046":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_agent_gate.py", "tests/test_web_round39_plus.py", "-q"],
+                "pytest preflight/matrix",
+            ),
+        ]
     else:
         return True, "unknown round skipped"
 
