@@ -1,14 +1,14 @@
 current_round:
-  id: round_041
-  name: Round 41 - 真实发布预检清单
+  id: round_042
+  name: Round 42 - 能力矩阵维护
   status: active
-  updated_at: '2026-05-31T00:23:09.817610+00:00'
+  updated_at: '2026-05-31T00:23:33.460461+00:00'
 last_completed_round:
-  id: round_040
-  completed_at: '2026-05-31T00:23:09.817610+00:00'
+  id: round_041
+  completed_at: '2026-05-31T00:23:33.460461+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 真实模式提供发布前检查 API 与人话摘要
-- 执行到点前展示阻断/提示项
+- wechat_capability_matrix 与已实现能力同步
+- 路线图 Phase 9 维护轮次可 gate 校验
 next_actions:
-- 推进 Round 42：能力矩阵维护
+- 维护 docs/rounds.md；按矩阵规划 Round 43+
