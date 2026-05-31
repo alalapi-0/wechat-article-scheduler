@@ -38,10 +38,10 @@ def test_round_order_contains_governance_round(ag):
     assert ag.ROUND_META["round_001"]["next_actions"]
 
 
-def test_round_order_covers_round_0_through_46(ag):
-    assert len(ag.ROUND_ORDER) == 47
+def test_round_order_covers_round_0_through_53(ag):
+    assert len(ag.ROUND_ORDER) == 54
     assert ag.ROUND_ORDER[0] == "round_000"
-    assert ag.ROUND_ORDER[-1] == "round_046"
+    assert ag.ROUND_ORDER[-1] == "round_053"
     for round_id in ag.ROUND_ORDER:
         assert round_id in ag.ROUND_META
         assert ag.ROUND_META[round_id]["name"]
@@ -118,6 +118,13 @@ def test_round_meta_aligns_with_rounds_doc_themes(ag):
     assert "批量上传" in ag.ROUND_META["round_044"]["name"]
     assert "界面与配色" in ag.ROUND_META["round_045"]["name"]
     assert "发布确认护栏" in ag.ROUND_META["round_046"]["name"]
+    assert "UI 细节" in ag.ROUND_META["round_047"]["name"]
+    assert "标题去重" in ag.ROUND_META["round_048"]["name"]
+    assert "预览修正" in ag.ROUND_META["round_049"]["name"]
+    assert "回收站" in ag.ROUND_META["round_050"]["name"]
+    assert "彻底删除" in ag.ROUND_META["round_051"]["name"]
+    assert "批量管理" in ag.ROUND_META["round_052"]["name"]
+    assert "内容质量" in ag.ROUND_META["round_053"]["name"]
 
 
 def test_suggest_next_command_completed(ag):

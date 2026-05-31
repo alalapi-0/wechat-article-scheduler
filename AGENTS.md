@@ -6,7 +6,7 @@
 
 | 用途 | 文件 |
 |------|------|
-| 人类可读路线图（权威） | `docs/rounds.md`（Round 0–38） |
+| 人类可读路线图（权威） | `docs/rounds.md`（Round 0–53） |
 | 机器可读轮次注册表 | `scripts/agent_gate.py` 的 `ROUND_ORDER` / `ROUND_META` |
 | 当前轮次运行状态 | `governance/round_state.yaml` |
 

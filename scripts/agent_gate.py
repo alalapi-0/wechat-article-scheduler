@@ -51,7 +51,7 @@ PASS, WARNING, BLOCKED = "PASS", "WARNING", "BLOCKED"
 SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
-# 权威路线图：docs/rounds.md（Round 0–46）。修改路线图时须同步本表与 tests/test_agent_gate.py。
+# 权威路线图：docs/rounds.md（Round 0–53）。修改路线图时须同步本表与 tests/test_agent_gate.py。
 ROUND_ORDER = [
     "round_000",
     "round_001",
@@ -100,6 +100,13 @@ ROUND_ORDER = [
     "round_044",
     "round_045",
     "round_046",
+    "round_047",
+    "round_048",
+    "round_049",
+    "round_050",
+    "round_051",
+    "round_052",
+    "round_053",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -538,7 +545,77 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "能力矩阵与文档同步，受影响测试全绿",
         ],
         "next_actions": [
-            "维护 docs/rounds.md；按矩阵规划 Round 47+",
+            "推进 Round 47：轻量 UI 细节修正",
+        ],
+    },
+    "round_047": {
+        "name": "Round 47 - 轻量 UI 细节修正",
+        "acceptance_criteria": [
+            "左上角品牌标识不突兀，作品列表与按钮视觉更克制",
+            "普通视图不回归审核概念或内部字段",
+        ],
+        "next_actions": [
+            "推进 Round 48：微信草稿正文规范化与标题去重",
+        ],
+    },
+    "round_048": {
+        "name": "Round 48 - 微信草稿正文规范化与标题去重",
+        "acceptance_criteria": [
+            "草稿 payload title 正确，content 不含重复首标题",
+            "Markdown / frontmatter / HTML 标题去重有测试覆盖",
+        ],
+        "next_actions": [
+            "推进 Round 49：公众号效果预览修正",
+        ],
+    },
+    "round_049": {
+        "name": "Round 49 - 公众号效果预览修正",
+        "acceptance_criteria": [
+            "预览弹窗展示可读正文，不显示 HTML 标签源码",
+            "Web 预览与真实 draft 共用同源渲染入口",
+        ],
+        "next_actions": [
+            "推进 Round 50：作品回收站与可逆删除",
+        ],
+    },
+    "round_050": {
+        "name": "Round 50 - 作品回收站与可逆删除",
+        "acceptance_criteria": [
+            "作品可从页面删除进入回收站，作品库/队列默认隐藏",
+            "回收站作品可恢复且不影响未删除作品",
+        ],
+        "next_actions": [
+            "推进 Round 51：清空回收站与彻底删除",
+        ],
+    },
+    "round_051": {
+        "name": "Round 51 - 清空回收站与彻底删除",
+        "acceptance_criteria": [
+            "清空后数据库和本地文章/封面文件按安全范围彻底删除",
+            "危险操作有二次确认且不会删除项目外路径",
+        ],
+        "next_actions": [
+            "推进 Round 52：批量管理与删除一致性",
+        ],
+    },
+    "round_052": {
+        "name": "Round 52 - 批量管理与删除一致性",
+        "acceptance_criteria": [
+            "作品、封面、未完成任务、回收站项都有清晰删除/恢复路径",
+            "批量操作不会影响未选中作品",
+        ],
+        "next_actions": [
+            "推进 Round 53：发布前内容质量检查",
+        ],
+    },
+    "round_053": {
+        "name": "Round 53 - 发布前内容质量检查",
+        "acceptance_criteria": [
+            "预检可发现标题重复、正文为空、疑似 HTML 源码等质量问题",
+            "真实发布路径对严重内容问题给出明确阻断或提示",
+        ],
+        "next_actions": [
+            "维护 docs/rounds.md；按能力矩阵规划 Round 54+",
         ],
     },
 }
@@ -824,6 +901,43 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_agent_gate.py", "tests/test_web_round39_plus.py", "-q"],
                 "pytest preflight/matrix",
+            ),
+        ]
+    elif round_id == "round_047":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_web_app.py", "tests/test_web_ordinary_copy.py", "-q"],
+                "pytest ui polish",
+            ),
+        ]
+    elif round_id == "round_048":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_parser.py", "tests/test_renderer_markdown.py", "tests/test_real_adapter.py", "-q"],
+                "pytest title/body rendering",
+            ),
+        ]
+    elif round_id == "round_049":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_publish_preview.py", "tests/test_web_app.py", "-q"],
+                "pytest publish preview",
+            ),
+        ]
+    elif round_id in {"round_050", "round_051"}:
+        steps = [([py, "-m", "pytest", "tests/test_web_trash.py", "-q"], "pytest trash")]
+    elif round_id == "round_052":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_web_trash.py", "tests/test_ui_e2e.py", "-q"],
+                "pytest bulk delete/e2e",
+            ),
+        ]
+    elif round_id == "round_053":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_web_round39_plus.py", "tests/test_publish_preview.py", "-q"],
+                "pytest content quality",
             ),
         ]
     else:
