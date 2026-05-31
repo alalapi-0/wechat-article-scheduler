@@ -1,0 +1,44 @@
+{
+  "started_at": "2026-05-31T23:04:57.624778+00:00",
+  "provider": "wechat_official",
+  "model": "draft/add + material/thumb",
+  "wechat_mode": "real",
+  "enable_publish": false,
+  "mock_used": false,
+  "samples_requested": 3,
+  "success_count": 3,
+  "failure_count": 0,
+  "results": [
+    {
+      "sample_id": "01_normal",
+      "title": "\"[API-TEST] 正常短文\"",
+      "ok": true,
+      "media_id": "OM-U2wK7LzfNRgc4...",
+      "error": "",
+      "content_len": 48,
+      "quality_notes": []
+    },
+    {
+      "sample_id": "02_duplicate_title",
+      "title": "\"[API-TEST] 标题去重\"",
+      "ok": true,
+      "media_id": "OM-U2wK7LzfNRgc4...",
+      "error": "",
+      "content_len": 46,
+      "quality_notes": []
+    },
+    {
+      "sample_id": "03_escaped_html",
+      "title": "\"[API-TEST] 转义 HTML\"",
+      "ok": true,
+      "media_id": "OM-U2wK7LzfNRgc4...",
+      "error": "",
+      "content_len": 50,
+      "quality_notes": [
+        "疑似转义 HTML 源码"
+      ]
+    }
+  ],
+  "token_ok": true,
+  "blocking_reason": ""
+}

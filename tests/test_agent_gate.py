@@ -38,10 +38,10 @@ def test_round_order_contains_governance_round(ag):
     assert ag.ROUND_META["round_001"]["next_actions"]
 
 
-def test_round_order_covers_round_0_through_53(ag):
-    assert len(ag.ROUND_ORDER) == 54
+def test_round_order_covers_round_0_through_54(ag):
+    assert len(ag.ROUND_ORDER) == 55
     assert ag.ROUND_ORDER[0] == "round_000"
-    assert ag.ROUND_ORDER[-1] == "round_053"
+    assert ag.ROUND_ORDER[-1] == "round_054"
     for round_id in ag.ROUND_ORDER:
         assert round_id in ag.ROUND_META
         assert ag.ROUND_META[round_id]["name"]

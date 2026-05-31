@@ -1179,6 +1179,25 @@
   - [ ] 真实发布阻断策略
   - [ ] 质量检查测试
 
+### Round 54 - 真实微信 API 闭环验证
+
+- 目标：用仓库已配置的真实微信凭证，批量验证 token、封面上传、草稿创建，并保存可审计报告。  
+- 范围：`scripts/real_api_check.py`；`fixtures/real_api_samples/` 样本；`reports/real_api_runs/` 报告；README 说明；工作台帮助文案与 `real + 草稿-only` 配置对齐。  
+- 非目标：默认开启 `freepublish/submit`；无限制烧 API；提交 `.env`。  
+- 输入：Round 53 内容质量检查、RealWechatAdapter、本地 `.env`。  
+- 输出：可重复执行的真实 API 验证入口与每轮报告。  
+- 验收标准：`real_api_check` 在 `WECHAT_MODE=real` 下完成至少 3 条草稿样本且报告落盘；gate 冒烟通过。  
+- 建议测试/冒烟命令：`python3 scripts/real_api_check.py --samples 3`；`python3 scripts/agent_gate.py gate`。  
+- 退出标准：失败时报告含可读错误且不泄露 secret；`WECHAT_ENABLE_PUBLISH=true` 时不自动提交发布。  
+- 风险：误创建过多公众号草稿。  
+- 回滚点：仅保留 token 探测，跳过 `draft/add`。  
+- 交付项：
+  - [ ] real_api_check 脚本
+  - [ ] 样本 fixtures
+  - [ ] 报告目录与示例
+  - [ ] README / 帮助文案
+  - [ ] agent_gate round_054 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

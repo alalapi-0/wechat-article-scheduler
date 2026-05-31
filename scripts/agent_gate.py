@@ -107,6 +107,7 @@ ROUND_ORDER = [
     "round_051",
     "round_052",
     "round_053",
+    "round_054",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -615,7 +616,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "真实发布路径对严重内容问题给出明确阻断或提示",
         ],
         "next_actions": [
-            "维护 docs/rounds.md；按能力矩阵规划 Round 54+",
+            "推进 Round 54：真实微信 API 闭环验证",
+        ],
+    },
+    "round_054": {
+        "name": "Round 54 - 真实微信 API 闭环验证",
+        "acceptance_criteria": [
+            "real_api_check 在 real 模式下完成样本草稿验证并保存报告",
+            "不泄露 token；WECHAT_ENABLE_PUBLISH 关闭时不提交发布",
+        ],
+        "next_actions": [
+            "维护 docs/rounds.md；按能力矩阵规划 Round 55+",
         ],
     },
 }
@@ -939,6 +950,10 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                 [py, "-m", "pytest", "tests/test_web_round39_plus.py", "tests/test_publish_preview.py", "-q"],
                 "pytest content quality",
             ),
+        ]
+    elif round_id == "round_054":
+        steps = [
+            ([py, "-m", "pytest", "tests/test_real_api_check.py", "-q"], "pytest real_api_check"),
         ]
     else:
         return True, "unknown round skipped"

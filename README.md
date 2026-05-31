@@ -72,6 +72,20 @@ python -m wechat_article_scheduler.cli run-once
 
 路线图现在按 Phase / Round 0-46 维护，每轮都要求目标、非目标、验收、建议测试与退出标准，并由 `scripts/agent_gate.py` 与 `tests/test_agent_gate.py` 做同步校验。Phase 6 / Phase 7 / Phase 8（Round 19–38）是普通用户友好的 Web 工作台可用性专项；**Phase 10（Round 43–46）完成产品重定位**：移除审核概念、新增网页批量上传作品与封面、重构工作台界面与配色。电脑浏览器是默认形态，窄屏只作为兼容验收。
 
+## 真实 API 验证（Agent / 本地）
+
+在 `.env` 配置 `WECHAT_MODE=real` 与公众号凭证，且 **`WECHAT_ENABLE_PUBLISH=false`**（只创建草稿）后：
+
+```bash
+python3 scripts/real_api_check.py --samples 3
+```
+
+报告写入 `reports/real_api_runs/`（JSON + Markdown 摘要，不含 token）。仅 token 探测：
+
+```bash
+python3 scripts/real_api_check.py --token-only
+```
+
 ## 安全边界
 
 - 默认不自动发布真实公众号内容（建议先使用 mock 或 real-draft-only）
