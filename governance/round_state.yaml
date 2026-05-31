@@ -1,14 +1,14 @@
 current_round:
-  id: round_039
-  name: Round 39 - Web 审核闸门
+  id: round_040
+  name: Round 40 - 定时发布 UX
   status: active
-  updated_at: '2026-05-31T00:22:24.729519+00:00'
+  updated_at: '2026-05-31T00:22:47.076211+00:00'
 last_completed_round:
-  id: round_038
-  completed_at: '2026-05-31T00:22:24.729519+00:00'
+  id: round_039
+  completed_at: '2026-05-31T00:22:47.076211+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- Web 可标记文章审核状态，真实发布路径尊重 review_status
-- 普通视图展示人话审核状态，不裸露 review_status 枚举
+- 概览与发布队列展示人话计划时间
+- 下一篇待发布摘要在普通视图可读
 next_actions:
-- 推进 Round 40：定时发布 UX
+- 推进 Round 41：真实发布预检清单
