@@ -72,6 +72,8 @@ class SampleResult:
     media_id: str = ""
     error: str = ""
     content_len: int = 0
+    rendered_len: int = 0
+    rendered_preview: str = ""
     quality_notes: list[str] = field(default_factory=list)
 
 
@@ -162,6 +164,17 @@ def run_check(*, samples: int, dry_run: bool, token_only: bool) -> RunReport:
             quality_notes=notes,
         )
         try:
+            from wechat_article_scheduler.publish_preview import render_for_publish
+
+            rendered = render_for_publish(sample["title"], sample["body"])
+            result.rendered_len = len(rendered)
+            result.rendered_preview = rendered[:240].replace("\n", " ")
+            if not rendered.strip():
+                notes.append("渲染后 HTML 为空")
+            if "&lt;" in sample["body"] and "&lt;" in rendered:
+                notes.append("渲染后仍含转义标签，预览可能异常")
+            elif "&lt;" in sample["body"] and "&lt;" not in rendered:
+                notes.append("转义 HTML 已归一化为可渲染段落")
             draft = adapter.create_draft(
                 title=sample["title"],
                 summary=sample["summary"],
@@ -219,6 +232,10 @@ def _write_report(report: RunReport) -> Path:
             lines.append(f"- media_id: {r.media_id}")
         if r.error:
             lines.append(f"- error: {r.error}")
+        if r.rendered_len:
+            lines.append(f"- rendered_len: {r.rendered_len}")
+        if r.rendered_preview:
+            lines.append(f"- rendered_preview: {r.rendered_preview[:200]}...")
         if r.quality_notes:
             lines.append(f"- quality: {', '.join(r.quality_notes)}")
         lines.append("")

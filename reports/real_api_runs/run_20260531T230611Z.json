@@ -1,0 +1,26 @@
+{
+  "started_at": "2026-05-31T23:06:06.147273+00:00",
+  "provider": "wechat_official",
+  "model": "draft/add + material/thumb",
+  "wechat_mode": "real",
+  "enable_publish": false,
+  "mock_used": false,
+  "samples_requested": 1,
+  "success_count": 1,
+  "failure_count": 0,
+  "results": [
+    {
+      "sample_id": "01_normal",
+      "title": "\"[API-TEST] 正常短文\"",
+      "ok": true,
+      "media_id": "OM-U2wK7LzfNRgc4...",
+      "error": "",
+      "content_len": 48,
+      "rendered_len": 206,
+      "rendered_preview": "<p style=\"margin: 0 0 1em; line-height: 1.8; font-size: 16px; color: #222;\">第一段正文，用于验证 draft/add 与段落渲染。</p> <p style=\"margin: 0 0 1em; line-height: 1.8; font-size: 16px; color: #222;\">第二段补充说明，确认多段落不会截断。</p>",
+      "quality_notes": []
+    }
+  ],
+  "token_ok": true,
+  "blocking_reason": ""
+}

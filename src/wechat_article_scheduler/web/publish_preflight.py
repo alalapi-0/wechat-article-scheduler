@@ -29,7 +29,11 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             "label": "运行模式",
             "detail": "当前为演练模式，不会真的发布"
             if mode == "mock"
-            else ("真实连接已启用，但发布开关关闭，只创建草稿" if not publish_on else "已连接真实公众号且允许发布"),
+            else (
+                "真实连接已启用：执行到点会创建公众号草稿，不会提交发布"
+                if not publish_on
+                else "已连接真实公众号且允许发布"
+            ),
         }
     )
 
