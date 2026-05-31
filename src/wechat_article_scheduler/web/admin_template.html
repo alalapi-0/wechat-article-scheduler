@@ -106,6 +106,7 @@
     <aside class="sidebar">
       <nav>
         <a href="#overview">概览</a>
+        <a href="#review">文章审核</a>
         <a href="#actions">主操作</a>
         <a href="#queue">发布队列</a>
         <a href="#events">操作记录</a>
@@ -124,6 +125,13 @@
         <h2>当前概况</h2>
         <p class="helper">这里只显示你需要知道的数量和状态；技术细节请打开「高级排错」或勾选左侧高级开关。</p>
         <div id="metricCards" class="cards"></div>
+        <div id="scheduleBanner" class="alert info" style="margin-top:12px;display:none;"></div>
+      </section>
+
+      <section id="review" class="panel">
+        <h2>文章审核</h2>
+        <p class="helper">真实发布前，请先把文章标记为「已通过」。演练模式不受此限制。</p>
+        <div id="reviewArea" class="empty">正在加载…</div>
       </section>
 
       <section id="actions" class="panel">
@@ -179,6 +187,8 @@
     const alertEl = document.getElementById('alert');
     const safetyTopEl = document.getElementById('safetyTop');
     const metricCardsEl = document.getElementById('metricCards');
+    const scheduleBannerEl = document.getElementById('scheduleBanner');
+    const reviewAreaEl = document.getElementById('reviewArea');
     const stepsAreaEl = document.getElementById('stepsArea');
     const jobsAreaEl = document.getElementById('jobsArea');
     const eventsAreaEl = document.getElementById('eventsArea');
@@ -238,6 +248,71 @@
       safetyTopEl.className = 'safety-pill ' + (mode === 'real' ? 'mode-real' : 'mode-safe');
     }
 
+    function renderScheduleBanner(data) {
+      const summary = data.schedule_summary || {};
+      const text = summary.next_summary;
+      if (!text || summary.pending_count === 0) {
+        scheduleBannerEl.style.display = 'none';
+        return;
+      }
+      scheduleBannerEl.style.display = 'block';
+      scheduleBannerEl.className = summary.due_now_count > 0 ? 'alert warn' : 'alert info';
+      scheduleBannerEl.textContent = text;
+    }
+
+    function renderReview(rows) {
+      if (!rows || !rows.length) {
+        reviewAreaEl.className = 'empty';
+        reviewAreaEl.textContent = '当前没有待审核文章。扫描新文章后，可在这里标记为「已通过」。';
+        return;
+      }
+      reviewAreaEl.className = '';
+      reviewAreaEl.innerHTML = `<table><thead><tr><th>标题</th><th>审核状态</th><th>操作</th></tr></thead><tbody>
+        ${rows.map(r => `<tr>
+          <td>${escapeHtml(r.title || '（无标题）')}</td>
+          <td><span class="pill warn">${escapeHtml(r.review_status_label || L(COPY.review_status, r.review_status, r.review_status))}</span></td>
+          <td class="btn-row">
+            <button class="primary js-review" data-id="${r.id}" data-status="approved">标记通过</button>
+            <button class="secondary js-review" data-id="${r.id}" data-status="pending_review">待审核</button>
+            <button class="danger js-review" data-id="${r.id}" data-status="rejected">驳回</button>
+          </td>
+        </tr>`).join('')}
+      </tbody></table>`;
+      reviewAreaEl.querySelectorAll('.js-review').forEach(btn => {
+        btn.onclick = () => submitReview(btn.dataset.id, btn.dataset.status);
+      });
+    }
+
+    async function submitReview(articleId, status) {
+      if (busy) return;
+      setBusy(true, '正在更新审核状态…');
+      try {
+        const resp = await fetch(`/api/articles/${articleId}/review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+        await refreshOverview();
+        renderResult('review', data, true);
+        setAlert('ok', (data.human || ['审核状态已更新'])[0]);
+      } catch (e) {
+        renderResult('review', { error: e.message || String(e) }, false);
+        setAlert('error', `审核更新失败：${e.message || e}`);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function renderPreflight(preflight, status) {
+      if (!preflight || String(status.wechat_mode).toLowerCase() !== 'real') return;
+      const lines = (preflight.human || []).join(' ');
+      if (lines) {
+        safetyTopEl.title = lines;
+      }
+    }
+
     function renderMetrics(data) {
       const ac = data.article_counts || {};
       const jc = data.job_counts || {};
@@ -275,11 +350,12 @@
         return;
       }
       jobsAreaEl.className = '';
-      jobsAreaEl.innerHTML = `<table><thead><tr><th>标题</th><th>计划时间</th><th>状态</th><th class="advanced-only">重试</th></tr></thead><tbody>
+      jobsAreaEl.innerHTML = `<table><thead><tr><th>标题</th><th>计划时间</th><th>状态</th><th>审核</th><th class="advanced-only">重试</th></tr></thead><tbody>
         ${rows.map(r => `<tr>
           <td>${escapeHtml(r.title || '（无标题）')}</td>
-          <td>${escapeHtml(r.scheduled_at || '--')}</td>
+          <td>${escapeHtml(r.scheduled_at_label || r.scheduled_at || '--')}</td>
           <td><span class="${pillClass(r.status)}">${escapeHtml(L(COPY.job_status, r.status, r.status))}</span></td>
+          <td>${escapeHtml(r.review_status_label || L(COPY.review_status, r.review_status, '--'))}</td>
           <td class="advanced-only">${escapeHtml(r.retry_count ?? 0)}</td>
         </tr>`).join('')}
       </tbody></table>`;
@@ -319,6 +395,7 @@
       if (action === 'plan') return (payload.human || []).length ? payload.human : [`排期完成`];
       if (action === 'run-once') return (payload.human || []).length ? payload.human : [`执行完成`];
       if (action === 'status') return ['状态已更新'];
+      if (action === 'review') return (payload.human || []).length ? payload.human : ['审核状态已更新'];
       return ['操作完成'];
     }
 
@@ -336,6 +413,9 @@
       lastOverview = data;
       renderSafetyTop(data.status);
       renderMetrics(data);
+      renderScheduleBanner(data);
+      renderReview(data.pending_review);
+      renderPreflight(data.publish_preflight, data.status);
       renderAdvanced(data.status);
       renderJobs(data.recent_jobs);
       renderEvents(data.recent_events);
@@ -359,7 +439,9 @@
       if (busy) return;
       const btn = event?.target;
       if (btn?.dataset?.confirmReal === '1' && needsRealConfirm()) {
-        const ok = window.confirm('当前已允许真实发布。确定要执行到点任务吗？这可能会真的发到公众号。');
+        const pf = lastOverview?.publish_preflight;
+        const hint = pf && !pf.ready ? '\n\n预检提示：' + (pf.human || []).join(' ') : '';
+        const ok = window.confirm('当前已允许真实发布。确定要执行到点任务吗？这可能会真的发到公众号。' + hint);
         if (!ok) return;
       }
       setBusy(true, `正在${L(COPY.actions, action, action)}…`);

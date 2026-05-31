@@ -38,10 +38,10 @@ def test_round_order_contains_governance_round(ag):
     assert ag.ROUND_META["round_001"]["next_actions"]
 
 
-def test_round_order_covers_round_0_through_38(ag):
-    assert len(ag.ROUND_ORDER) == 39
+def test_round_order_covers_round_0_through_42(ag):
+    assert len(ag.ROUND_ORDER) == 43
     assert ag.ROUND_ORDER[0] == "round_000"
-    assert ag.ROUND_ORDER[-1] == "round_038"
+    assert ag.ROUND_ORDER[-1] == "round_042"
     for round_id in ag.ROUND_ORDER:
         assert round_id in ag.ROUND_META
         assert ag.ROUND_META[round_id]["name"]
@@ -110,6 +110,10 @@ def test_round_meta_aligns_with_rounds_doc_themes(ag):
     assert "非技术用户" in ag.ROUND_META["round_036"]["name"]
     assert "MVP 收口" in ag.ROUND_META["round_037"]["name"]
     assert "接入规范" in ag.ROUND_META["round_038"]["name"]
+    assert "审核闸门" in ag.ROUND_META["round_039"]["name"]
+    assert "定时发布" in ag.ROUND_META["round_040"]["name"]
+    assert "预检" in ag.ROUND_META["round_041"]["name"]
+    assert "能力矩阵" in ag.ROUND_META["round_042"]["name"]
 
 
 def test_suggest_next_command_completed(ag):

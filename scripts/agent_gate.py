@@ -51,7 +51,7 @@ PASS, WARNING, BLOCKED = "PASS", "WARNING", "BLOCKED"
 SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
-# 权威路线图：docs/rounds.md（Round 0–38）。修改路线图时须同步本表与 tests/test_agent_gate.py。
+# 权威路线图：docs/rounds.md（Round 0–42）。修改路线图时须同步本表与 tests/test_agent_gate.py。
 ROUND_ORDER = [
     "round_000",
     "round_001",
@@ -92,6 +92,10 @@ ROUND_ORDER = [
     "round_036",
     "round_037",
     "round_038",
+    "round_039",
+    "round_040",
+    "round_041",
+    "round_042",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -450,7 +454,47 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "未来 Web 功能必须定义普通视图、详情视图和高级字段归属",
         ],
         "next_actions": [
-            "维护 docs/rounds.md 与治理协议；按后续功能接入规范规划 Round 39+",
+            "推进 Round 39：Web 审核闸门",
+        ],
+    },
+    "round_039": {
+        "name": "Round 39 - Web 审核闸门",
+        "acceptance_criteria": [
+            "Web 可标记文章审核状态，真实发布路径尊重 review_status",
+            "普通视图展示人话审核状态，不裸露 review_status 枚举",
+        ],
+        "next_actions": [
+            "推进 Round 40：定时发布 UX",
+        ],
+    },
+    "round_040": {
+        "name": "Round 40 - 定时发布 UX",
+        "acceptance_criteria": [
+            "概览与发布队列展示人话计划时间",
+            "下一篇待发布摘要在普通视图可读",
+        ],
+        "next_actions": [
+            "推进 Round 41：真实发布预检清单",
+        ],
+    },
+    "round_041": {
+        "name": "Round 41 - 真实发布预检清单",
+        "acceptance_criteria": [
+            "真实模式提供发布前检查 API 与人话摘要",
+            "执行到点前展示阻断/提示项",
+        ],
+        "next_actions": [
+            "推进 Round 42：能力矩阵维护",
+        ],
+    },
+    "round_042": {
+        "name": "Round 42 - 能力矩阵维护",
+        "acceptance_criteria": [
+            "wechat_capability_matrix 与已实现能力同步",
+            "路线图 Phase 9 维护轮次可 gate 校验",
+        ],
+        "next_actions": [
+            "维护 docs/rounds.md；按矩阵规划 Round 43+",
         ],
     },
 }
@@ -701,6 +745,19 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             ([py, "-m", "pytest", "tests/test_ui_e2e.py", "-q"], "pytest ui e2e"),
         ]
     elif round_id in {"round_036", "round_037", "round_038"}:
+        steps = [([py, "-m", "pytest", "tests/test_agent_gate.py", "-q"], "pytest agent gate")]
+    elif round_id == "round_039":
+        steps = [([py, "-m", "pytest", "tests/test_scheduler_hardening.py", "tests/test_web_round39_plus.py", "-q"], "pytest review gate")]
+    elif round_id == "round_040":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_web_round39_plus.py", "tests/test_web_ordinary_copy.py", "-q"],
+                "pytest schedule ux",
+            ),
+        ]
+    elif round_id == "round_041":
+        steps = [([py, "-m", "pytest", "tests/test_web_round39_plus.py", "tests/test_web_app.py", "-q"], "pytest preflight")]
+    elif round_id == "round_042":
         steps = [([py, "-m", "pytest", "tests/test_agent_gate.py", "-q"], "pytest agent gate")]
     else:
         return True, "unknown round skipped"

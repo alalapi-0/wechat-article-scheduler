@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from wechat_article_scheduler import db
@@ -15,7 +15,8 @@ from wechat_article_scheduler.config import AppConfig, load_config
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.plan import build_plan
 from wechat_article_scheduler.scanner import scan_inbox
-from wechat_article_scheduler.content_library import list_collections, list_content_items
+from wechat_article_scheduler.content_library import list_collections, list_content_items, set_review_status
+from wechat_article_scheduler.content_library.models import REVIEW_STATUSES
 from wechat_article_scheduler.cover_assets import check_cover_path, index_cover_directory
 from wechat_article_scheduler.renderers import render_markdown_to_html_safe
 from wechat_article_scheduler.scheduler import run_due_jobs
@@ -24,7 +25,10 @@ from wechat_article_scheduler.web.user_copy import (
     humanize_plan_result,
     humanize_run_once_result,
     humanize_scan_result,
+    label_review_status,
 )
+from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
+from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
 
 _TEMPLATE_PATH = Path(__file__).parent / "admin_template.html"
 _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exists() else "<html><body>模板缺失</body></html>"
@@ -71,19 +75,45 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             recent_jobs = conn.execute(
                 """
                 SELECT j.id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       j.adapter_mode, j.updated_at, a.title
+                       j.adapter_mode, j.updated_at, a.title, a.review_status
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
                 ORDER BY j.updated_at DESC, j.id DESC
                 LIMIT 10
                 """
             ).fetchall()
+            pending_review = conn.execute(
+                """
+                SELECT id, title, review_status, updated_at
+                FROM articles
+                WHERE COALESCE(review_status, 'draft') IN ('draft', 'pending_review', 'rejected')
+                ORDER BY updated_at DESC, id DESC
+                LIMIT 10
+                """
+            ).fetchall()
+            schedule = summarize_schedule(conn)
+            preflight = build_publish_preflight(cfg, conn)
+        recent_jobs_out = []
+        for r in recent_jobs:
+            row = dict(r)
+            row["scheduled_at_label"] = format_scheduled_at(row.get("scheduled_at"))
+            row["review_status_label"] = label_review_status(row.get("review_status"))
+            recent_jobs_out.append(row)
         return {
             "status": status(),
             "article_counts": {str(r["status"]): int(r["count"]) for r in article_rows},
             "job_counts": {str(r["status"]): int(r["count"]) for r in job_rows},
-            "recent_jobs": [dict(r) for r in recent_jobs],
+            "recent_jobs": recent_jobs_out,
             "recent_events": [dict(r) for r in list_events(cfg, limit=10)],
+            "pending_review": [
+                {
+                    **dict(r),
+                    "review_status_label": label_review_status(r["review_status"]),
+                }
+                for r in pending_review
+            ],
+            "schedule_summary": schedule,
+            "publish_preflight": preflight,
             "docs": [
                 {"label": "README", "path": "README.md"},
                 {"label": "开发路线图", "path": "docs/rounds.md"},
@@ -96,7 +126,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         with db.connect(cfg.database_path) as conn:
             rows = conn.execute(
                 """
-                SELECT id, title, status, source_path, created_at, updated_at
+                SELECT id, title, status, source_path, created_at, updated_at, review_status
                 FROM articles ORDER BY id DESC LIMIT ?
                 """,
                 (limit,),
@@ -109,7 +139,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             rows = conn.execute(
                 """
                 SELECT j.id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       a.title
+                       a.title, a.review_status
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
                 ORDER BY j.scheduled_at ASC
@@ -117,7 +147,46 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 """,
                 (limit,),
             ).fetchall()
-        return [dict(r) for r in rows]
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            row = dict(r)
+            row["scheduled_at_label"] = format_scheduled_at(row.get("scheduled_at"))
+            row["review_status_label"] = label_review_status(row.get("review_status"))
+            out.append(row)
+        return out
+
+    @app.get("/api/publish-preflight")
+    def publish_preflight() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            return build_publish_preflight(cfg, conn)
+
+    @app.get("/api/schedule-summary")
+    def schedule_summary(limit: int = 10) -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            return summarize_schedule(conn, limit=limit)
+
+    @app.post("/api/articles/{article_id}/review")
+    async def update_article_review(article_id: int, request: Request) -> dict[str, Any]:
+        body = await request.json()
+        status_value = str(body.get("status") or "").strip().lower()
+        if status_value not in REVIEW_STATUSES:
+            raise HTTPException(status_code=400, detail="无效的审核状态")
+        with db.connect(cfg.database_path) as conn:
+            row = conn.execute(
+                "SELECT id, title, review_status FROM articles WHERE id = ?",
+                (article_id,),
+            ).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="文章不存在")
+            set_review_status(conn, article_id, status_value)  # type: ignore[arg-type]
+            conn.commit()
+        return {
+            "article_id": article_id,
+            "title": row["title"],
+            "review_status": status_value,
+            "review_status_label": label_review_status(status_value),
+            "human": [f"《{row['title'] or '无标题'}》已标记为{label_review_status(status_value)}"],
+        }
 
     @app.get("/api/events")
     def events(limit: int = 30) -> list[dict[str, Any]]:

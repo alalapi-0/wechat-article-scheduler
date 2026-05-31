@@ -1,4 +1,4 @@
-# 开发路线图（Round 0 ~ Round 38）
+# 开发路线图（Round 0 ~ Round 42）
 
 本文件是路线图**人类权威源**；机器可读状态见 `governance/round_state.yaml`，机器轮次注册表见 `scripts/agent_gate.py` 的 `ROUND_ORDER` / `ROUND_META`。  
 任何轮次调整都必须同次同步 `tests/test_agent_gate.py` 与治理范围字段。
@@ -30,6 +30,7 @@
 | Phase 6 普通用户视图与主流程 | Round 19 ~ Round 25 | 普通视图原则、术语人话化、信息减法、三步操作、反馈、空状态、真实发布护栏 |
 | Phase 7 桌面工作台信息架构 | Round 26 ~ Round 30 | 桌面主布局、文章列表、发布队列、事件时间线、高级信息开关 |
 | Phase 8 体验固化与后续接入规范 | Round 31 ~ Round 38 | 帮助解释、错误恢复、桌面效率、窄屏兼容、E2E 基线、非技术用户走查、MVP 收口、后续功能接入规范 |
+| Phase 9 维护与生产加固 | Round 39 ~ Round 42 | Web 审核闸门、定时发布 UX、真实发布预检、能力矩阵维护 |
 
 ## Round 状态快照
 
@@ -74,6 +75,10 @@
 | Round 36 | 非技术用户走查报告 | 已完成 |
 | Round 37 | Web 控制台 MVP 收口 | 已完成 |
 | Round 38 | 后续功能接入规范 | 已完成 |
+| Round 39 | Web 审核闸门 | 待开始 |
+| Round 40 | 定时发布 UX | 待开始 |
+| Round 41 | 真实发布预检清单 | 待开始 |
+| Round 42 | 能力矩阵维护 | 待开始 |
 
 ## 轮次字段规范
 
@@ -857,6 +862,86 @@
   - [x] 错误解释模板
   - [x] 未来功能验收模板
   - [x] 治理文档同步
+
+## Phase 9：维护与生产加固
+
+> 在 Round 38 接入规范基础上，补齐发布可靠性与人话 UX 的遗留项；仍保持 Desktop-first、默认 mock、普通视图不裸露内部字段。
+
+### Round 39 - Web 审核闸门
+
+- 目标：让普通用户能在 Web 工作台审核文章，真实发布路径尊重 `review_status`。  
+- 范围：审核 API、待审核列表、人话状态标签、与 scheduler 闸门一致。  
+- 非目标：多人审批流、权限系统。  
+- 输入：`articles.review_status`、现有 content_library 仓库。  
+- 输出：Web 审核面板与 POST 审核接口。  
+- 验收标准：可标记通过/待审/驳回；真实发布跳过未批准任务；普通视图不裸露枚举。  
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_scheduler_hardening.py tests/test_web_round39_plus.py -q`。  
+- 退出标准：审核状态与 run-once 闸门行为一致。  
+- 风险：误点通过导致真实发布。  
+- 回滚点：保留 CLI 审核，隐藏 Web 按钮。  
+- 交付项：
+  - [x] POST `/api/articles/{id}/review`
+  - [x] 概览待审核列表
+  - [x] 人话审核状态标签
+  - [x] 与 scheduler 闸门测试
+  - [x] 普通视图审核区块
+
+### Round 40 - 定时发布 UX
+
+- 目标：让用户在概览与队列中读懂「下一篇什么时候发」。  
+- 范围：计划时间人话格式化、下一篇摘要、到点任务提示。  
+- 非目标：拖拽改期、日历组件。  
+- 输入：`publish_jobs.scheduled_at`、overview API。  
+- 输出：`schedule_summary` 与队列 `scheduled_at_label`。  
+- 验收标准：普通视图显示「YYYY年MM月DD日 HH:MM」；有到点任务时提示可读。  
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_web_round39_plus.py tests/test_web_ordinary_copy.py -q`。  
+- 退出标准：ISO 时间不再直接出现在普通视图表格。  
+- 风险：时区误解。  
+- 回滚点：保留 ISO 到高级区。  
+- 交付项：
+  - [x] format_scheduled_at 辅助
+  - [x] `/api/schedule-summary`
+  - [x] 概览下一篇横幅
+  - [x] 队列人话时间列
+  - [x] 对应测试
+
+### Round 41 - 真实发布预检清单
+
+- 目标：真实模式执行到点前展示可读检查项。  
+- 范围：预检 API、模式/审核/封面/摘要检查、确认对话框提示。  
+- 非目标：自动修复、联网校验。  
+- 输入：配置、待发布任务、文章摘要。  
+- 输出：`/api/publish-preflight` 与人话摘要。  
+- 验收标准：mock 模式提示演练；real 模式列出阻断/提示项。  
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_web_round39_plus.py tests/test_web_app.py -q`。  
+- 退出标准：未批准任务在 real 模式被标记为需处理。  
+- 风险：预检遗漏真实风险。  
+- 回滚点：仅保留二次确认。  
+- 交付项：
+  - [x] build_publish_preflight
+  - [x] GET `/api/publish-preflight`
+  - [x] 执行到点确认附带预检提示
+  - [x] overview 嵌入 preflight
+  - [x] 对应测试
+
+### Round 42 - 能力矩阵维护
+
+- 目标：同步能力矩阵与已实现功能，固化 Phase 9 维护入口。  
+- 范围：更新 `docs/wechat_capability_matrix.md`、治理 round_range、gate 注册表。  
+- 非目标：新业务能力。  
+- 输入：Round 39–41 产物、现有矩阵。  
+- 输出：矩阵状态更新与 Round 43+ 候选说明。  
+- 验收标准：审核闸门、Web 预检、定时 UX 在矩阵中标记为已实现/部分实现。  
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_agent_gate.py -q`。  
+- 退出标准：矩阵与代码无显著漂移。  
+- 风险：文档再次滞后。  
+- 回滚点：保留矩阵历史行。  
+- 交付项：
+  - [x] 能力矩阵更新
+  - [x] Phase 9 路线图同步
+  - [x] agent_gate ROUND_ORDER 扩展
+  - [x] 治理 round_range 更新
+  - [x] gate 测试通过
 
 ## 历史说明
 

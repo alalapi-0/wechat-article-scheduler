@@ -34,6 +34,13 @@ JOB_STATUS: dict[str, str] = {
     "cancelled": "已取消",
 }
 
+REVIEW_STATUS: dict[str, str] = {
+    "draft": "草稿",
+    "pending_review": "待审核",
+    "approved": "已通过",
+    "rejected": "已驳回",
+}
+
 EVENT_TYPE: dict[str, str] = {
     "scan_imported": "收录文章",
     "plan_created": "创建发布计划",
@@ -90,6 +97,11 @@ def label_job_status(status: str | None) -> str:
     return JOB_STATUS.get(key, status or "未知")
 
 
+def label_review_status(status: str | None) -> str:
+    key = (status or "").strip().lower()
+    return REVIEW_STATUS.get(key, status or "未知")
+
+
 def label_event_type(event_type: str | None) -> str:
     key = (event_type or "").strip().lower()
     return EVENT_TYPE.get(key, event_type or "系统事件")
@@ -124,12 +136,15 @@ def humanize_plan_result(payload: dict[str, Any]) -> list[str]:
 def humanize_run_once_result(payload: dict[str, Any]) -> list[str]:
     processed = int(payload.get("processed") or 0)
     skipped = int(payload.get("skipped_future") or 0)
+    skipped_approval = int(payload.get("skipped_not_approved") or 0)
     failed = int(payload.get("failed") or 0)
     lines: list[str] = []
     if processed:
         lines.append(f"已处理 {processed} 个到点任务")
     if skipped:
         lines.append(f"有 {skipped} 个任务还没到发布时间")
+    if skipped_approval:
+        lines.append(f"有 {skipped_approval} 个任务因未审核通过而跳过")
     if failed:
         lines.append(f"有 {failed} 个任务失败，请查看发布队列")
     if not lines:
@@ -142,6 +157,7 @@ def export_labels_json() -> dict[str, Any]:
     return {
         "article_status": ARTICLE_STATUS,
         "job_status": JOB_STATUS,
+        "review_status": REVIEW_STATUS,
         "event_type": EVENT_TYPE,
         "mode": MODE_LABELS,
         "publish_switch": {str(k): v for k, v in PUBLISH_SWITCH.items()},

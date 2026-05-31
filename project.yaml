@@ -36,5 +36,5 @@ protocol_standard:
     reason: 非小说项目，无 novel_pipeline_contract
     owner: user
   - field: agent_policy_standard.automation_policy
-    reason: agent_gate 编排 round_000..round_038 与 pytest/CLI 冒烟，须与 docs/rounds.md 同步
+    reason: agent_gate 编排 round_000..round_042 与 pytest/CLI 冒烟，须与 docs/rounds.md 同步
     owner: agent
