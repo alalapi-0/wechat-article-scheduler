@@ -1,14 +1,14 @@
 current_round:
-  id: round_051
-  name: Round 51 - 清空回收站与彻底删除
+  id: round_052
+  name: Round 52 - 批量管理与删除一致性
   status: active
-  updated_at: '2026-05-31T05:42:02.960099+00:00'
+  updated_at: '2026-05-31T05:42:49.460828+00:00'
 last_completed_round:
-  id: round_050
-  completed_at: '2026-05-31T05:42:02.960099+00:00'
+  id: round_051
+  completed_at: '2026-05-31T05:42:49.460828+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 清空后数据库和本地文章/封面文件按安全范围彻底删除
-- 危险操作有二次确认且不会删除项目外路径
+- 作品、封面、未完成任务、回收站项都有清晰删除/恢复路径
+- 批量操作不会影响未选中作品
 next_actions:
-- 推进 Round 52：批量管理与删除一致性
+- 推进 Round 53：发布前内容质量检查
