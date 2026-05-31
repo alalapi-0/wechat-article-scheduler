@@ -106,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
 
         from wechat_article_scheduler.web import create_app
 
+        db.init_db(config.database_path)
         host = args.host or config.web_host
         port = args.port or config.web_port
         app = create_app(config)

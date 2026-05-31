@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import Body, FastAPI, File, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from wechat_article_scheduler import db
@@ -27,6 +27,13 @@ from wechat_article_scheduler.web.user_copy import (
 )
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
 from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
+from wechat_article_scheduler.web.covers import (
+    batch_set_cover_from_article,
+    batch_set_cover_from_bytes,
+    batch_set_cover_from_path,
+    normalize_cover_config,
+    resolve_cover_config,
+)
 from wechat_article_scheduler.web.uploads import handle_upload, save_cover_file
 from wechat_article_scheduler.web.trash import (
     bulk_restore,
@@ -44,6 +51,8 @@ _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exist
 def create_app(config: AppConfig | None = None) -> FastAPI:
     """创建 FastAPI 应用（可注入 config 便于测试）。"""
     cfg = config or load_config()
+    # 启动时补齐 schema 与 migrations（旧库可能缺少 deleted_at 等列）
+    db.init_db(cfg.database_path)
     app = FastAPI(title="微信公众号文章调度器", description="本地管理后台（默认 mock）")
 
     @app.get("/", response_class=HTMLResponse)
@@ -118,7 +127,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             rows = conn.execute(
                 """
                 SELECT id, title, summary, status, source_path, cover_path,
-                       created_at, updated_at
+                       cover_config_json, created_at, updated_at
                 FROM articles
                 WHERE deleted_at IS NULL OR deleted_at = ''
                 ORDER BY id DESC LIMIT ?
@@ -130,6 +139,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             row = dict(r)
             row["has_cover"] = bool((row.get("cover_path") or "").strip())
             row["has_summary"] = bool((row.get("summary") or "").strip())
+            row["has_cover_config"] = bool((row.get("cover_config_json") or "").strip())
             row["cover_url"] = f"/media/cover/{row['id']}" if row["has_cover"] else None
             out.append(row)
         return out
@@ -231,7 +241,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return handle_upload(cfg, articles=article_payloads, covers=cover_payloads)
 
     @app.post("/api/articles/{article_id}/cover")
-    async def set_article_cover(article_id: int, cover: UploadFile = File(...)) -> dict[str, Any]:
+    async def set_article_cover(
+        article_id: int,
+        cover: UploadFile = File(...),
+        cover_config_json: str | None = Form(default=None),
+    ) -> dict[str, Any]:
         """为单篇作品替换/设置封面。"""
         with db.connect(cfg.database_path) as conn:
             row = conn.execute("SELECT id, title FROM articles WHERE id = ?", (article_id,)).fetchone()
@@ -239,10 +253,20 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 raise HTTPException(status_code=404, detail="作品不存在")
         data = await cover.read()
         dest = save_cover_file(cfg, cover.filename or f"cover_{article_id}.png", data)
+        cfg_json: str | None = None
+        if cover_config_json:
+            try:
+                cfg_json = normalize_cover_config(cover_config_json)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
         with db.connect(cfg.database_path) as conn:
             conn.execute(
-                "UPDATE articles SET cover_path = ?, updated_at = datetime('now') WHERE id = ?",
-                (str(dest), article_id),
+                """
+                UPDATE articles
+                SET cover_path = ?, cover_config_json = ?, updated_at = datetime('now')
+                WHERE id = ?
+                """,
+                (str(dest), cfg_json, article_id),
             )
             conn.commit()
         return {
@@ -250,6 +274,80 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "cover_url": f"/media/cover/{article_id}",
             "human": [f"《{row['title'] or '无标题'}》的封面已更新"],
         }
+
+    @app.post("/api/articles/batch-cover")
+    async def batch_set_covers(
+        ids: str = Form(...),
+        cover: UploadFile | None = File(default=None),
+        cover_asset_path: str | None = Form(default=None),
+        copy_from_article_id: int | None = Form(default=None),
+        reuse_config_from_article_id: int | None = Form(default=None),
+        cover_config_json: str | None = Form(default=None),
+    ) -> dict[str, Any]:
+        """批量为选中作品设置封面，可选复用封面裁剪位置。"""
+        try:
+            raw_ids = json.loads(ids)
+            article_ids = [int(x) for x in raw_ids]
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="ids 必须是 JSON 数组") from exc
+        if not article_ids:
+            raise HTTPException(status_code=400, detail="请至少选择一篇作品")
+
+        with db.connect(cfg.database_path) as conn:
+            try:
+                cfg_json = resolve_cover_config(
+                    conn,
+                    explicit=cover_config_json,
+                    reuse_from_article_id=reuse_config_from_article_id,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+            try:
+                if cover is not None and cover.filename:
+                    data = await cover.read()
+                    stats = batch_set_cover_from_bytes(
+                        cfg,
+                        conn,
+                        article_ids,
+                        filename=cover.filename or "batch_cover.png",
+                        data=data,
+                        cover_config_json=cfg_json,
+                    )
+                elif copy_from_article_id is not None:
+                    stats = batch_set_cover_from_article(
+                        conn,
+                        article_ids,
+                        source_article_id=copy_from_article_id,
+                        cover_config_json=cfg_json,
+                    )
+                elif cover_asset_path:
+                    asset = Path(cover_asset_path)
+                    if not asset.is_file():
+                        raise HTTPException(status_code=400, detail="封面素材路径无效")
+                    stats = batch_set_cover_from_path(
+                        conn,
+                        article_ids,
+                        cover_path=str(asset),
+                        cover_config_json=cfg_json,
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="请上传封面、选择素材库文件或指定源作品",
+                    )
+            except FileNotFoundError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            conn.commit()
+
+        msg = f"已为 {stats['updated']} 篇作品设置封面"
+        if stats["skipped"]:
+            msg += f"（跳过 {stats['skipped']} 篇）"
+        if cfg_json:
+            msg += "，并已应用封面位置配置"
+        return {"ok": True, **stats, "human": [msg]}
 
     @app.get("/media/cover/{article_id}")
     def media_cover(article_id: int) -> FileResponse:

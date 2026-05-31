@@ -28,6 +28,7 @@ def test_init_db_applies_migrations(tmp_path: Path) -> None:
         assert "review_status" not in cols
         assert "collection_id" in cols
         assert "cover_path" in cols
+        assert "cover_config_json" in cols
         assert "deleted_at" in cols
 
 
