@@ -1,14 +1,14 @@
 current_round:
-  id: round_048
-  name: Round 48 - 微信草稿正文规范化与标题去重
+  id: round_049
+  name: Round 49 - 公众号效果预览修正
   status: active
-  updated_at: '2026-05-31T05:36:22.151179+00:00'
+  updated_at: '2026-05-31T05:37:12.069533+00:00'
 last_completed_round:
-  id: round_047
-  completed_at: '2026-05-31T05:36:22.151179+00:00'
+  id: round_048
+  completed_at: '2026-05-31T05:37:12.069533+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 草稿 payload title 正确，content 不含重复首标题
-- Markdown / frontmatter / HTML 标题去重有测试覆盖
+- 预览弹窗展示可读正文，不显示 HTML 标签源码
+- Web 预览与真实 draft 共用同源渲染入口
 next_actions:
-- 推进 Round 49：公众号效果预览修正
+- 推进 Round 50：作品回收站与可逆删除

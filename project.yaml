@@ -6,7 +6,7 @@ project:
   primary_language: zh-CN
   output_language: zh-CN
   current_stage: round_development
-  current_round: round_048
+  current_round: round_049
   summary: 本地「作品 → 公众号」批量发布工作台：网页批量上传文章与封面，CLI 闭环 + 电脑浏览器优先 Web 控制台，支持上传、排期、草稿创建与可审计发布；无审核步骤，上传即待发布。
   long_term_goal: 形成可持续演进的本地批量发布工作台与治理体系；用户上传的作品即想发布的内容，安全靠默认演练 + 显式开关 + 发布前二次确认 +
     预检；Web 控制台普通视图优先服务非技术用户，默认只展示安全状态、下一步、操作结果和错误恢复建议，同时优先保障桌面端信息密度和操作效率，窄屏只做兼容。

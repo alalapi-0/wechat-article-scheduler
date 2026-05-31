@@ -239,7 +239,22 @@
   .modal { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; max-width: 760px; width: 100%; max-height: 86vh; overflow: auto; padding: 18px 20px; box-shadow: 0 18px 60px rgba(0,0,0,.16); }
   .modal h3 { margin: 0 0 8px; }
   .modal .close { float: right; }
-  .preview-body { border: 1px solid var(--line); border-radius: 9px; padding: 14px; margin-top: 12px; }
+  .preview-hint { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+  .preview-body {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 16px 18px;
+    margin-top: 4px;
+    background: #fafafa;
+    font-size: 16px;
+    line-height: 1.75;
+    color: #353535;
+    word-break: break-word;
+  }
+  .preview-body p { margin: 0 0 1em; }
+  .preview-body h1, .preview-body h2, .preview-body h3 { margin: 0 0 .6em; font-weight: 650; }
+  .preview-body a { color: #576b95; text-decoration: underline; }
+  .preview-raw { margin-top: 10px; font-size: 12px; color: var(--muted); white-space: pre-wrap; font-family: ui-monospace, monospace; }
 
   @media (max-width: 1050px) {
     .workspace { grid-template-columns: 1fr; }
@@ -402,7 +417,9 @@
     <button class="btn-ghost btn-sm close" id="modalClose">关闭</button>
     <h3 id="modalTitle">预览</h3>
     <div id="modalSummary" style="color:var(--muted);font-size:13px;"></div>
+    <p class="preview-hint">公众号正文预览（标题在微信标题栏单独显示）</p>
     <div class="preview-body" id="modalBody"></div>
+    <pre class="preview-raw advanced-only" id="modalRaw" hidden></pre>
   </div>
 </div>
 
@@ -629,11 +646,17 @@ async function preview(id){
   el('modalTitle').textContent = '预览';
   el('modalBody').innerHTML = '加载中…';
   el('modalSummary').textContent = '';
+  el('modalRaw').hidden = true;
+  el('modalRaw').textContent = '';
   try {
     const d = await (await fetch(`/api/articles/${id}/render-preview`)).json();
     el('modalTitle').textContent = d.title || '预览';
     el('modalSummary').textContent = d.summary || '';
     el('modalBody').innerHTML = d.render_error ? esc('渲染失败：'+d.render_error) : (d.html_body || '（空）');
+    if (document.body.classList.contains('show-advanced') && d.raw_body) {
+      el('modalRaw').hidden = false;
+      el('modalRaw').textContent = d.raw_body;
+    }
   } catch(e){ el('modalBody').textContent = '预览失败：' + e; }
 }
 

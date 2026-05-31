@@ -17,7 +17,7 @@ from wechat_article_scheduler.plan import build_plan
 from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.content_library import list_collections, list_content_items
 from wechat_article_scheduler.cover_assets import check_cover_path, index_cover_directory
-from wechat_article_scheduler.renderers import render_markdown_to_html_safe
+from wechat_article_scheduler.publish_preview import build_publish_preview
 from wechat_article_scheduler.scheduler import run_due_jobs
 from wechat_article_scheduler.web.user_copy import (
     export_labels_json,
@@ -275,15 +275,12 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             ).fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="文章不存在")
-        html_body, render_error = render_markdown_to_html_safe(row["body"] or "")
-        return {
-            "article_id": article_id,
-            "title": (row["title"] or "").strip() or f"文章 {article_id}",
-            "summary": (row["summary"] or "").strip(),
-            "html_body": html_body,
-            "render_error": render_error,
-            "read_only": True,
-        }
+        return build_publish_preview(
+            row["title"] or "",
+            row["summary"] or "",
+            row["body"] or "",
+            article_id=article_id,
+        )
 
     @app.get("/api/drafts/preview/{article_id}")
     def draft_preview(article_id: int) -> JSONResponse:
