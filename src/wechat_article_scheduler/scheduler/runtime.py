@@ -10,7 +10,6 @@ from datetime import datetime
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.scheduler.domain import execute_due_job, record_dry_run_job
-from wechat_article_scheduler.publish_body import publish_body_for
 from wechat_article_scheduler.scheduler.policies import (
     max_retries_for,
     should_skip_max_retries,
@@ -24,10 +23,30 @@ def _content_block_reason(title: str | None, body: str | None) -> str | None:
     raw_body = body or ""
     if not raw_body.strip():
         return "正文为空"
-    t = (title or "").strip()
-    if t and publish_body_for(t, raw_body) != raw_body.strip():
-        return "标题重复"
     return None
+
+
+def _parse_job_time(raw: str | None) -> datetime | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    normalized = text.replace(" ", "T") if "T" not in text and " " in text else text
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+
+def _job_is_due(raw: str | None, *, now: datetime) -> bool:
+    scheduled = _parse_job_time(raw)
+    if scheduled is None:
+        logger.warning("任务计划时间格式无效，暂不执行: %r", raw)
+        return False
+    if scheduled.tzinfo is not None and scheduled.utcoffset() is not None:
+        compare_now = datetime.now(scheduled.tzinfo).replace(microsecond=0)
+    else:
+        compare_now = now
+    return scheduled.replace(microsecond=0) <= compare_now
 
 
 def run_due_jobs(config: AppConfig) -> dict[str, int]:
@@ -45,8 +64,9 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
         "dry_run": 0,
         "skipped_max_retries": 0,
         "skipped_content": 0,
+        "drafted": 0,
     }
-    now = datetime.now().isoformat(timespec="seconds")
+    now = datetime.now().replace(microsecond=0)
     published_dir = config.published_dir
     published_dir.mkdir(parents=True, exist_ok=True)
     max_retries = max_retries_for(config)
@@ -65,7 +85,7 @@ def run_due_jobs(config: AppConfig) -> dict[str, int]:
         ).fetchall()
 
         for job in jobs:
-            if job["scheduled_at"] > now:
+            if not _job_is_due(job["scheduled_at"], now=now):
                 stats["skipped_future"] += 1
                 continue
 

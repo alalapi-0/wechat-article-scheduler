@@ -85,9 +85,9 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             {
                 "id": "duplicate_title",
                 "ok": False,
-                "required": will_publish,
+                "required": False,
                 "label": "标题重复",
-                "detail": f"有 {quality['duplicate_title']} 篇待发布作品正文含与标题重复的首标题",
+                "detail": f"有 {quality['duplicate_title']} 篇待发布作品正文含与标题重复的首标题，发布时会自动去掉",
             }
         )
     if quality["empty_body"]:

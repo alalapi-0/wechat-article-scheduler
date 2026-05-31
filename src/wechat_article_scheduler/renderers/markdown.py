@@ -60,6 +60,75 @@ def _render_block(block: str) -> str:
     return f'<p style="margin: 0 0 1em;">{inner}</p>'
 
 
+def _is_html_line(line: str) -> bool:
+    stripped = line.lstrip()
+    return stripped.startswith("<") and ">" in stripped
+
+
+def _render_lines(markdown_text: str) -> str:
+    lines = (markdown_text or "").splitlines()
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if not stripped:
+            i += 1
+            continue
+
+        heading = _HEADING_RE.match(stripped)
+        if heading:
+            level = len(heading.group(1))
+            out.append(
+                f'<h{level} style="margin: 0 0 0.75em;">'
+                f"{_inline_markup(heading.group(2))}</h{level}>"
+            )
+            i += 1
+            continue
+
+        if _is_html_line(line):
+            block: list[str] = []
+            while i < len(lines) and lines[i].strip():
+                block.append(lines[i].rstrip())
+                i += 1
+            out.append("\n".join(block))
+            continue
+
+        if _LIST_ITEM_RE.match(stripped):
+            items: list[str] = []
+            while i < len(lines):
+                item = _LIST_ITEM_RE.match(lines[i].strip())
+                if not item:
+                    break
+                items.append(
+                    f'<li style="margin: 0 0 0.35em;">{_inline_markup(item.group(1))}</li>'
+                )
+                i += 1
+            out.append(f'<ul style="margin: 0 0 1em; padding-left: 1.25em;">{"".join(items)}</ul>')
+            continue
+
+        paragraph: list[str] = []
+        while i < len(lines):
+            current = lines[i]
+            current_stripped = current.strip()
+            if not current_stripped:
+                break
+            if paragraph and (
+                _HEADING_RE.match(current_stripped)
+                or _is_html_line(current)
+                or _LIST_ITEM_RE.match(current_stripped)
+            ):
+                break
+            paragraph.append(current.rstrip())
+            i += 1
+        if paragraph:
+            inner = "<br/>".join(_inline_markup(ln) for ln in paragraph)
+            out.append(f'<p style="margin: 0 0 1em;">{inner}</p>')
+        else:
+            i += 1
+    return "\n".join(out)
+
+
 def render_markdown_to_html(markdown_text: str) -> str:
     """
     将 Markdown 文本渲染为 HTML。
@@ -71,10 +140,7 @@ def render_markdown_to_html(markdown_text: str) -> str:
     if stripped.startswith("<"):
         return raw
 
-    blocks = [b.strip() for b in raw.split("\n\n") if b.strip()]
-    if not blocks:
-        return ""
-    return "\n".join(_render_block(b) for b in blocks)
+    return _render_lines(raw)
 
 
 def render_markdown_to_html_safe(markdown_text: str) -> tuple[str, str | None]:

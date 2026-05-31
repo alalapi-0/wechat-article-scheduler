@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.web import create_app
+from wechat_article_scheduler.web.app import _web_auto_runner_state
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
 from tests.conftest import make_test_config
 
@@ -92,3 +93,53 @@ def test_summarize_schedule_due_now(app_config: AppConfig) -> None:
         summary = summarize_schedule(conn)
     assert summary["due_now_count"] == 1
     assert "已到发布时间" in summary["next_summary"]
+
+
+def test_web_auto_runner_enabled_for_draft_only(tmp_path: Path) -> None:
+    cfg = make_test_config(
+        tmp_path,
+        tmp_path / "auto.sqlite3",
+        web_auto_run_due=True,
+        wechat_mode="real",
+        wechat_enable_publish=False,
+    )
+    enabled, reason = _web_auto_runner_state(cfg)
+    assert enabled is True
+    assert "开启" in reason
+
+
+def test_web_auto_runner_blocks_true_publish(tmp_path: Path) -> None:
+    cfg = make_test_config(
+        tmp_path,
+        tmp_path / "auto.sqlite3",
+        web_auto_run_due=True,
+        wechat_mode="real",
+        wechat_enable_publish=True,
+    )
+    enabled, reason = _web_auto_runner_state(cfg)
+    assert enabled is False
+    assert "人工" in reason
+
+
+def test_web_auto_runner_follows_pending_jobs(app_config: AppConfig) -> None:
+    app_config.web_auto_run_due = True
+    app_config.wechat_mode = "mock"
+    app_config.scheduler_poll_seconds = 60
+    with TestClient(create_app(app_config)) as c:
+        status = c.get("/api/status").json()
+        assert status["web_auto_runner_active"] is False
+        assert "暂无待发布任务" in status["web_auto_runner_reason"]
+
+        with db.connect(app_config.database_path) as conn:
+            aid = _seed_article(conn)
+        future = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M")
+        scheduled = c.post(f"/api/articles/{aid}/schedule", json={"scheduled_at": future})
+        assert scheduled.status_code == 200
+        status = c.get("/api/status").json()
+        assert status["web_auto_runner_active"] is True
+
+        trashed = c.post(f"/api/articles/{aid}/trash")
+        assert trashed.status_code == 200
+        status = c.get("/api/status").json()
+        assert status["web_auto_runner_active"] is False
+        assert "暂无待发布任务" in status["web_auto_runner_reason"]

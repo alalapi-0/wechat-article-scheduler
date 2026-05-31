@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from wechat_article_scheduler import db
+from wechat_article_scheduler.adapters.base import DraftResult
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.scheduler import run_due_jobs
 from tests.conftest import make_test_config
@@ -63,3 +64,62 @@ def test_max_retries_skips_job(sched_config: AppConfig) -> None:
     stats = run_due_jobs(sched_config)
     assert stats["skipped_max_retries"] == 1
     assert stats["processed"] == 0
+
+
+def test_real_draft_only_keeps_article_unpublished(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    src = tmp_path / "articles" / "imported" / "real.md"
+    src.parent.mkdir(parents=True)
+    src.write_text("# T\n\nbody", encoding="utf-8")
+    db_path = tmp_path / "draft.sqlite3"
+    db.init_db(db_path)
+    past = (datetime.now() - timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
+    with db.connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO articles (source_path, title, summary, body, content_hash, status)
+            VALUES (?, 'T', 'S', '# T\n\nbody', 'hash-draft', 'imported')
+            """,
+            (str(src),),
+        )
+        aid = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+        conn.execute(
+            """
+            INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode, retry_count)
+            VALUES (?, ?, 'pending', 'real', 0)
+            """,
+            (aid, past),
+        )
+        conn.commit()
+
+    class FakeAdapter:
+        def create_draft(self, **kwargs):  # noqa: ANN001, ANN201
+            return DraftResult(media_id="draft-real-1", raw_response={"media_id": "draft-real-1"})
+
+        def submit_publish(self, media_id: str) -> dict:
+            return {"errcode": 0, "skipped": True, "media_id": media_id}
+
+    monkeypatch.setattr(
+        "wechat_article_scheduler.scheduler.domain.get_adapter",
+        lambda config: FakeAdapter(),  # noqa: ARG005
+    )
+    cfg = make_test_config(
+        tmp_path,
+        db_path,
+        wechat_mode="real",
+        wechat_enable_publish=False,
+        dry_run=False,
+    )
+    stats = run_due_jobs(cfg)
+    assert stats["processed"] == 1
+    assert stats["drafted"] == 1
+    assert src.exists()
+    with db.connect(db_path) as conn:
+        article = conn.execute("SELECT status, source_path FROM articles WHERE id = ?", (aid,)).fetchone()
+        job = conn.execute("SELECT status FROM publish_jobs WHERE article_id = ?", (aid,)).fetchone()
+        drafts = conn.execute("SELECT COUNT(*) AS cnt FROM wechat_drafts WHERE article_id = ?", (aid,)).fetchone()
+        event = conn.execute("SELECT event_type FROM events ORDER BY id DESC LIMIT 1").fetchone()
+    assert article["status"] == "imported"
+    assert article["source_path"] == str(src)
+    assert job["status"] == "done"
+    assert drafts["cnt"] == 1
+    assert event["event_type"] == "draft_created"

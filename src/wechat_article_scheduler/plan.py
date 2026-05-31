@@ -20,14 +20,20 @@ def _schedule_rules(config: AppConfig) -> dict:
 def _next_slot(
     start: datetime,
     *,
+    floor: datetime | None = None,
     day_counts: dict[str, int],
     max_per_day: int,
     min_hours_between: int,
     preferred_hours: list[int],
     last_scheduled: datetime | None,
 ) -> datetime:
-    """在窗口内找下一个可用发布时间。"""
+    """在窗口内找下一个可用发布时间（不早于 floor）。"""
+    not_before = (floor or start).replace(microsecond=0)
     current = start.replace(minute=0, second=0, microsecond=0)
+    if current < not_before:
+        current = not_before.replace(second=0)
+        if current < not_before:
+            current = not_before
     for _ in range(500):
         day_key = current.strftime("%Y-%m-%d")
         if day_counts.get(day_key, 0) >= max_per_day:
@@ -46,7 +52,14 @@ def _next_slot(
         if last_scheduled and (current - last_scheduled).total_seconds() < min_hours_between * 3600:
             current += timedelta(hours=min_hours_between)
             continue
+        if current < not_before:
+            current = not_before.replace(second=0)
+            if current < not_before:
+                current = not_before
+            continue
         return current
+    if current < not_before:
+        return not_before
     return current
 
 
@@ -105,6 +118,7 @@ def build_plan(config: AppConfig) -> dict[str, int]:
 
             slot = _next_slot(
                 slot_start,
+                floor=now,
                 day_counts=day_counts,
                 max_per_day=sched["max_per_day"],
                 min_hours_between=sched["min_hours_between"],

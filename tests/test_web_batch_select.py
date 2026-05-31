@@ -47,6 +47,8 @@ def test_index_has_batch_selection_ui(client: TestClient) -> None:
     assert "批量设置封面" in html
     assert "worksMarquee" in html
     assert "coverBatchBack" in html
+    assert "coverCropViewport" in html
+    assert "coverCropScale" in html
 
 
 def test_normalize_cover_config() -> None:
@@ -57,9 +59,10 @@ def test_normalize_cover_config() -> None:
 def test_batch_cover_upload_applies_to_selected(client: TestClient) -> None:
     c, cfg = client
     ids = _upload_two_articles(client)
+    cfg_json = normalize_cover_config({"crop": {"x": 0.1, "y": 0.05, "width": 0.7, "height": 0.3}})
     r = c.post(
         "/api/articles/batch-cover",
-        data={"ids": json.dumps(ids)},
+        data={"ids": json.dumps(ids), "cover_config_json": cfg_json},
         files={"cover": ("batch.png", PNG, "image/png")},
     )
     assert r.status_code == 200
@@ -75,6 +78,23 @@ def test_batch_cover_upload_applies_to_selected(client: TestClient) -> None:
             ).fetchall()
         }
     assert len(paths) == 1
+    with db.connect(cfg.database_path) as conn:
+        row = conn.execute(
+            "SELECT cover_config_json FROM articles WHERE id = ?",
+            (ids[0],),
+        ).fetchone()
+    assert row["cover_config_json"] == cfg_json
+
+
+def test_cover_asset_media_endpoint(client: TestClient, tmp_path: Path) -> None:
+    c, cfg = client
+    asset = cfg.root / "cover_assets"
+    asset.mkdir(parents=True, exist_ok=True)
+    asset_file = asset / "preview.png"
+    asset_file.write_bytes(PNG)
+    ok = c.get("/media/cover-asset", params={"path": str(asset_file)})
+    assert ok.status_code == 200
+    assert c.get("/media/cover-asset", params={"path": str(tmp_path / "outside.png")}).status_code == 400
 
 
 def test_batch_cover_reuses_config_from_source(client: TestClient) -> None:

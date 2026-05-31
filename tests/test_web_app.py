@@ -66,7 +66,9 @@ def test_render_preview_endpoint(app_config: AppConfig) -> None:
     assert r.status_code == 200
     data = r.json()
     assert data["read_only"] is True
-    assert "<h1" in data["html_body"]
+    assert "<h1" not in data["html_body"]
+    assert "font-size: 22px" in data["html_body"]
+    assert "font-weight: 700" in data["html_body"]
     assert data["render_error"] is None
 
 

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+from contextlib import asynccontextmanager, suppress
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -14,16 +17,24 @@ from wechat_article_scheduler.adapters import get_adapter
 from wechat_article_scheduler.config import AppConfig, load_config
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.plan import build_plan
+from wechat_article_scheduler.schedule_assign import (
+    assign_article_schedule,
+    assign_batch_schedule,
+    parse_scheduled_at,
+)
 from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.content_library import list_collections, list_content_items
 from wechat_article_scheduler.cover_assets import check_cover_path, index_cover_directory
 from wechat_article_scheduler.publish_preview import build_publish_preview
 from wechat_article_scheduler.scheduler import run_due_jobs
 from wechat_article_scheduler.web.user_copy import (
+    article_workflow_hint,
     export_labels_json,
     humanize_plan_result,
     humanize_run_once_result,
     humanize_scan_result,
+    humanize_schedule_batch_result,
+    humanize_schedule_single_result,
 )
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
 from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
@@ -46,6 +57,122 @@ from wechat_article_scheduler.web.trash import (
 
 _TEMPLATE_PATH = Path(__file__).parent / "admin_template.html"
 _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exists() else "<html><body>模板缺失</body></html>"
+logger = logging.getLogger(__name__)
+
+
+def _cover_asset_roots(config: AppConfig) -> list[Path]:
+    roots = [config.root / "cover_assets", config.covers_dir, config.root / "assets" / "covers"]
+    out: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        resolved = root.resolve()
+        key = str(resolved)
+        if key not in seen:
+            seen.add(key)
+            out.append(resolved)
+    return out
+
+
+def _is_under_any(path: Path, roots: list[Path]) -> bool:
+    resolved = path.resolve()
+    for root in roots:
+        try:
+            resolved.relative_to(root.resolve())
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _web_auto_runner_state(config: AppConfig) -> tuple[bool, str]:
+    """Web 工作台到点自动执行开关；真正发布仍要求显式人工路径。"""
+    if not getattr(config, "web_auto_run_due", False):
+        return False, "WEB_AUTO_RUN_DUE=false"
+    if config.dry_run:
+        return False, "DRY_RUN=true"
+    if config.wechat_mode == "real" and config.wechat_enable_publish:
+        return False, "真实发布开关已开启，需人工点击执行或使用 CLI scheduler"
+    return True, "已开启"
+
+
+def _pending_publish_job_count(config: AppConfig) -> int:
+    with db.connect(config.database_path) as conn:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS cnt
+            FROM publish_jobs j
+            JOIN articles a ON a.id = j.article_id
+            WHERE j.status = 'pending'
+              AND (a.deleted_at IS NULL OR a.deleted_at = '')
+            """
+        ).fetchone()
+    return int(row["cnt"] if row else 0)
+
+
+def _runner_task(app: FastAPI) -> asyncio.Task | None:
+    task = getattr(app.state, "web_auto_runner_task", None)
+    if task is not None and task.done():
+        app.state.web_auto_runner_task = None
+        return None
+    return task
+
+
+async def _stop_web_auto_runner(app: FastAPI, *, reason: str) -> None:
+    task = _runner_task(app)
+    current = asyncio.current_task()
+    if task is not None and task is not current:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+    app.state.web_auto_runner_task = None
+    app.state.web_auto_runner_active = False
+    app.state.web_auto_runner_reason = reason
+
+
+async def _sync_web_auto_runner(app: FastAPI, config: AppConfig) -> None:
+    allowed, reason = _web_auto_runner_state(config)
+    if not allowed:
+        await _stop_web_auto_runner(app, reason=reason)
+        logger.info("Web 到点自动执行未启动：%s", reason)
+        return
+
+    pending_count = _pending_publish_job_count(config)
+    if pending_count <= 0:
+        await _stop_web_auto_runner(app, reason="暂无待发布任务")
+        logger.info("Web 到点自动执行已停止：暂无待发布任务")
+        return
+
+    if _runner_task(app) is not None:
+        app.state.web_auto_runner_active = True
+        app.state.web_auto_runner_reason = f"已开启（{pending_count} 个待发布任务）"
+        return
+
+    app.state.web_auto_runner_active = True
+    app.state.web_auto_runner_reason = f"已开启（{pending_count} 个待发布任务）"
+    app.state.web_auto_runner_task = asyncio.create_task(_web_auto_run_loop(config, app))
+
+
+async def _web_auto_run_loop(config: AppConfig, app: FastAPI) -> None:
+    poll = max(5, config.scheduler_poll_seconds)
+    logger.info("Web 到点自动执行已启动：每 %ss 检查一次", poll)
+    while True:
+        try:
+            pending_before = _pending_publish_job_count(config)
+            if pending_before <= 0:
+                await _stop_web_auto_runner(app, reason="暂无待发布任务")
+                return
+            stats = run_due_jobs(config)
+            if any(stats.get(k) for k in ("processed", "drafted", "failed", "dry_run")):
+                logger.info("Web 到点自动执行结果: %s", stats)
+            pending_after = _pending_publish_job_count(config)
+            if pending_after <= 0:
+                await _stop_web_auto_runner(app, reason="暂无待发布任务")
+                return
+            app.state.web_auto_runner_active = True
+            app.state.web_auto_runner_reason = f"已开启（{pending_after} 个待发布任务）"
+        except Exception:  # noqa: BLE001 - 后台循环不应拖垮 Web 工作台
+            logger.exception("Web 到点自动执行失败")
+        await asyncio.sleep(poll)
 
 
 def create_app(config: AppConfig | None = None) -> FastAPI:
@@ -53,7 +180,23 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     cfg = config or load_config()
     # 启动时补齐 schema 与 migrations（旧库可能缺少 deleted_at 等列）
     db.init_db(cfg.database_path)
-    app = FastAPI(title="微信公众号文章调度器", description="本地管理后台（默认 mock）")
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        app.state.web_auto_runner_task = None
+        app.state.web_auto_runner_active = False
+        app.state.web_auto_runner_reason = "未启动"
+        await _sync_web_auto_runner(app, cfg)
+        try:
+            yield
+        finally:
+            await _stop_web_auto_runner(app, reason="服务已停止")
+
+    app = FastAPI(
+        title="微信公众号文章调度器",
+        description="本地管理后台（默认 mock）",
+        lifespan=lifespan,
+    )
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
@@ -75,6 +218,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "wechat_mode": cfg.wechat_mode,
             "dry_run": cfg.dry_run,
             "wechat_enable_publish": cfg.wechat_enable_publish,
+            "web_auto_run_due": cfg.web_auto_run_due,
+            "web_auto_runner_active": bool(getattr(app.state, "web_auto_runner_active", False)),
+            "web_auto_runner_reason": str(getattr(app.state, "web_auto_runner_reason", "")),
             "database": str(cfg.database_path),
         }
 
@@ -126,11 +272,19 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         with db.connect(cfg.database_path) as conn:
             rows = conn.execute(
                 """
-                SELECT id, title, summary, status, source_path, cover_path,
-                       cover_config_json, created_at, updated_at
-                FROM articles
+                SELECT a.id, a.title, a.summary, a.status, a.source_path, a.cover_path,
+                       a.cover_config_json, a.created_at, a.updated_at,
+                       EXISTS(
+                           SELECT 1 FROM wechat_drafts d WHERE d.article_id = a.id
+                       ) AS has_wechat_draft,
+                       (
+                           SELECT j.status FROM publish_jobs j
+                           WHERE j.article_id = a.id
+                           ORDER BY j.id DESC LIMIT 1
+                       ) AS latest_job_status
+                FROM articles a
                 WHERE deleted_at IS NULL OR deleted_at = ''
-                ORDER BY id DESC LIMIT ?
+                ORDER BY a.id DESC LIMIT ?
                 """,
                 (limit,),
             ).fetchall()
@@ -141,6 +295,12 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             row["has_summary"] = bool((row.get("summary") or "").strip())
             row["has_cover_config"] = bool((row.get("cover_config_json") or "").strip())
             row["cover_url"] = f"/media/cover/{row['id']}" if row["has_cover"] else None
+            row["has_wechat_draft"] = bool(row.get("has_wechat_draft"))
+            row["workflow_hint"] = article_workflow_hint(
+                status=row.get("status"),
+                latest_job_status=row.get("latest_job_status"),
+                has_wechat_draft=row["has_wechat_draft"],
+            )
             out.append(row)
         return out
 
@@ -150,11 +310,12 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             return list_trash_articles(conn, limit=limit)
 
     @app.post("/api/articles/{article_id}/trash")
-    def trash_article(article_id: int) -> dict[str, Any]:
+    async def trash_article(article_id: int) -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
             if not soft_delete_article(conn, article_id):
                 raise HTTPException(status_code=404, detail="作品不存在或已在回收站")
             conn.commit()
+        await _sync_web_auto_runner(app, cfg)
         return {"ok": True, "article_id": article_id, "human": ["作品已移入回收站，相关待发布任务已取消"]}
 
     @app.post("/api/articles/{article_id}/restore")
@@ -166,11 +327,12 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return {"ok": True, "article_id": article_id, "human": ["作品已从回收站恢复"]}
 
     @app.post("/api/articles/bulk-trash")
-    def bulk_trash_articles(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    async def bulk_trash_articles(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         ids = [int(x) for x in (payload.get("ids") or [])]
         with db.connect(cfg.database_path) as conn:
             stats = bulk_soft_delete(conn, ids)
             conn.commit()
+        await _sync_web_auto_runner(app, cfg)
         return {"ok": True, **stats, "human": [f"已移入回收站 {stats['deleted']} 篇"]}
 
     @app.post("/api/articles/bulk-restore")
@@ -182,10 +344,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return {"ok": True, **stats, "human": [f"已恢复 {stats['restored']} 篇"]}
 
     @app.post("/api/trash/purge")
-    def purge_trash_bin() -> dict[str, Any]:
+    async def purge_trash_bin() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
             result = purge_trash(cfg, conn)
             conn.commit()
+        await _sync_web_auto_runner(app, cfg)
         return {
             "ok": True,
             **result,
@@ -362,6 +525,16 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="封面不存在")
         return FileResponse(str(path))
 
+    @app.get("/media/cover-asset")
+    def media_cover_asset(path: str) -> FileResponse:
+        """返回封面素材库中的素材（供控制台裁剪预览）。"""
+        asset = Path(path).resolve()
+        if not _is_under_any(asset, _cover_asset_roots(cfg)):
+            raise HTTPException(status_code=400, detail="封面素材路径无效")
+        if not asset.is_file():
+            raise HTTPException(status_code=404, detail="封面素材不存在")
+        return FileResponse(str(asset))
+
     @app.post("/api/scan")
     def trigger_scan() -> dict[str, Any]:
         result = scan_inbox(cfg)
@@ -369,21 +542,74 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return result
 
     @app.post("/api/plan")
-    def trigger_plan() -> dict[str, Any]:
+    async def trigger_plan() -> dict[str, Any]:
         result = build_plan(cfg)
         result["human"] = humanize_plan_result(result)
+        await _sync_web_auto_runner(app, cfg)
         return result
 
+    @app.post("/api/articles/{article_id}/schedule")
+    async def schedule_article(
+        article_id: int,
+        payload: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        raw = str(payload.get("scheduled_at") or "").strip()
+        try:
+            when = parse_scheduled_at(raw)
+            result = assign_article_schedule(cfg, article_id, when)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        result["ok"] = True
+        result["scheduled_at_label"] = format_scheduled_at(result["scheduled_at"])
+        result["human"] = humanize_schedule_single_result(result)
+        await _sync_web_auto_runner(app, cfg)
+        return result
+
+    @app.post("/api/articles/batch-schedule")
+    async def batch_schedule(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        ids = [int(x) for x in (payload.get("ids") or [])]
+        raw_anchor = str(payload.get("anchor_at") or "").strip()
+        sort_order = str(payload.get("sort_order") or "asc").strip().lower()
+        interval = int(payload.get("interval") or 5)
+        interval_unit = str(payload.get("interval_unit") or "minutes").strip().lower()
+        if sort_order not in ("asc", "desc"):
+            raise HTTPException(status_code=400, detail="排序方式无效")
+        if interval_unit not in ("minutes", "hours"):
+            raise HTTPException(status_code=400, detail="间隔单位无效")
+        try:
+            anchor = parse_scheduled_at(raw_anchor)
+            stats = assign_batch_schedule(
+                cfg,
+                ids,
+                anchor=anchor,
+                sort_order=sort_order,  # type: ignore[arg-type]
+                interval=interval,
+                interval_unit=interval_unit,  # type: ignore[arg-type]
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        msg_stats = {**stats, "human": humanize_schedule_batch_result(stats)}
+        await _sync_web_auto_runner(app, cfg)
+        return {"ok": True, **msg_stats}
+
     @app.post("/api/run-once")
-    def trigger_run_once() -> dict[str, Any]:
+    async def trigger_run_once() -> dict[str, Any]:
         result = run_due_jobs(cfg)
         result["human"] = humanize_run_once_result(result)
+        await _sync_web_auto_runner(app, cfg)
         return result
 
     @app.get("/api/cover-assets")
     def cover_assets_index() -> dict[str, Any]:
-        root = cfg.root / "cover_assets"
-        assets = index_cover_directory(root)
+        roots = _cover_asset_roots(cfg)
+        indexed = []
+        seen_paths: set[str] = set()
+        for root in roots:
+            for asset in index_cover_directory(root):
+                if asset.path in seen_paths:
+                    continue
+                seen_paths.add(asset.path)
+                indexed.append({"asset": asset, "source": str(root)})
         check = check_cover_path(
             None,
             default_thumb=Path(cfg.wechat_default_thumb_path)
@@ -391,10 +617,16 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             else None,
         )
         return {
-            "directory": str(root),
+            "directory": str(roots[0]),
+            "directories": [str(root) for root in roots],
             "assets": [
-                {"path": a.path, "name": a.name, "size_bytes": a.size_bytes}
-                for a in assets
+                {
+                    "path": item["asset"].path,
+                    "name": item["asset"].name,
+                    "size_bytes": item["asset"].size_bytes,
+                    "source": item["source"],
+                }
+                for item in indexed
             ],
             "publish_check": check,
         }

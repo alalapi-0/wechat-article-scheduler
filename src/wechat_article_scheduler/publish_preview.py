@@ -6,7 +6,7 @@ import html as html_module
 from typing import Any
 
 from wechat_article_scheduler.publish_body import publish_body_for
-from wechat_article_scheduler.renderers import render_markdown_to_html, render_markdown_to_html_safe
+from wechat_article_scheduler.renderers import render_wechat_html, render_wechat_html_safe
 
 
 def _maybe_unescape_html(body: str) -> str:
@@ -28,8 +28,8 @@ def normalized_body_for_publish(title: str, body: str) -> str:
 
 
 def render_for_publish(title: str, body: str) -> str:
-    """与微信 draft content 字段一致的 HTML（无安全降级）。"""
-    return render_markdown_to_html(normalized_body_for_publish(title, body))
+    """与微信 draft/add content 字段一致的公众号兼容 HTML。"""
+    return render_wechat_html(normalized_body_for_publish(title, body))
 
 
 def build_publish_preview(
@@ -42,7 +42,7 @@ def build_publish_preview(
     """构建 Web/API 预览载荷；raw_body 供高级信息区展示原始内容。"""
     raw = body or ""
     prepared = normalized_body_for_publish(title or "", raw)
-    html_body, render_error = render_markdown_to_html_safe(prepared)
+    html_body, render_error = render_wechat_html_safe(prepared)
     out: dict[str, Any] = {
         "title": (title or "").strip() or (f"文章 {article_id}" if article_id else "未命名"),
         "summary": (summary or "").strip(),

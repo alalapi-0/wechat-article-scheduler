@@ -30,6 +30,7 @@ def make_test_config(root: Path, db_path: Path, **overrides: Any) -> AppConfig:
         wechat_app_secret="",
         wechat_default_thumb_path="",
         wechat_enable_publish=True,
+        web_auto_run_due=False,
         web_host="127.0.0.1",
         web_port=8080,
         rules={},

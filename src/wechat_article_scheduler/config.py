@@ -44,6 +44,7 @@ class AppConfig:
     wechat_app_secret: str
     wechat_default_thumb_path: str
     wechat_enable_publish: bool
+    web_auto_run_due: bool
     web_host: str
     web_port: int
     rules: dict[str, Any]
@@ -123,6 +124,7 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         wechat_app_secret=os.getenv("WECHAT_APP_SECRET", "").strip(),
         wechat_default_thumb_path=os.getenv("WECHAT_DEFAULT_THUMB_PATH", "").strip(),
         wechat_enable_publish=_env_bool("WECHAT_ENABLE_PUBLISH", True),
+        web_auto_run_due=_env_bool("WEB_AUTO_RUN_DUE", True),
         web_host=os.getenv("WEB_HOST", "127.0.0.1").strip(),
         web_port=int(os.getenv("WEB_PORT", "8080")),
         rules=rules,

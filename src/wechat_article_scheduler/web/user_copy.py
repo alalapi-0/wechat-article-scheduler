@@ -36,9 +36,11 @@ JOB_STATUS: dict[str, str] = {
 
 EVENT_TYPE: dict[str, str] = {
     "scan_imported": "收录文章",
+    "scan_reupload_reconciled": "重新上传已绑定",
     "plan_created": "创建发布计划",
     "job_started": "开始发布",
     "job_done": "发布完成",
+    "draft_created": "微信草稿已创建",
     "job_failed": "发布失败",
     "digest_warning": "摘要提醒",
     "dry_run": "演练执行",
@@ -62,7 +64,7 @@ DRY_RUN_LABELS: dict[bool, str] = {
 ACTION_LABELS: dict[str, str] = {
     "upload": "上传作品与封面",
     "scan": "扫描收件箱",
-    "plan": "安排发布时间",
+    "plan": "自动推荐时间",
     "run-once": "执行到点发布",
     "status": "刷新状态",
 }
@@ -86,6 +88,30 @@ def label_article_status(status: str | None) -> str:
     return ARTICLE_STATUS.get(key, status or "未知")
 
 
+def article_workflow_hint(
+    *,
+    status: str | None,
+    latest_job_status: str | None,
+    has_wechat_draft: bool,
+) -> str:
+    """作品库卡片上的下一步状态提示（普通视图）。"""
+    st = (status or "").strip().lower()
+    job = (latest_job_status or "").strip().lower()
+    if st == "published":
+        return "已发布"
+    if st == "imported":
+        if job == "pending":
+            return "待发布（已排期）"
+        if job == "running":
+            return "发布中"
+        if job == "failed":
+            return "发布失败，可重新安排"
+        if has_wechat_draft:
+            return "已收录 · 微信草稿已创建"
+        return "待安排发布"
+    return label_article_status(status)
+
+
 def label_job_status(status: str | None) -> str:
     key = (status or "").strip().lower()
     return JOB_STATUS.get(key, status or "未知")
@@ -105,9 +131,17 @@ def humanize_scan_result(payload: dict[str, Any]) -> list[str]:
     imported = int(payload.get("imported") or 0)
     scanned = int(payload.get("scanned") or 0)
     errors = int(payload.get("errors") or 0)
+    reconciled = payload.get("reconciled_articles") or []
     lines = [f"已检查 {scanned} 个文件"]
     if imported:
         lines.append(f"新收录 {imported} 篇文章")
+    elif reconciled:
+        for item in reconciled:
+            title = str(item.get("title") or "该作品")
+            if item.get("status_reset"):
+                lines.append(f"《{title}》已在作品库中，已识别为重新上传并重置为待发布")
+            else:
+                lines.append(f"《{title}》已在作品库中，可继续安排发布")
     else:
         lines.append("没有发现新的文章")
     if errors:
@@ -118,17 +152,43 @@ def humanize_scan_result(payload: dict[str, Any]) -> list[str]:
 def humanize_plan_result(payload: dict[str, Any]) -> list[str]:
     planned = int(payload.get("planned") or 0)
     if planned:
-        return [f"已为 {planned} 篇文章安排发布时间"]
+        return [f"已按推荐时段自动为 {planned} 篇文章安排发布时间"]
     return ["没有需要新安排的文章（可能已全部排期）"]
+
+
+def humanize_schedule_single_result(payload: dict[str, Any]) -> list[str]:
+    title = (payload.get("title") or "该作品").strip()
+    when = payload.get("scheduled_at_label") or payload.get("scheduled_at") or ""
+    verb = "已安排" if payload.get("created", True) else "已更新"
+    return [f"《{title}》{verb}发布时间为 {when}"]
+
+
+def humanize_schedule_batch_result(stats: dict[str, Any]) -> list[str]:
+    scheduled = int(stats.get("scheduled") or 0)
+    updated = int(stats.get("updated") or 0)
+    skipped = int(stats.get("skipped") or 0)
+    total = scheduled + updated
+    if not total:
+        return ["没有作品被安排（请确认已选中「已收录」作品）"]
+    lines = [f"已为 {total} 篇作品安排发布时间"]
+    if skipped:
+        lines.append(f"跳过 {skipped} 篇（不存在或不可排期）")
+    return lines
 
 
 def humanize_run_once_result(payload: dict[str, Any]) -> list[str]:
     processed = int(payload.get("processed") or 0)
+    drafted = int(payload.get("drafted") or 0)
     skipped = int(payload.get("skipped_future") or 0)
     failed = int(payload.get("failed") or 0)
     lines: list[str] = []
+    if drafted:
+        lines.append(f"已创建 {drafted} 个微信草稿")
     if processed:
-        lines.append(f"已处理 {processed} 个到点任务")
+        if drafted and drafted == processed:
+            pass
+        else:
+            lines.append(f"已处理 {processed} 个到点任务")
     if skipped:
         lines.append(f"有 {skipped} 个任务还没到发布时间")
     if failed:

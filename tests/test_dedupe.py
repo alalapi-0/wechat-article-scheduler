@@ -22,6 +22,11 @@ def test_duplicate_by_content_hash(tmp_path) -> None:
             (article.source_path, article.title, article.summary, article.body, article.content_hash),
         )
         conn.commit()
+        from wechat_article_scheduler.dedupe import find_existing_article, is_duplicate
+
+        existing_id, reason = find_existing_article(conn, article, rules)
+        assert existing_id is not None
+        assert "content_hash" in reason
         dup, reason = is_duplicate(conn, article, rules)
         assert dup is True
         assert "content_hash" in reason

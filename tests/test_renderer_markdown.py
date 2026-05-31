@@ -22,6 +22,24 @@ def test_markdown_heading_list_link_image_fixture() -> None:
     assert "img-placeholder" in html
 
 
+def test_markdown_mixed_with_html_blocks_renders_instead_of_escaping() -> None:
+    md = (
+        "# 标题\n"
+        "## 小节\n"
+        "<p style=\"color:#888;\">\n"
+        "说明：<a href=\"https://example.com\">链接</a>\n"
+        "</p>\n\n"
+        "正文。"
+    )
+    html = render_markdown_to_html(md)
+    assert "<h1" in html and "标题" in html
+    assert "<h2" in html and "小节" in html
+    assert '<p style="color:#888;">' in html
+    assert '<a href="https://example.com">链接</a>' in html
+    assert "&lt;p" not in html
+    assert "&lt;a" not in html
+
+
 def test_render_safe_returns_error_field_on_failure(monkeypatch) -> None:
     def boom(_text: str) -> str:
         raise ValueError("boom")

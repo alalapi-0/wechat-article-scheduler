@@ -86,6 +86,8 @@ def test_create_draft_strips_duplicate_markdown_title() -> None:
     article = posts[-1][1]["articles"][0]
     assert article["title"] == "重复标题"
     assert "<h1" not in article["content"].lower()
+    assert "##" not in article["content"]
+    assert "&lt;p" not in article["content"]
     assert "正文" in article["content"]
 
 

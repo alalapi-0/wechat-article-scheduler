@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>微信公众号文章发布工作台</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 <style>
   :root {
     --bg: #fbfbfa;
@@ -278,6 +279,48 @@
   .cover-asset-list { max-height: 140px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
   .cover-asset-list label { flex-direction: row; align-items: center; gap: 8px; padding: 4px 2px; cursor: pointer; }
   .cover-asset-list input { margin: 0; }
+  .cover-crop-section { display: flex; flex-direction: column; gap: 8px; }
+  .cover-crop-hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .cover-crop-viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2.35 / 1;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: #1a1a1a;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+  .cover-crop-viewport.dragging { cursor: grabbing; }
+  .cover-crop-viewport img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    pointer-events: none;
+    max-width: none;
+  }
+  .cover-crop-scale-wrap {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .cover-crop-scale-wrap input[type="range"] { flex: 1; }
+
+  .schedule-form { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .schedule-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .schedule-form input[type="text"],
+  .schedule-form input[type="number"],
+  .schedule-form select { font: inherit; padding: 7px 9px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); }
+  .schedule-form .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .schedule-form .row-inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+  .schedule-form .preview-count { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .schedule-form-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .flatpickr-input { cursor: pointer; }
 
   @media (max-width: 1050px) {
     .workspace { grid-template-columns: 1fr; }
@@ -378,6 +421,7 @@
               <button class="btn-ghost btn-sm" id="btnDeselectAll" type="button">取消全选</button>
               <span class="sel-count" id="selectedWorkCount">已选 0 篇</span>
               <button class="btn-ghost btn-sm" id="btnBulkCover" type="button" disabled>批量设置封面</button>
+              <button class="btn-ghost btn-sm" id="btnBulkSchedule" type="button" disabled>批量安排时间</button>
               <button class="btn-ghost btn-sm" id="btnBulkTrash" type="button" disabled>删除选中</button>
             </div>
             <div class="works-wrap" id="worksWrap">
@@ -408,10 +452,12 @@
             <div class="card pad">
               <div class="banner" id="scheduleBanner">读取计划中…</div>
               <div class="upload-actions">
-                <button class="btn-primary" id="btnPlan">安排发布时间</button>
+                <button class="btn-primary" id="btnPlan">自动推荐时间</button>
+                <button class="btn-ghost" id="btnOpenSchedule" type="button">自定义安排…</button>
                 <button class="btn-primary" id="btnRun">执行到点发布</button>
                 <button class="btn-ghost" id="btnRefresh">刷新</button>
               </div>
+              <p class="preview-hint" style="margin-top:8px;">在作品库可单篇或批量指定发布时间；「自动推荐」按配置偏好时段排期。</p>
               <div id="resultBox" style="margin-top:10px;"></div>
             </div>
           </section>
@@ -498,6 +544,16 @@
         <span>位置来源作品</span>
         <select id="coverReuseSource"><option value="">（自动：与封面来源相同）</option></select>
       </label>
+      <div class="cover-crop-section" id="coverCropSection" hidden>
+        <p class="cover-crop-hint">拖动图片调整位置，滚轮或滑块缩放；框内区域即为公众号封面裁剪范围（2.35:1）</p>
+        <div class="cover-crop-viewport" id="coverCropViewport">
+          <img id="coverCropImage" alt="封面裁剪预览" draggable="false" />
+        </div>
+        <label class="cover-crop-scale-wrap">
+          <span>缩放</span>
+          <input type="range" id="coverCropScale" min="1" max="3" step="0.01" value="1" />
+        </label>
+      </div>
       <div class="cover-batch-actions">
         <button class="btn-primary" id="coverBatchApply" type="button">应用到选中作品</button>
         <button class="btn-ghost" id="coverBatchCancel" type="button">取消</button>
@@ -506,6 +562,57 @@
   </div>
 </div>
 
+<!-- 安排发布时间弹窗 -->
+<div class="modal-back" id="scheduleModalBack">
+  <div class="modal">
+    <button class="btn-ghost btn-sm close" id="scheduleModalClose">关闭</button>
+    <h3 id="scheduleModalTitle">安排发布时间</h3>
+    <p class="preview-hint" id="scheduleModalHint">选择发布时间</p>
+    <div class="schedule-form" id="scheduleSinglePanel" hidden>
+      <label>
+        <span>发布时间</span>
+        <input type="text" id="scheduleSingleAt" placeholder="选择日期与时间" />
+      </label>
+      <div class="schedule-form-actions">
+        <button class="btn-primary" id="scheduleSingleApply" type="button">保存</button>
+        <button class="btn-ghost" id="scheduleSingleCancel" type="button">取消</button>
+      </div>
+    </div>
+    <div class="schedule-form" id="scheduleBatchPanel" hidden>
+      <label>
+        <span>起始时间（第一篇）</span>
+        <input type="text" id="scheduleBatchAnchor" placeholder="选择日期与时间" />
+      </label>
+      <div class="row-2">
+        <label>
+          <span>按标题排序</span>
+          <select id="scheduleBatchSort">
+            <option value="asc">名称升序 (A→Z)</option>
+            <option value="desc">名称降序 (Z→A)</option>
+          </select>
+        </label>
+        <label>
+          <span>每篇间隔</span>
+          <div class="row-inline">
+            <input type="number" id="scheduleBatchInterval" min="1" value="5" style="width:72px;" />
+            <select id="scheduleBatchUnit">
+              <option value="minutes">分钟</option>
+              <option value="hours">小时</option>
+            </select>
+          </div>
+        </label>
+      </div>
+      <p class="preview-count" id="scheduleBatchPreview">将安排 0 篇作品</p>
+      <div class="schedule-form-actions">
+        <button class="btn-primary" id="scheduleBatchApply" type="button">应用到选中作品</button>
+        <button class="btn-ghost" id="scheduleBatchCancel" type="button">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js"></script>
 <script>
 let COPY = {};
 const pending = { articles: [], covers: [] };
@@ -514,6 +621,147 @@ const selectedTrashIds = new Set();
 let workArticlesList = [];
 let lastClickedWorkId = null;
 let marqueeState = null;
+let scheduleMode = 'batch'; // 'single' | 'batch'
+let scheduleSingleArticleId = null;
+let fpSingle = null;
+let fpBatch = null;
+
+function defaultScheduleMoment(){
+  const d = new Date();
+  d.setMinutes(d.getMinutes() + 30, 0, 0);
+  return d;
+}
+
+function flatpickrDefaults(){
+  return {
+    enableTime: true,
+    time_24hr: true,
+    dateFormat: 'Y-m-d H:i',
+    locale: (window.flatpickr && flatpickr.l10ns && flatpickr.l10ns.zh) ? flatpickr.l10ns.zh : 'default',
+    minDate: 'today',
+    minuteIncrement: 1,
+    disableMobile: true,
+  };
+}
+
+function initSchedulePickers(){
+  if (!window.flatpickr) return;
+  const base = flatpickrDefaults();
+  if (!fpSingle) {
+    fpSingle = flatpickr('#scheduleSingleAt', {
+      ...base,
+      defaultDate: defaultScheduleMoment(),
+    });
+  }
+  if (!fpBatch) {
+    fpBatch = flatpickr('#scheduleBatchAnchor', {
+      ...base,
+      defaultDate: defaultScheduleMoment(),
+    });
+  }
+}
+
+function updateScheduleBatchPreview(){
+  const n = selectedWorkIds.size;
+  const anchor = el('scheduleBatchAnchor').value || '（未选）';
+  const interval = el('scheduleBatchInterval').value || '1';
+  const unit = el('scheduleBatchUnit').value === 'hours' ? '小时' : '分钟';
+  const sortLbl = el('scheduleBatchSort').value === 'desc' ? '名称降序' : '名称升序';
+  el('scheduleBatchPreview').textContent =
+    n ? `将按${sortLbl}为 ${n} 篇作品排期，首篇 ${anchor}，间隔 ${interval} ${unit}` : '请先在作品库勾选要排期的作品';
+}
+
+function openScheduleModal(mode, articleId){
+  scheduleMode = mode;
+  scheduleSingleArticleId = articleId || null;
+  initSchedulePickers();
+  const now = defaultScheduleMoment();
+  el('scheduleSinglePanel').hidden = mode !== 'single';
+  el('scheduleBatchPanel').hidden = mode !== 'batch';
+  if (mode === 'single') {
+    const art = workArticlesList.find(a => a.id === articleId);
+    el('scheduleModalTitle').textContent = '安排发布时间';
+    el('scheduleModalHint').textContent = art ? `为《${art.title || '（无标题）'}》设定发布时间` : '设定发布时间';
+    if (fpSingle) fpSingle.setDate(now, true);
+  } else {
+    el('scheduleModalTitle').textContent = '批量安排发布时间';
+    el('scheduleModalHint').textContent = '从起始时间起，按标题排序依次为选中作品排期';
+    if (fpBatch) fpBatch.setDate(now, true);
+    updateScheduleBatchPreview();
+  }
+  el('scheduleModalBack').classList.add('open');
+}
+
+function closeScheduleModal(){
+  el('scheduleModalBack').classList.remove('open');
+  scheduleSingleArticleId = null;
+}
+
+function setupScheduleModal(){
+  initSchedulePickers();
+  el('scheduleModalClose').addEventListener('click', closeScheduleModal);
+  el('scheduleSingleCancel').addEventListener('click', closeScheduleModal);
+  el('scheduleBatchCancel').addEventListener('click', closeScheduleModal);
+  el('scheduleModalBack').addEventListener('click', e => {
+    if (e.target === el('scheduleModalBack')) closeScheduleModal();
+  });
+  ['scheduleBatchInterval', 'scheduleBatchUnit', 'scheduleBatchSort'].forEach(id => {
+    el(id).addEventListener('input', updateScheduleBatchPreview);
+    el(id).addEventListener('change', updateScheduleBatchPreview);
+  });
+  el('scheduleSingleApply').addEventListener('click', submitSingleSchedule);
+  el('scheduleBatchApply').addEventListener('click', submitBatchSchedule);
+}
+
+async function submitSingleSchedule(){
+  const raw = el('scheduleSingleAt').value.trim();
+  if (!raw || !scheduleSingleArticleId) { setAlert('warn', '请选择发布时间'); return; }
+  setAlert('info', '正在保存发布时间…');
+  try {
+    const r = await fetch(`/api/articles/${scheduleSingleArticleId}/schedule`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scheduled_at: raw }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || '保存失败');
+    closeScheduleModal();
+    showResult(data.human || ['已安排发布时间']);
+    setAlert('ok', (data.human || ['已安排']).join('；'));
+    await refreshAll();
+  } catch(e) { setAlert('err', '安排失败：' + e.message); }
+}
+
+async function submitBatchSchedule(){
+  const ids = [...selectedWorkIds];
+  const raw = el('scheduleBatchAnchor').value.trim();
+  if (!ids.length) { setAlert('warn', '请先在作品库勾选作品'); return; }
+  if (!raw) { setAlert('warn', '请选择起始时间'); return; }
+  setAlert('info', '正在批量安排…');
+  try {
+    const r = await fetch('/api/articles/batch-schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids,
+        anchor_at: raw,
+        sort_order: el('scheduleBatchSort').value,
+        interval: Number(el('scheduleBatchInterval').value) || 1,
+        interval_unit: el('scheduleBatchUnit').value,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || '批量安排失败');
+    closeScheduleModal();
+    showResult(data.human || ['批量安排完成']);
+    setAlert('ok', (data.human || ['完成']).join('；'));
+    await refreshAll();
+  } catch(e) { setAlert('err', '批量安排失败：' + e.message); }
+}
+
+function scheduleArticle(id){
+  openScheduleModal('single', id);
+}
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function L(map, key, fallback){ if(map && key!=null && map[key]!=null) return map[key]; return fallback!=null?fallback:(key!=null?key:''); }
@@ -532,11 +780,17 @@ async function boot(){
   setupUpload();
   setupWorksSelection();
   setupCoverBatchModal();
+  setupScheduleModal();
   el('btnPlan').addEventListener('click', () => runAction('plan', '/api/plan'));
+  el('btnOpenSchedule').addEventListener('click', () => {
+    if (selectedWorkIds.size > 0) openScheduleModal('batch');
+    else setAlert('info', '请先在作品库勾选作品，或点单篇「安排时间」');
+  });
   el('btnRun').addEventListener('click', onRun);
   el('btnRefresh').addEventListener('click', refreshAll);
   el('btnBulkTrash').addEventListener('click', bulkTrashSelected);
   el('btnBulkCover').addEventListener('click', openCoverBatchModal);
+  el('btnBulkSchedule').addEventListener('click', () => openScheduleModal('batch'));
   el('btnDeselectAll').addEventListener('click', () => { selectedWorkIds.clear(); lastClickedWorkId = null; syncWorkSelectionUI(); renderWorks(workArticlesList); });
   el('chkSelectAllWorks').addEventListener('change', e => {
     if (e.target.checked) workArticlesList.forEach(a => selectedWorkIds.add(a.id));
@@ -673,12 +927,13 @@ async function refreshAll(){
 function renderSafety(status, preflight){
   const pill = el('safetyTop');
   const mode = status ? status.wechat_mode : 'mock';
+  const auto = status && status.web_auto_runner_active ? ' · 自动到点执行' : '';
   if (mode === 'real' && status.wechat_enable_publish) {
     pill.className = 'pill err'; pill.innerHTML = '<span class="dot"></span> 真实发布 · 会真的发到公众号';
   } else if (mode === 'real') {
-    pill.className = 'pill warn'; pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿，不会发布';
+    pill.className = 'pill warn'; pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿，不会发布' + auto;
   } else {
-    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 不会真的发到公众号';
+    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 不会真的发到公众号' + auto;
   }
 }
 
@@ -732,19 +987,21 @@ function renderWorks(arts){
     const thumb = a.has_cover
       ? `<img src="${esc(a.cover_url)}" alt="封面" loading="lazy"/>`
       : `<div class="ph">未设置封面</div>`;
-    const statusLbl = L(COPY.article_status, a.status, a.status);
+    const statusLbl = a.workflow_hint || L(COPY.article_status, a.status, a.status);
     const summary = a.has_summary ? esc(a.summary) : '<i>未填写摘要</i>';
     const checked = selectedWorkIds.has(a.id) ? 'checked' : '';
     const selCls = selectedWorkIds.has(a.id) ? ' selected' : '';
+    const pillCls = a.status==='published'?'ok':(a.latest_job_status==='failed'?'err':(a.latest_job_status==='pending'?'warn':''));
     return `
       <div class="work${selCls}" data-work-id="${a.id}" data-work-index="${idx}">
         <div class="thumb">${thumb}</div>
         <div class="body">
           <div class="title"><label><input type="checkbox" data-sel-work="${a.id}" ${checked}/> ${esc(a.title||'（无标题）')}</label></div>
           <div class="summary">${summary}</div>
-          <div class="meta"><span class="pill ${a.status==='published'?'ok':''}">${esc(statusLbl)}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}</div>
+          <div class="meta"><span class="pill ${pillCls}">${esc(statusLbl)}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}</div>
           <div class="acts">
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
+            <button class="btn-ghost btn-sm" onclick="scheduleArticle(${a.id})">安排时间</button>
             <button class="btn-ghost btn-sm" onclick="changeCover(${a.id})">换封面</button>
             <button class="btn-ghost btn-sm" onclick="trashArticle(${a.id})">删除</button>
           </div>
@@ -770,6 +1027,7 @@ function syncWorkSelectionUI(){
   el('selectedWorkCount').textContent = `已选 ${n} 篇`;
   el('btnBulkTrash').disabled = n === 0;
   el('btnBulkCover').disabled = n === 0;
+  el('btnBulkSchedule').disabled = n === 0;
   const all = el('chkSelectAllWorks');
   if (all) {
     all.indeterminate = n > 0 && n < total;
@@ -892,6 +1150,21 @@ function onMarqueeUp(){
   syncWorkSelectionUI();
 }
 
+const COVER_CROP_ASPECT = 2.35;
+let coverCrop = {
+  active: false,
+  objectUrl: null,
+  Iw: 0,
+  Ih: 0,
+  scale: 1,
+  ox: 0,
+  oy: 0,
+  Vw: 0,
+  Vh: 0,
+  dragging: false,
+  dragStart: null,
+};
+
 function setupCoverBatchModal(){
   el('coverBatchClose').addEventListener('click', closeCoverBatchModal);
   el('coverBatchCancel').addEventListener('click', closeCoverBatchModal);
@@ -899,6 +1172,272 @@ function setupCoverBatchModal(){
   el('coverBatchApply').addEventListener('click', submitCoverBatch);
   el('coverReuseConfig').addEventListener('change', e => {
     el('coverReuseSourceWrap').hidden = !e.target.checked;
+    syncCoverCropVisibility();
+  });
+  el('coverBatchFile').addEventListener('change', onCoverBatchFileChange);
+  el('coverCopyFromArticle').addEventListener('change', onCoverCopyFromChange);
+  el('coverAssetList').addEventListener('change', onCoverAssetPickChange);
+  initCoverCropEditor();
+}
+
+function initCoverCropEditor(){
+  const viewport = el('coverCropViewport');
+  viewport.addEventListener('mousedown', onCoverCropPointerDown);
+  viewport.addEventListener('wheel', onCoverCropWheel, { passive: false });
+  viewport.addEventListener('touchstart', onCoverCropTouchStart, { passive: false });
+  el('coverCropScale').addEventListener('input', onCoverCropScaleInput);
+  document.addEventListener('mousemove', onCoverCropPointerMove);
+  document.addEventListener('mouseup', onCoverCropPointerUp);
+  document.addEventListener('touchmove', onCoverCropTouchMove, { passive: false });
+  document.addEventListener('touchend', onCoverCropPointerUp);
+}
+
+function resetCoverCrop(){
+  if (coverCrop.objectUrl) URL.revokeObjectURL(coverCrop.objectUrl);
+  coverCrop = {
+    active: false,
+    objectUrl: null,
+    Iw: 0,
+    Ih: 0,
+    scale: 1,
+    ox: 0,
+    oy: 0,
+    Vw: 0,
+    Vh: 0,
+    dragging: false,
+    dragStart: null,
+  };
+  el('coverCropImage').removeAttribute('src');
+  el('coverCropSection').hidden = true;
+  el('coverCropViewport').classList.remove('dragging');
+}
+
+function syncCoverCropVisibility(){
+  el('coverCropSection').hidden = el('coverReuseConfig').checked || !coverCrop.active;
+}
+
+function measureCoverCropViewport(){
+  const viewport = el('coverCropViewport');
+  const rect = viewport.getBoundingClientRect();
+  if (rect.width > 0 && rect.height > 0) {
+    coverCrop.Vw = rect.width;
+    coverCrop.Vh = rect.height;
+    return;
+  }
+  const width = viewport.clientWidth || viewport.offsetWidth || 420;
+  coverCrop.Vw = width;
+  coverCrop.Vh = width / COVER_CROP_ASPECT;
+}
+
+function getMinCoverCropScale(){
+  const { Iw, Ih, Vw, Vh } = coverCrop;
+  if (!Iw || !Ih || !Vw || !Vh) return 1;
+  return Math.max(Vw / Iw, Vh / Ih);
+}
+
+function centerCoverCrop(){
+  const { Iw, Ih, scale, Vw, Vh } = coverCrop;
+  coverCrop.ox = (Vw - Iw * scale) / 2;
+  coverCrop.oy = (Vh - Ih * scale) / 2;
+}
+
+function applyCropToCoverTransform(crop){
+  const { Iw, Ih, Vw, Vh } = coverCrop;
+  const cropX = crop.x * Iw;
+  const cropY = crop.y * Ih;
+  const cropW = crop.width * Iw;
+  const cropH = crop.height * Ih;
+  coverCrop.scale = Vw / cropW;
+  coverCrop.ox = -cropX * coverCrop.scale;
+  coverCrop.oy = -cropY * coverCrop.scale;
+  clampCoverCropPosition();
+}
+
+function clampCoverCropPosition(){
+  const { scale, Iw, Ih, Vw, Vh } = coverCrop;
+  const dw = Iw * scale;
+  const dh = Ih * scale;
+  coverCrop.ox = Math.min(0, Math.max(Vw - dw, coverCrop.ox));
+  coverCrop.oy = Math.min(0, Math.max(Vh - dh, coverCrop.oy));
+}
+
+function applyCoverCropTransform(){
+  const img = el('coverCropImage');
+  const { scale, ox, oy, Iw, Ih } = coverCrop;
+  img.style.width = `${Iw * scale}px`;
+  img.style.height = `${Ih * scale}px`;
+  img.style.left = `${ox}px`;
+  img.style.top = `${oy}px`;
+}
+
+function updateCoverCropScaleSlider(){
+  const minScale = getMinCoverCropScale();
+  const slider = el('coverCropScale');
+  slider.min = String(minScale);
+  slider.max = String(minScale * 3);
+  slider.step = String(Math.max(minScale * 0.01, 0.001));
+  slider.value = String(coverCrop.scale);
+}
+
+function zoomCoverCropTo(newScale, cx, cy){
+  const { scale, ox, oy, Vw, Vh } = coverCrop;
+  const minScale = getMinCoverCropScale();
+  const nextScale = Math.max(minScale, newScale);
+  const px = cx != null ? cx : Vw / 2;
+  const py = cy != null ? cy : Vh / 2;
+  const ratio = nextScale / scale;
+  coverCrop.ox = px - (px - ox) * ratio;
+  coverCrop.oy = py - (py - oy) * ratio;
+  coverCrop.scale = nextScale;
+  clampCoverCropPosition();
+  applyCoverCropTransform();
+  updateCoverCropScaleSlider();
+}
+
+function loadCoverCropImage(src, opts = {}){
+  const img = el('coverCropImage');
+  return new Promise((resolve, reject) => {
+    img.onload = () => {
+      if (opts.revokePrev && coverCrop.objectUrl && coverCrop.objectUrl !== opts.objectUrl) {
+        URL.revokeObjectURL(coverCrop.objectUrl);
+      }
+      coverCrop.active = true;
+      coverCrop.objectUrl = opts.objectUrl || null;
+      coverCrop.Iw = img.naturalWidth;
+      coverCrop.Ih = img.naturalHeight;
+      syncCoverCropVisibility();
+      measureCoverCropViewport();
+      coverCrop.scale = getMinCoverCropScale();
+      if (opts.crop) applyCropToCoverTransform(opts.crop);
+      else centerCoverCrop();
+      clampCoverCropPosition();
+      applyCoverCropTransform();
+      updateCoverCropScaleSlider();
+      resolve();
+    };
+    img.onerror = () => reject(new Error('封面预览加载失败'));
+    img.src = src;
+  });
+}
+
+function parseArticleCoverCrop(articleId){
+  const art = workArticlesList.find(a => a.id === Number(articleId));
+  if (!art || !art.cover_config_json) return null;
+  try {
+    const data = JSON.parse(art.cover_config_json);
+    return data && data.crop ? data.crop : null;
+  } catch(e){
+    return null;
+  }
+}
+
+async function onCoverBatchFileChange(){
+  const file = el('coverBatchFile').files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  try {
+    await loadCoverCropImage(url, { revokePrev: true, objectUrl: url });
+  } catch(e){
+    setAlert('warn', '无法预览所选封面：' + e.message);
+  }
+}
+
+async function onCoverCopyFromChange(){
+  const id = el('coverCopyFromArticle').value;
+  if (!id) return;
+  try {
+    await loadCoverCropImage(`/media/cover/${id}`, {
+      revokePrev: true,
+      crop: parseArticleCoverCrop(id),
+    });
+  } catch(e){
+    setAlert('warn', '无法加载源作品封面：' + e.message);
+  }
+}
+
+async function onCoverAssetPickChange(e){
+  const input = e.target;
+  if (!input || input.name !== 'coverAssetPick' || !input.checked) return;
+  const path = input.value;
+  if (!path) return;
+  try {
+    await loadCoverCropImage(`/media/cover-asset?path=${encodeURIComponent(path)}`, { revokePrev: true });
+  } catch(e){
+    setAlert('warn', '无法加载素材库封面：' + e.message);
+  }
+}
+
+function onCoverCropPointerDown(e){
+  if (!coverCrop.active || el('coverReuseConfig').checked) return;
+  e.preventDefault();
+  coverCrop.dragging = true;
+  coverCrop.dragStart = { x: e.clientX, y: e.clientY, ox: coverCrop.ox, oy: coverCrop.oy };
+  el('coverCropViewport').classList.add('dragging');
+}
+
+function onCoverCropTouchStart(e){
+  if (!coverCrop.active || el('coverReuseConfig').checked || !e.touches.length) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  coverCrop.dragging = true;
+  coverCrop.dragStart = { x: t.clientX, y: t.clientY, ox: coverCrop.ox, oy: coverCrop.oy };
+  el('coverCropViewport').classList.add('dragging');
+}
+
+function onCoverCropPointerMove(e){
+  if (!coverCrop.dragging || !coverCrop.dragStart) return;
+  const pt = e.touches ? e.touches[0] : e;
+  coverCrop.ox = coverCrop.dragStart.ox + (pt.clientX - coverCrop.dragStart.x);
+  coverCrop.oy = coverCrop.dragStart.oy + (pt.clientY - coverCrop.dragStart.y);
+  clampCoverCropPosition();
+  applyCoverCropTransform();
+}
+
+function onCoverCropTouchMove(e){
+  if (!coverCrop.dragging) return;
+  e.preventDefault();
+  onCoverCropPointerMove(e);
+}
+
+function onCoverCropPointerUp(){
+  if (!coverCrop.dragging) return;
+  coverCrop.dragging = false;
+  coverCrop.dragStart = null;
+  el('coverCropViewport').classList.remove('dragging');
+}
+
+function onCoverCropWheel(e){
+  if (!coverCrop.active || el('coverReuseConfig').checked) return;
+  e.preventDefault();
+  const rect = el('coverCropViewport').getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const delta = e.deltaY > 0 ? 0.92 : 1.08;
+  zoomCoverCropTo(coverCrop.scale * delta, cx, cy);
+}
+
+function onCoverCropScaleInput(e){
+  zoomCoverCropTo(parseFloat(e.target.value));
+}
+
+function roundCoverCrop(n){
+  return Math.round(n * 10000) / 10000;
+}
+
+function computeCoverCropConfig(){
+  if (!coverCrop.active) return null;
+  const { scale, ox, oy, Iw, Ih, Vw, Vh } = coverCrop;
+  const x0 = Math.max(0, -ox / scale);
+  const y0 = Math.max(0, -oy / scale);
+  const x1 = Math.min(Iw, (Vw - ox) / scale);
+  const y1 = Math.min(Ih, (Vh - oy) / scale);
+  return JSON.stringify({
+    crop: {
+      x: roundCoverCrop(x0 / Iw),
+      y: roundCoverCrop(y0 / Ih),
+      width: roundCoverCrop((x1 - x0) / Iw),
+      height: roundCoverCrop((y1 - y0) / Ih),
+    },
   });
 }
 
@@ -909,12 +1448,14 @@ async function openCoverBatchModal(){
   el('coverBatchFile').value = '';
   el('coverReuseConfig').checked = false;
   el('coverReuseSourceWrap').hidden = true;
+  resetCoverCrop();
   await populateCoverBatchOptions();
   el('coverBatchBack').classList.add('open');
 }
 
 function closeCoverBatchModal(){
   el('coverBatchBack').classList.remove('open');
+  resetCoverCrop();
 }
 
 async function populateCoverBatchOptions(){
@@ -938,6 +1479,12 @@ async function populateCoverBatchOptions(){
     list.innerHTML = assets.map((a, i) =>
       `<label><input type="radio" name="coverAssetPick" value="${esc(a.path)}" ${i===0?'checked':''}/> ${esc(a.name)}</label>`
     ).join('');
+    if (assets.length) {
+      const first = assets[0].path;
+      try {
+        await loadCoverCropImage(`/media/cover-asset?path=${encodeURIComponent(first)}`, { revokePrev: true });
+      } catch(e){ /* 预览失败不阻断 */ }
+    }
   } catch(e) {
     list.innerHTML = '<div class="muted" style="padding:6px;">无法加载素材库</div>';
   }
@@ -968,6 +1515,9 @@ async function submitCoverBatch(){
       setAlert('warn', '请选择要复用封面位置的作品');
       return;
     }
+  } else if (coverCrop.active) {
+    const cfg = computeCoverCropConfig();
+    if (cfg) fd.append('cover_config_json', cfg);
   }
   el('coverBatchApply').disabled = true;
   setAlert('info', '正在批量设置封面…');
@@ -1093,19 +1643,12 @@ async function preview(id){
 }
 
 function changeCover(id){
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*';
-  inp.addEventListener('change', async () => {
-    if (!inp.files.length) return;
-    const fd = new FormData(); fd.append('cover', inp.files[0], inp.files[0].name);
-    setAlert('info', '正在更新封面…');
-    try {
-      const d = await (await fetch(`/api/articles/${id}/cover`, { method:'POST', body: fd })).json();
-      setAlert('ok', (d.human||['封面已更新']).join('；'));
-    } catch(e){ setAlert('err', '更新封面失败：'+e); }
-    await refreshAll();
-  });
-  inp.click();
+  selectedWorkIds.clear();
+  selectedWorkIds.add(id);
+  lastClickedWorkId = id;
+  syncWorkSelectionUI();
+  renderWorks(workArticlesList);
+  openCoverBatchModal();
 }
 
 function renderAdvanced(ov){

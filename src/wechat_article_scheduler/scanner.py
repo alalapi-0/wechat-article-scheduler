@@ -9,8 +9,51 @@ from typing import Any
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.content_library import register_imported_article
-from wechat_article_scheduler.dedupe import is_duplicate
+from wechat_article_scheduler.dedupe import find_existing_article
 from wechat_article_scheduler.parser import parse_file
+
+
+def _reconcile_reupload(
+    conn: sqlite3.Connection,
+    *,
+    existing_id: int,
+    inbox_path: Path,
+    reason: str,
+) -> dict[str, object]:
+    """重复上传时绑定已有作品：清理 inbox 临时文件，必要时重置发布状态。"""
+    row = conn.execute(
+        "SELECT id, title, status FROM articles WHERE id = ?",
+        (existing_id,),
+    ).fetchone()
+    status_reset = False
+    if row and row["status"] == "published":
+        conn.execute(
+            "UPDATE articles SET status = 'imported', updated_at = datetime('now') WHERE id = ?",
+            (existing_id,),
+        )
+        status_reset = True
+    elif row:
+        conn.execute(
+            "UPDATE articles SET updated_at = datetime('now') WHERE id = ?",
+            (existing_id,),
+        )
+
+    if inbox_path.is_file():
+        inbox_path.unlink()
+
+    db.log_event(
+        conn,
+        entity_type="article",
+        entity_id=existing_id,
+        event_type="scan_reupload_reconciled",
+        payload=reason,
+    )
+    conn.commit()
+    return {
+        "id": existing_id,
+        "title": row["title"] if row else "",
+        "status_reset": status_reset,
+    }
 
 
 def _allowed_extensions(rules: dict[str, Any]) -> set[str]:
@@ -23,9 +66,17 @@ def scan_inbox(config: AppConfig) -> dict[str, int]:
     """
     扫描 inbox 目录：解析、去重、入库并移动到 imported。
 
-    返回统计：scanned, imported, skipped_duplicate, errors
+    返回统计：scanned, imported, reconciled_reupload, skipped_duplicate, errors,
+    reconciled_articles（重复上传时绑定的已有作品列表）
     """
-    stats = {"scanned": 0, "imported": 0, "skipped_duplicate": 0, "errors": 0}
+    stats: dict[str, object] = {
+        "scanned": 0,
+        "imported": 0,
+        "reconciled_reupload": 0,
+        "skipped_duplicate": 0,
+        "errors": 0,
+        "reconciled_articles": [],
+    }
     inbox = config.inbox_dir
     if not inbox.exists():
         inbox.mkdir(parents=True, exist_ok=True)
@@ -45,16 +96,18 @@ def scan_inbox(config: AppConfig) -> dict[str, int]:
             stats["scanned"] += 1
             try:
                 parsed = parse_file(path, summary_max_chars=summary_max)
-                dup, reason = is_duplicate(conn, parsed, config.rules)
-                if dup:
-                    stats["skipped_duplicate"] += 1
-                    db.log_event(
+                existing_id, reason = find_existing_article(conn, parsed, config.rules)
+                if existing_id is not None:
+                    info = _reconcile_reupload(
                         conn,
-                        entity_type="article",
-                        entity_id=None,
-                        event_type="scan_skipped_duplicate",
-                        payload=reason,
+                        existing_id=existing_id,
+                        inbox_path=path,
+                        reason=reason,
                     )
+                    stats["reconciled_reupload"] = int(stats["reconciled_reupload"]) + 1
+                    reconciled = stats["reconciled_articles"]
+                    assert isinstance(reconciled, list)
+                    reconciled.append(info)
                     continue
 
                 cur = conn.execute(

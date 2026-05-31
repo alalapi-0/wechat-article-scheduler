@@ -81,25 +81,33 @@ def execute_due_job(
             "UPDATE publish_jobs SET status = 'done', updated_at = datetime('now') WHERE id = ?",
             (job_id,),
         )
-        conn.execute(
-            "UPDATE articles SET status = 'published', updated_at = datetime('now') WHERE id = ?",
-            (article_id,),
-        )
-        src = Path(job["source_path"])
-        if src.exists():
-            dest = published_dir / src.name
-            if dest.exists():
-                dest = published_dir / f"{src.stem}_{article_id}{src.suffix}"
-            src.rename(dest)
+        draft_only = bool(pub.get("skipped"))
+        if draft_only:
             conn.execute(
-                "UPDATE articles SET source_path = ? WHERE id = ?",
-                (str(dest), article_id),
+                "UPDATE articles SET updated_at = datetime('now') WHERE id = ?",
+                (article_id,),
             )
+            stats["drafted"] = stats.get("drafted", 0) + 1
+        else:
+            conn.execute(
+                "UPDATE articles SET status = 'published', updated_at = datetime('now') WHERE id = ?",
+                (article_id,),
+            )
+            src = Path(job["source_path"])
+            if src.exists():
+                dest = published_dir / src.name
+                if dest.exists():
+                    dest = published_dir / f"{src.stem}_{article_id}{src.suffix}"
+                src.rename(dest)
+                conn.execute(
+                    "UPDATE articles SET source_path = ? WHERE id = ?",
+                    (str(dest), article_id),
+                )
         db.log_event(
             conn,
             entity_type="publish_job",
             entity_id=job_id,
-            event_type="job_done",
+            event_type="draft_created" if draft_only else "job_done",
             payload=safe_payload(pub),
         )
         stats["processed"] += 1

@@ -63,6 +63,21 @@ def test_upload_rejects_unsupported_extensions(client) -> None:
     assert data["skipped_covers"]
 
 
+def test_cover_only_upload_enters_cover_asset_library(client) -> None:
+    c, cfg = client
+    data = c.post(
+        "/api/upload",
+        files=[("covers", ("library.png", PNG, "image/png"))],
+    ).json()
+    assert data["saved_articles"] == 0
+    assert data["saved_covers"] == 1
+    assets = c.get("/api/cover-assets").json()["assets"]
+    uploaded = [a for a in assets if a["name"] == "library.png"]
+    assert uploaded
+    assert str(cfg.covers_dir) in uploaded[0]["source"]
+    assert c.get("/media/cover-asset", params={"path": uploaded[0]["path"]}).status_code == 200
+
+
 def test_set_article_cover_endpoint(client) -> None:
     c, cfg = client
     c.post("/api/upload", files=[("articles", ("solo.md", b"# Solo\n\nbody", "text/markdown"))])
@@ -97,3 +112,67 @@ def test_empty_upload_returns_hint(client) -> None:
     assert data["saved_articles"] == 0
     assert data["saved_covers"] == 0
     assert any("没有可处理" in line for line in data["human"])
+
+
+def test_reupload_same_content_reconciles_existing(client) -> None:
+    """重复上传同一作品应绑定已有记录并给出可继续操作的提示。"""
+    c, cfg = client
+    body = "# 001 是谁杀死了勇者\n\n正文".encode()
+    files = [("articles", ("001.md", body, "text/markdown"))]
+    first = c.post("/api/upload", files=files).json()
+    assert first["scan"]["imported"] == 1
+    aid = c.get("/api/articles").json()[0]["id"]
+
+    second = c.post("/api/upload", files=files).json()
+    assert second["scan"]["imported"] == 0
+    assert second["scan"]["reconciled_reupload"] == 1
+    assert second["reconciled_articles"][0]["id"] == aid
+    assert any("已在作品库中" in line for line in second["human"])
+    assert any("可继续安排发布" in line for line in second["human"])
+
+    arts = c.get("/api/articles").json()
+    assert len(arts) == 1
+    assert arts[0]["workflow_hint"] == "待安排发布"
+    assert not list(cfg.inbox_dir.iterdir())
+
+
+def test_reupload_published_resets_to_imported(client) -> None:
+    """已发布作品重新上传后应重置为待发布，以便再次排期。"""
+    c, cfg = client
+    body = b"# Re\n\nbody"
+    c.post("/api/upload", files=[("articles", ("re.md", body, "text/markdown"))])
+    aid = c.get("/api/articles").json()[0]["id"]
+    with db.connect(cfg.database_path) as conn:
+        conn.execute("UPDATE articles SET status = 'published' WHERE id = ?", (aid,))
+        conn.commit()
+
+    data = c.post(
+        "/api/upload",
+        files=[("articles", ("re.md", body, "text/markdown"))],
+    ).json()
+    assert data["scan"]["reconciled_reupload"] == 1
+    assert data["reconciled_articles"][0]["status_reset"] is True
+    assert any("重置为待发布" in line for line in data["human"])
+
+    art = c.get("/api/articles").json()[0]
+    assert art["status"] == "imported"
+    assert art["workflow_hint"] == "待安排发布"
+    plan = c.post("/api/plan").json()
+    assert plan["planned"] == 1
+
+
+def test_reupload_with_wechat_draft_shows_hint(client) -> None:
+    c, cfg = client
+    body = b"# Draft\n\nbody"
+    c.post("/api/upload", files=[("articles", ("d.md", body, "text/markdown"))])
+    aid = c.get("/api/articles").json()[0]["id"]
+    with db.connect(cfg.database_path) as conn:
+        conn.execute(
+            "INSERT INTO wechat_drafts (article_id, media_id, status) VALUES (?, ?, 'created')",
+            (aid, "mock_media_test"),
+        )
+        conn.commit()
+
+    art = c.get("/api/articles").json()[0]
+    assert art["has_wechat_draft"] is True
+    assert art["workflow_hint"] == "已收录 · 微信草稿已创建"

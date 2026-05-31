@@ -20,6 +20,17 @@ COVER_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 _UNSAFE = re.compile(r"[^\w.\-\u4e00-\u9fff]+")
 
 
+def _humanize_reconciled(reconciled: list[dict[str, object]]) -> list[str]:
+    lines: list[str] = []
+    for item in reconciled:
+        title = str(item.get("title") or "该作品")
+        if item.get("status_reset"):
+            lines.append(f"《{title}》已在作品库中，已识别为重新上传并重置为待发布")
+        else:
+            lines.append(f"《{title}》已在作品库中，可继续安排发布")
+    return lines
+
+
 def safe_filename(name: str) -> str:
     """清洗上传文件名，移除路径分隔符与危险字符。"""
     base = Path(name or "").name.strip() or "unnamed"
@@ -106,10 +117,13 @@ def handle_upload(
     scan_stats = scan_inbox(config) if saved_articles else {
         "scanned": 0,
         "imported": 0,
+        "reconciled_reupload": 0,
         "skipped_duplicate": 0,
         "errors": 0,
+        "reconciled_articles": [],
     }
     matched_covers = _match_covers(config, cover_by_stem)
+    reconciled = scan_stats.get("reconciled_articles") or []
 
     human: list[str] = []
     if saved_articles:
@@ -118,6 +132,8 @@ def handle_upload(
         human.append(f"已上传 {len(cover_by_stem)} 张封面")
     if scan_stats.get("imported"):
         human.append(f"新收录 {scan_stats['imported']} 篇作品")
+    if reconciled:
+        human.extend(_humanize_reconciled(reconciled))
     if matched_covers:
         human.append(f"已为 {matched_covers} 篇作品自动绑定封面")
     if scan_stats.get("skipped_duplicate"):
@@ -136,5 +152,6 @@ def handle_upload(
         "skipped_articles": skipped_articles,
         "skipped_covers": skipped_covers,
         "scan": scan_stats,
+        "reconciled_articles": reconciled,
         "human": human,
     }
