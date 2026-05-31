@@ -17,6 +17,7 @@ from wechat_article_scheduler.adapters.wechat_http import (
     redact_url,
 )
 from wechat_article_scheduler.parser import clamp_summary
+from wechat_article_scheduler.publish_body import publish_body_for
 from wechat_article_scheduler.renderers import render_markdown_to_html
 
 logger = logging.getLogger(__name__)
@@ -168,7 +169,7 @@ class RealWechatAdapter(WechatAdapter):
                     "title": title,
                     "author": "",
                     "digest": clamp_summary(summary or title, 120),
-                    "content": render_markdown_to_html(body),
+                    "content": render_markdown_to_html(publish_body_for(title, body)),
                     "content_source_url": "",
                     "thumb_media_id": thumb_media_id,
                     "need_open_comment": 0,

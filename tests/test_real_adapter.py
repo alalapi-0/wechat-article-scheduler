@@ -56,6 +56,39 @@ def test_upload_thumb_jpg_multipart_metadata(tmp_path: Path) -> None:
     assert part[2] == "image/jpeg"
 
 
+def test_create_draft_strips_duplicate_markdown_title() -> None:
+    posts: list[tuple[str, dict]] = []
+
+    def fake_get(url: str, **kwargs) -> dict:  # noqa: ARG001
+        return {"access_token": "ATOKEN", "expires_in": 7200}
+
+    def fake_post_json(url: str, body: dict, **kwargs) -> dict:  # noqa: ARG001
+        posts.append((url, body))
+        if "draft/add" in url:
+            return {"errcode": 0, "media_id": "draft_media_1"}
+        return {"errcode": 0}
+
+    def fake_multipart(url: str, fields: dict, files: dict, **kwargs) -> dict:  # noqa: ARG001
+        return {"errcode": 0, "media_id": "thumb_1"}
+
+    adapter = RealWechatAdapter(
+        "wxapp",
+        "wxsec",
+        http_get=fake_get,
+        http_post_json_fn=fake_post_json,
+        http_post_multipart_fn=fake_multipart,
+    )
+    adapter.create_draft(
+        title="重复标题",
+        summary="摘要",
+        body="# 重复标题\n\n<p>正文</p>",
+    )
+    article = posts[-1][1]["articles"][0]
+    assert article["title"] == "重复标题"
+    assert "<h1" not in article["content"].lower()
+    assert "正文" in article["content"]
+
+
 def test_create_draft_with_mock_http() -> None:
     posts: list[tuple[str, dict]] = []
 
