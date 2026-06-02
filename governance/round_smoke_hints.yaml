@@ -212,3 +212,5 @@ round_117:
   - python3 -m pytest tests/test_round_117_wechat_p0.py -q
 round_118:
   - python3 -m pytest tests/test_round_118_wechat_p0.py -q
+round_119:
+  - python3 -m pytest tests/test_round_119_wechat_p0.py -q

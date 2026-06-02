@@ -2288,6 +2288,23 @@
   - [x] 刷新恢复与无效 key 回退
   - [x] agent_gate round_118 冒烟
 
+### Round 119 - Hash 深链与区块恢复
+
+- 目标：`#queue`/`#works`/`#drafts` 深链；刷新恢复当前区块；与 queue/collection localStorage 协同。
+- 范围：`initWorkbenchHash`、`navigateWorkbenchSection`、head 预恢复 hash。
+- 非目标：独立路由页改造。
+- 输入：round_117/118 localStorage 模式。
+- 输出：`wechat_workbench_section_hash`；`#articles`→`#works` 别名。
+- 验收标准：`test_round_119_wechat_p0`；mock@8080 `/#queue` 直达。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_119_wechat_p0.py -q`。
+- 退出标准：gate round_119。
+- 风险：无。
+- 回滚点：恢复 `setupNav` 无 hash 持久化。
+- 交付项：
+  - [x] hash 深链与 localStorage
+  - [x] 刷新恢复区块
+  - [x] agent_gate round_119 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -10,6 +10,15 @@ try {
     document.documentElement.classList.add('show-advanced');
   }
 } catch (e) {}
+try {
+  if (!location.hash) {
+    const s = localStorage.getItem('wechat_workbench_section_hash');
+    if (s) {
+      const id = (s === 'articles') ? 'works' : s;
+      if (id) history.replaceState(null, '', '#' + (id === 'works' ? 'works' : id));
+    }
+  }
+} catch (e) {}
 </script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 <style>
@@ -1025,7 +1034,7 @@ async function boot(){
   try { COPY = await (await fetch('/api/user-labels')).json(); } catch(e){ COPY = {}; }
   initAdvancedToggle();
   initCollectionFilter();
-  setupNav();
+  initWorkbenchHash();
   setupUpload();
   setupWorksSelection();
   setupCoverBatchModal();
@@ -1065,6 +1074,7 @@ async function boot(){
   if (btnRefreshQ) btnRefreshQ.addEventListener('click', refreshAll);
   renderSteps();
   await refreshAll();
+  applyInitialWorkbenchSection();
 }
 
 let queueJobsList = [];
@@ -1129,12 +1139,75 @@ function setupDraftFilters(){
   });
 }
 
-function setupNav(){
-  const links = document.querySelectorAll('.nav a[href^="#"]');
-  links.forEach(a => a.addEventListener('click', () => {
-    links.forEach(x => x.classList.remove('active'));
-    a.classList.add('active');
-  }));
+const HASH_SECTION_STORAGE_KEY = 'wechat_workbench_section_hash';
+const WORKBENCH_SECTION_IDS = new Set([
+  'overview', 'works', 'articles', 'actions', 'queue', 'drafts', 'trash', 'events', 'help',
+]);
+
+function normalizeWorkbenchSection(raw){
+  const h = String(raw || '').replace(/^#/, '').trim().toLowerCase();
+  if (h === 'articles') return 'works';
+  return WORKBENCH_SECTION_IDS.has(h) ? h : 'works';
+}
+
+function workbenchHashForSection(sectionId){
+  const id = normalizeWorkbenchSection(sectionId);
+  return '#' + id;
+}
+
+function persistWorkbenchSection(sectionId){
+  try { localStorage.setItem(HASH_SECTION_STORAGE_KEY, normalizeWorkbenchSection(sectionId)); } catch (e) {}
+}
+
+function applyWorkbenchSection(sectionId, opts){
+  const o = opts || {};
+  const id = normalizeWorkbenchSection(sectionId);
+  document.querySelectorAll('.nav a[href^="#"]').forEach(a => {
+    const navId = normalizeWorkbenchSection(a.getAttribute('href'));
+    a.classList.toggle('active', navId === id);
+  });
+  if (o.persist !== false) persistWorkbenchSection(id);
+  if (o.updateHash !== false) {
+    const hash = workbenchHashForSection(id);
+    try {
+      if (location.hash !== hash) history.replaceState(null, '', hash);
+    } catch (e) {}
+  }
+  if (o.scroll !== false) {
+    const target = document.getElementById(id);
+    if (target) target.scrollIntoView({ behavior: o.smooth ? 'smooth' : 'auto', block: 'start' });
+  }
+}
+
+function navigateWorkbenchSection(sectionId, opts){
+  applyWorkbenchSection(sectionId, opts);
+}
+
+function initWorkbenchHash(){
+  window.addEventListener('hashchange', () => {
+    applyWorkbenchSection(location.hash, { updateHash: false, scroll: true, smooth: false });
+    persistWorkbenchSection(normalizeWorkbenchSection(location.hash));
+  });
+  document.querySelectorAll('.nav a[href^="#"]').forEach(a => {
+    a.addEventListener('click', () => {
+      persistWorkbenchSection(a.getAttribute('href'));
+    });
+  });
+}
+
+function applyInitialWorkbenchSection(){
+  let initial = '';
+  try {
+    initial = (location.hash || '').replace(/^#/, '')
+      || localStorage.getItem(HASH_SECTION_STORAGE_KEY)
+      || 'works';
+  } catch (e) { initial = 'works'; }
+  applyWorkbenchSection(initial, {
+    updateHash: !location.hash,
+    persist: true,
+    scroll: true,
+    smooth: false,
+  });
 }
 
 function renderSteps(){
@@ -1598,7 +1671,7 @@ function renderSafety(status, preflight){
 
 async function goWaitingConfirmQueue(){
   await setQueueFilterKey('confirm');
-  document.getElementById('queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  navigateWorkbenchSection('queue', { smooth: true });
 }
 
 function renderWaitingConfirmationEntry(wc){
@@ -1649,7 +1722,7 @@ function renderStats(ov){
     card.addEventListener('click', async () => {
       const key = card.getAttribute('data-goto-queue') || 'err';
       await setQueueFilterKey(key);
-      document.getElementById('queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      navigateWorkbenchSection('queue', { smooth: true });
     });
   });
 }
