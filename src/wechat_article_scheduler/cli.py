@@ -92,6 +92,14 @@ def _build_parser() -> argparse.ArgumentParser:
     uob.add_argument("--config", type=str, default=None, help="unified_outbox.yaml 路径")
     uob.add_argument("--projects", type=str, default=None)
 
+    ops = sub.add_parser(
+        "ops-health-dry-run",
+        help="长期运维 runbook 检查清单与健康指标 dry-run",
+    )
+    ops.add_argument("--config", type=str, default=None, help="ops_maintenance.yaml 路径")
+
+    p5 = sub.add_parser("phase5-closure-summary", help="Phase5 预研模块收口摘要（只读）")
+
     lb = sub.add_parser(
         "local-blog-plan",
         help="local_blog 评估干跑 JSON（静态站/WordPress/本地目录，不真发）",
@@ -359,6 +367,28 @@ def main(argv: list[str] | None = None) -> int:
             config_path=config_path,
             projects_path=projects_path,
         )
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0 if summary.get("ok") else 1
+
+    if args.command == "ops-health-dry-run":
+        import json
+
+        from wechat_article_scheduler.core.ops_health_presearch import (
+            build_ops_health_dry_run,
+        )
+
+        summary = build_ops_health_dry_run(config)
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0 if summary.get("ok") else 1
+
+    if args.command == "phase5-closure-summary":
+        import json
+
+        from wechat_article_scheduler.core.phase5_closure_summary import (
+            build_phase5_closure_summary,
+        )
+
+        summary = build_phase5_closure_summary(config)
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 0 if summary.get("ok") else 1
 

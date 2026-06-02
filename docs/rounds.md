@@ -2068,6 +2068,39 @@
   - [x] CLI/API 与 /debug
   - [x] agent_gate round_105 冒烟
 
+### Round 106 - Phase5 长期运维预研
+
+- 目标：路线图 Round 42 — runbook 检查清单与健康指标 dry-run（不改生产 cron）。
+- 范围：`ops_health_presearch.py`、`ops_maintenance.example.yaml`、CLI/API、`/debug`。
+- 非目标：安装 launchd/cron；企业监控；破坏 SQLite。
+- 输入：round_069 scheduler-health、round_070 runbook、`deploy/examples`。
+- 输出：`ops-health-dry-run`；`/api/ops/health-dry-run` 与 runbook-checklist。
+- 验收标准：`test_ops_health_presearch` 通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_ops_health_presearch.py -q`。
+- 退出标准：gate round_106。
+- 风险：误将 dry-run 当自动运维。
+- 回滚点：移除 ops API。
+- 交付项：
+  - [x] runbook 清单与健康聚合
+  - [x] CLI/API 与 /debug
+  - [x] agent_gate round_106 冒烟
+
+### Round 107 - Phase5 收口摘要
+
+- 目标：聚合 round_103–106 预研模块状态，文档收口。
+- 范围：`phase5_closure_summary.py`、`docs/phase5_closure.md`、API。
+- 非目标：新平台实现；改微信主线。
+- 输入：Phase5 各 dry-run 模块。
+- 输出：`phase5-closure-summary`；`/api/phase5/closure-summary`。
+- 验收标准：`test_phase5_closure` 通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_phase5_closure.py -q`。
+- 退出标准：gate round_107。
+- 风险：无。
+- 回滚点：移除 closure API。
+- 交付项：
+  - [x] Phase5 收口 API 与文档
+  - [x] agent_gate round_107 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -492,7 +492,20 @@ Phase 4 暂不开发。音频、版权和审核复杂度高，仅保留长期 ba
 - 不做什么：不标记导出即发布。
 - 允许改动范围：core、config 示例、web、tests。
 - 风险边界：proof 须人工确认。
-- 下一轮衔接：Round 42 长期运维预研。
+- 下一轮衔接：Round 42 长期运维（`round_106`）与 Phase5 收口（`round_107`）。
+
+### Round 42：长期运维预研（已完成 — agent `round_106`）
+
+- 本轮目标：runbook 检查清单 + 健康指标 dry-run（scheduler/DB/inbox/outbox）。
+- 交付物：`docs/phase5_ops_maintenance.md`；不改生产 cron。
+- 验收标准：`ops-health-dry-run` 可测；deploy 样例仅对照。
+- 下一轮衔接：Phase5 收口 `round_107`。
+
+### Round 42b：Phase5 收口（已完成 — agent `round_107`）
+
+- 本轮目标：聚合 103–106 预研 ok 与计数；`phase5_closure.md`。
+- 交付物：`/api/phase5/closure-summary`。
+- 验收标准：微信 scan/plan 仍为 P0。
 
 ### Round 37：网易云音乐发布包预研
 
@@ -532,13 +545,6 @@ Phase 5 是长期 backlog。当前不开发。
 
 - 已落地为 agent `round_105`（见上）。备份/清理自动化仍属 backlog。
 
-### Round 42：长期备份、日志轮转、迁移系统
+### Round 42（原 backlog）：长期备份、日志轮转、迁移系统
 
-- 本轮目标：整理长期运行维护能力。
-- 具体任务：备份、日志轮转、迁移、恢复和归档策略。
-- 交付物：运维设计。
-- 验收标准：个人本地可维护。
-- 不做什么：不做企业级运维平台。
-- 允许改动范围：docs、必要小工具。
-- 风险边界：不能破坏当前 SQLite 数据。
-- 下一轮衔接：回到具体阶段治理，不自动扩展平台。
+- 运维检查清单与指标 dry-run 已落地为 `round_106`；自动备份/轮转仍属 backlog。

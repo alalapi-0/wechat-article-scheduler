@@ -1,6 +1,6 @@
 # Web 工作台 DOM 结构快照（自动生成）
 
-- generated_at: 2026-06-02T18:39:28.319853+00:00
+- generated_at: 2026-06-02T18:42:04.593073+00:00
 - seed_articles: 0
 - tag: empty_state
 - generator: tools/browser_automation/ui_review.py

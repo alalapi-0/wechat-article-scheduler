@@ -180,3 +180,11 @@ round_104:
 round_105:
   - python3 -m pytest tests/test_unified_outbox_presearch.py -q
   - python3 -m pytest tests/test_cross_project_calendar.py -q
+
+round_106:
+  - python3 -m pytest tests/test_ops_health_presearch.py -q
+  - python3 -m pytest tests/test_scheduler_runbook.py -q
+
+round_107:
+  - python3 -m pytest tests/test_phase5_closure.py -q
+  - python3 -m pytest tests/test_multi_project_dry_run.py tests/test_unified_outbox_presearch.py -q

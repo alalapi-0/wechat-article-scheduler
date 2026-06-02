@@ -23,6 +23,9 @@ DEBUG_APIS = (
     "/api/publish-calendar/conflicts",
     "/api/unified-outbox/index",
     "/api/unified-outbox/dry-run",
+    "/api/ops/health-dry-run",
+    "/api/ops/runbook-checklist",
+    "/api/phase5/closure-summary",
     "/api/audio-package-plan",
     "/api/browser-assist-plan",
 )

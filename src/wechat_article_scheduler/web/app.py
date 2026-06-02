@@ -653,6 +653,36 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         scan_roots = [str(r) for r in (ucfg.get("scan_roots") or ["outbox"])]
         return index_outbox_directories(cfg.root, scan_roots=scan_roots)
 
+    @app.get("/api/ops/health-dry-run")
+    def api_ops_health_dry_run() -> dict[str, Any]:
+        from wechat_article_scheduler.core.ops_health_presearch import (
+            build_ops_health_dry_run,
+        )
+
+        return build_ops_health_dry_run(cfg)
+
+    @app.get("/api/ops/runbook-checklist")
+    def api_ops_runbook_checklist() -> dict[str, Any]:
+        from wechat_article_scheduler.core.ops_health_presearch import (
+            build_ops_health_dry_run,
+        )
+
+        summary = build_ops_health_dry_run(cfg)
+        return {
+            "ok": summary.get("ok"),
+            "items": summary.get("runbook_checklist") or [],
+            "guardrails": summary.get("guardrails") or [],
+            "mode": "dry_run",
+        }
+
+    @app.get("/api/phase5/closure-summary")
+    def api_phase5_closure_summary() -> dict[str, Any]:
+        from wechat_article_scheduler.core.phase5_closure_summary import (
+            build_phase5_closure_summary,
+        )
+
+        return build_phase5_closure_summary(cfg)
+
     @app.get("/api/waiting-confirmation")
     def api_waiting_confirmation() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
@@ -1438,6 +1468,9 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>Phase5 日历冲突检测</h2><pre id="publish-calendar-conflicts">加载中…</pre>
 <h2>Phase5 统一 outbox 索引</h2><pre id="unified-outbox-index">加载中…</pre>
 <h2>Phase5 统一 outbox dry-run</h2><pre id="unified-outbox-dry-run">加载中…</pre>
+<h2>Phase5 运维健康 dry-run</h2><pre id="ops-health">加载中…</pre>
+<h2>Phase5 runbook 检查清单</h2><pre id="ops-runbook">加载中…</pre>
+<h2>Phase5 收口摘要</h2><pre id="phase5-closure">加载中…</pre>
 <h2>local_blog 评估（静态站）</h2><pre id="local-blog-static">加载中…</pre>
 <h2>local_blog 评估（WordPress）</h2><pre id="local-blog-wp">加载中…</pre>
 <h2>Webhook 评估（generic）</h2><pre id="webhook-plan">加载中…</pre>
@@ -1468,6 +1501,9 @@ Promise.all([
   fetch('/api/publish-calendar/conflicts'),
   fetch('/api/unified-outbox/index'),
   fetch('/api/unified-outbox/dry-run'),
+  fetch('/api/ops/health-dry-run'),
+  fetch('/api/ops/runbook-checklist'),
+  fetch('/api/phase5/closure-summary'),
   fetch('/api/local-blog-plan?destination=static_site'),
   fetch('/api/local-blog-plan?destination=wordpress'),
   fetch('/api/webhook-plan?channel=generic'),
@@ -1479,7 +1515,7 @@ Promise.all([
   fetch('/api/audio-package-plan?platform=netease_music'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,pr,pd,pc,pcc,uoi,uod,l,m,n,o,p,q,r,s,t,u,v])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,pr,pd,pc,pcc,uoi,uod,oh,orb,p5,l,m,n,o,p,q,r,s,t,u,v])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1497,6 +1533,9 @@ Promise.all([
   document.getElementById('publish-calendar-conflicts').textContent = JSON.stringify(await pcc.json(), null, 2);
   document.getElementById('unified-outbox-index').textContent = JSON.stringify(await uoi.json(), null, 2);
   document.getElementById('unified-outbox-dry-run').textContent = JSON.stringify(await uod.json(), null, 2);
+  document.getElementById('ops-health').textContent = JSON.stringify(await oh.json(), null, 2);
+  document.getElementById('ops-runbook').textContent = JSON.stringify(await orb.json(), null, 2);
+  document.getElementById('phase5-closure').textContent = JSON.stringify(await p5.json(), null, 2);
   document.getElementById('local-blog-static').textContent = JSON.stringify(await l.json(), null, 2);
   document.getElementById('local-blog-wp').textContent = JSON.stringify(await m.json(), null, 2);
   document.getElementById('webhook-plan').textContent = JSON.stringify(await n.json(), null, 2);

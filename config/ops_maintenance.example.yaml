@@ -1,0 +1,36 @@
+# 长期运维预研配置（Phase5 / round_106）
+# 仅 dry-run 检查；不修改生产 cron / launchd / systemd。
+schema_version: 1
+guardrails:
+  - 不安装或改写本机 cron/launchd
+  - 仅引用 deploy/examples 作为文档样例
+  - 备份与轮转须人工执行
+runbook_checklist:
+  - id: database_present
+    title: SQLite 数据库文件可访问
+    cadence: daily
+    auto_check: database_exists
+  - id: scheduler_health
+    title: 调度队列健康（scheduler-health 等价）
+    cadence: daily
+    auto_check: scheduler_ok
+  - id: inbox_ready
+    title: 收件箱目录存在
+    cadence: weekly
+    auto_check: inbox_readable
+  - id: log_policy
+    title: 日志路径已配置或明确禁用
+    cadence: weekly
+    auto_check: log_policy
+  - id: deploy_examples
+    title: 部署样例文件仍在仓库（供对照）
+    cadence: quarterly
+    auto_check: deploy_examples_present
+  - id: backup_manual
+    title: 人工备份数据库与 outbox
+    cadence: weekly
+    auto_check: manual_only
+  - id: cron_review_manual
+    title: 对照 runbook 复核本机定时任务（不自动改）
+    cadence: monthly
+    auto_check: manual_only

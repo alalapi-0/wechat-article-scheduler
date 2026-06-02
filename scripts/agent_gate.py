@@ -160,6 +160,8 @@ ROUND_ORDER = [
     "round_103",
     "round_104",
     "round_105",
+    "round_106",
+    "round_107",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1241,8 +1243,29 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "不移动真实文件",
         ],
         "next_actions": [
-            "round_106 长期运维预研或维护",
-            "见 docs/roadmap_converged.md Round 42",
+            "round_106 长期运维预研",
+        ],
+    },
+    "round_106": {
+        "name": "Round 106 - Phase5 长期运维预研",
+        "acceptance_criteria": [
+            "ops runbook 检查清单 dry-run",
+            "健康指标聚合 API",
+            "不修改生产 cron",
+        ],
+        "next_actions": [
+            "round_107 Phase5 收口",
+        ],
+    },
+    "round_107": {
+        "name": "Round 107 - Phase5 收口摘要",
+        "acceptance_criteria": [
+            "phase5-closure-summary API",
+            "round_103-106 模块 ok 聚合",
+            "docs/phase5_closure.md",
+        ],
+        "next_actions": [
+            "注册 round_108 维护或新阶段",
         ],
     },
 }
@@ -2144,6 +2167,35 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_cross_project_calendar.py", "-q"],
                 "pytest phase5 calendar regression",
+            ),
+        ]
+    elif round_id == "round_106":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_ops_health_presearch.py", "-q"],
+                "pytest ops health presearch",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_scheduler_runbook.py", "-q"],
+                "pytest scheduler runbook regression",
+            ),
+        ]
+    elif round_id == "round_107":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_phase5_closure.py", "-q"],
+                "pytest phase5 closure",
+            ),
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_multi_project_dry_run.py",
+                    "tests/test_unified_outbox_presearch.py",
+                    "-q",
+                ],
+                "pytest phase5 regression",
             ),
         ]
     else:
