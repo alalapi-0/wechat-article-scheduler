@@ -52,7 +52,7 @@ SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
 # 权威路线图：docs/rounds.md（Round 0–102，脚本轮注册表）。修改路线图时须同步本表与 tests/test_agent_gate.py。
-# 里程碑：round_000–101 为 Phase0–4 与微信工作台收敛；round_102 为维护收口；Phase5+ 见 docs/roadmap_converged.md backlog。
+# 里程碑：round_000–101 Phase0–4；round_102 维护收口；round_103+ Phase5 多项目 manifest 等见 roadmap。
 ROUND_ORDER = [
     "round_000",
     "round_001",
@@ -157,6 +157,7 @@ ROUND_ORDER = [
     "round_100",
     "round_101",
     "round_102",
+    "round_103",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1202,8 +1203,20 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock 主链路 scan→plan→预览→队列→草稿→debug API",
         ],
         "next_actions": [
-            "手工注册 round_103 或 Phase5 实现轮",
-            "见 docs/roadmap_converged.md Phase 5 backlog",
+            "Phase5 多项目 manifest round_103",
+        ],
+    },
+    "round_103": {
+        "name": "Round 103 - Phase5 多项目 manifest 干跑",
+        "acceptance_criteria": [
+            "projects.example.yaml 与 registry 加载",
+            "多项目 manifest dry-run CLI/API",
+            "/debug Phase5 区块",
+            "不替代 scan/plan",
+        ],
+        "next_actions": [
+            "round_104 跨项目日历预研或维护",
+            "见 docs/roadmap_converged.md Round 40",
         ],
     },
 }
@@ -2065,6 +2078,24 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_agent_gate.py", "-q"],
                 "pytest agent_gate registry",
+            ),
+        ]
+    elif round_id == "round_103":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_multi_project_dry_run.py", "-q"],
+                "pytest multi-project dry-run",
+            ),
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_manifest_validate.py",
+                    "tests/test_manifest_dry_run.py",
+                    "-q",
+                ],
+                "pytest manifest round_086/087 regression",
             ),
         ]
     else:

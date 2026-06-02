@@ -1,0 +1,14 @@
+# 多项目 publish_manifest 注册表示例（Phase5 / round_103）
+# 复制为 projects.yaml 后可自定义；不替代微信 scan/plan 主线。
+schema_version: 1
+projects:
+  - project_id: demo-novel
+    display_name: 示例小说项目
+    enabled: true
+    manifests:
+      - manifests/examples/sample_publish_manifest.json
+  - project_id: demo-podcast
+    display_name: 示例播客项目
+    enabled: true
+    manifests:
+      - manifests/examples/sample_podcast_manifest.json

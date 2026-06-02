@@ -17,6 +17,8 @@ DEBUG_APIS = (
     "/api/wechat-chain-summary",
     "/api/adapter-registry",
     "/api/manifest/sample-dry-run",
+    "/api/projects/registry",
+    "/api/projects/dry-run",
     "/api/audio-package-plan",
     "/api/browser-assist-plan",
 )

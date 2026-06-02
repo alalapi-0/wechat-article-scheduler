@@ -168,3 +168,7 @@ round_101:
 round_102:
   - python3 -m pytest tests/test_round_102_maintenance_smoke.py -q
   - python3 -m pytest tests/test_agent_gate.py -q
+
+round_103:
+  - python3 -m pytest tests/test_multi_project_dry_run.py -q
+  - python3 -m pytest tests/test_manifest_validate.py tests/test_manifest_dry_run.py -q

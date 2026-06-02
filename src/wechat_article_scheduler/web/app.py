@@ -582,6 +582,22 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="示例 manifest 不存在")
         return manifest_dry_run_summary(load_manifest(sample))
 
+    @app.get("/api/projects/registry")
+    def api_projects_registry() -> dict[str, Any]:
+        from wechat_article_scheduler.core.multi_project_dry_run import (
+            projects_registry_summary,
+        )
+
+        return projects_registry_summary(cfg.root)
+
+    @app.get("/api/projects/dry-run")
+    def api_projects_dry_run() -> dict[str, Any]:
+        from wechat_article_scheduler.core.multi_project_dry_run import (
+            build_multi_project_dry_run,
+        )
+
+        return build_multi_project_dry_run(cfg.root)
+
     @app.get("/api/waiting-confirmation")
     def api_waiting_confirmation() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
@@ -1361,6 +1377,8 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>微信视频号 browser_assist 评估</h2><pre id="browser-assist-channels">加载中…</pre>
 <h2>Adapter Registry</h2><pre id="adapter-registry">加载中…</pre>
 <h2>publish_manifest 干跑（示例）</h2><pre id="manifest-dry-run">加载中…</pre>
+<h2>Phase5 多项目 registry</h2><pre id="projects-registry">加载中…</pre>
+<h2>Phase5 多项目 manifest 干跑</h2><pre id="projects-dry-run">加载中…</pre>
 <h2>local_blog 评估（静态站）</h2><pre id="local-blog-static">加载中…</pre>
 <h2>local_blog 评估（WordPress）</h2><pre id="local-blog-wp">加载中…</pre>
 <h2>Webhook 评估（generic）</h2><pre id="webhook-plan">加载中…</pre>
@@ -1385,6 +1403,8 @@ Promise.all([
   fetch('/api/browser-assist-plan?platform=wechat_channels'),
   fetch('/api/adapter-registry'),
   fetch('/api/manifest/sample-dry-run'),
+  fetch('/api/projects/registry'),
+  fetch('/api/projects/dry-run'),
   fetch('/api/local-blog-plan?destination=static_site'),
   fetch('/api/local-blog-plan?destination=wordpress'),
   fetch('/api/webhook-plan?channel=generic'),
@@ -1396,7 +1416,7 @@ Promise.all([
   fetch('/api/audio-package-plan?platform=netease_music'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,pr,pd,l,m,n,o,p,q,r,s,t,u,v])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1408,6 +1428,8 @@ Promise.all([
   document.getElementById('browser-assist-channels').textContent = JSON.stringify(await i.json(), null, 2);
   document.getElementById('adapter-registry').textContent = JSON.stringify(await j.json(), null, 2);
   document.getElementById('manifest-dry-run').textContent = JSON.stringify(await k.json(), null, 2);
+  document.getElementById('projects-registry').textContent = JSON.stringify(await pr.json(), null, 2);
+  document.getElementById('projects-dry-run').textContent = JSON.stringify(await pd.json(), null, 2);
   document.getElementById('local-blog-static').textContent = JSON.stringify(await l.json(), null, 2);
   document.getElementById('local-blog-wp').textContent = JSON.stringify(await m.json(), null, 2);
   document.getElementById('webhook-plan').textContent = JSON.stringify(await n.json(), null, 2);

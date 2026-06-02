@@ -2017,6 +2017,23 @@
   - [x] 全量 pytest + 维护冒烟
   - [x] agent_gate round_102 冒烟
 
+### Round 103 - Phase5 多项目 manifest 干跑
+
+- 目标：路线图 Round 39 — 在 round_086/087 上增加 `projects.yaml` 多项目编排（不写库）。
+- 范围：`projects_registry.py`、`multi_project_dry_run.py`、`config/projects.example.yaml`、CLI/API、`/debug`。
+- 非目标：manifest 导入 SQLite；替换 scan/plan；跨项目日历实现。
+- 输入：round_086 校验、round_087 单 manifest 干跑。
+- 输出：`projects-dry-run`；`/api/projects/registry` 与 `/api/projects/dry-run`。
+- 验收标准：`test_multi_project_dry_run` 两项目均 ok；微信主线未改。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_multi_project_dry_run.py -q`；`python -m wechat_article_scheduler.cli projects-dry-run`。
+- 退出标准：gate round_103。
+- 风险：误把 manifest 当唯一导入路径。
+- 回滚点：移除 projects API。
+- 交付项：
+  - [x] projects.yaml 示例与多项目 dry-run
+  - [x] CLI/API 与 /debug
+  - [x] agent_gate round_103 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

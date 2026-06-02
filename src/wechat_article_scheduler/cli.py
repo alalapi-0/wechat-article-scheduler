@@ -62,6 +62,17 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     mdry.add_argument("--manifest", type=str, required=True)
 
+    mpdry = sub.add_parser(
+        "projects-dry-run",
+        help="多项目 projects.yaml 批量 manifest 干跑（不写库）",
+    )
+    mpdry.add_argument(
+        "--projects",
+        type=str,
+        default=None,
+        help="projects.yaml 路径（默认 config/projects.yaml 或 projects.example.yaml）",
+    )
+
     lb = sub.add_parser(
         "local-blog-plan",
         help="local_blog 评估干跑 JSON（静态站/WordPress/本地目录，不真发）",
@@ -280,6 +291,20 @@ def main(argv: list[str] | None = None) -> int:
         summary["manifest_path"] = str(path.resolve())
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 0
+
+    if args.command == "projects-dry-run":
+        import json
+        from pathlib import Path
+
+        from wechat_article_scheduler.config import ROOT
+        from wechat_article_scheduler.core.multi_project_dry_run import (
+            build_multi_project_dry_run,
+        )
+
+        projects_path = Path(args.projects) if args.projects else None
+        summary = build_multi_project_dry_run(ROOT, projects_path=projects_path)
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0 if summary.get("ok") else 1
 
     if args.command == "local-blog-plan":
         import json

@@ -459,7 +459,18 @@ Phase 4 暂不开发。音频、版权和审核复杂度高，仅保留长期 ba
 - 不做什么：不替换 scan/upload；不上传非微信平台。
 - 允许改动范围：tests、docs、governance、小 bugfix。
 - 风险边界：个人本地 mock 优先。
-- 下一轮衔接：手工注册 round_103 或 Phase 5 Round 39（多项目 manifest 预研，docs only）。
+- 下一轮衔接：Phase 5 Round 39 多项目 manifest（`round_103`）。
+
+### Round 39：publish_manifest 多项目协议（已完成 — agent `round_103`）
+
+- 本轮目标：在 round_086/087 上增加多项目 `projects.yaml` 编排与批量干跑。
+- 具体任务：`projects.example.yaml`；registry 加载；`projects-dry-run` CLI/API；`/debug` Phase5 区块。
+- 交付物：`docs/phase5_multi_project_manifest.md`。
+- 验收标准：两示例项目 manifest 干跑 ok；**不**替代 scan/plan。
+- 不做什么：不写库；不 SaaS 多租户。
+- 允许改动范围：core、config 示例、web debug、tests。
+- 风险边界：微信收件箱仍为 P0。
+- 下一轮衔接：Round 40 跨项目发布日历预研。
 
 ### Round 37：网易云音乐发布包预研
 
@@ -487,16 +498,9 @@ Phase 4 暂不开发。音频、版权和审核复杂度高，仅保留长期 ba
 
 Phase 5 是长期 backlog。当前不开发。
 
-### Round 39：publish_manifest 多项目协议
+### Round 39（原 backlog）：publish_manifest 多项目协议
 
-- 本轮目标：评估跨项目导入协议。
-- 具体任务：复盘单项目微信工作台是否需要 manifest。
-- 交付物：manifest 决策文档。
-- 验收标准：只有明确需要时才进入实现。
-- 不做什么：不替换当前 scan/upload。
-- 允许改动范围：docs only。
-- 风险边界：不能侵入创作项目。
-- 下一轮衔接：进入跨项目发布日历评估。
+- 已落地为 agent `round_103`（见上）。后续导入 SQLite 仍属 backlog。
 
 ### Round 40：跨项目发布日历
 
