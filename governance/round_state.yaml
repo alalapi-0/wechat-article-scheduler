@@ -1,15 +1,14 @@
 current_round:
-  id: round_056
-  name: Round 56 - 路线收敛治理轮
+  id: round_057
+  name: Round 57 - 收敛后微信链路稳定化（启动）
   status: active
-  updated_at: '2026-06-02T05:51:40.511891+00:00'
+  updated_at: '2026-06-02T05:54:59.470737+00:00'
 last_completed_round:
-  id: round_055
-  completed_at: '2026-06-02T05:51:40.511891+00:00'
+  id: round_056
+  completed_at: '2026-06-02T05:54:59.470737+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 路线发散审计、产品愿景、架构、收敛路线图与平台优先级已更新
-- 不破坏微信公众号 scan/plan/run-once/草稿创建链路
-- 默认 mock 不联网；real 模式用于真实 API 测试；browser_assist 只作为个人本地自用后备方案
+- scan/plan/run-once mock 主链路测试通过
+- draft-only 与正式发布路径在文档和测试中可区分
 next_actions:
-- 下一轮优先执行 Round 2：当前微信公众号链路稳定化
+- 按 docs/roadmap_converged.md 继续 Round 3：摘要、错误码与幂等
