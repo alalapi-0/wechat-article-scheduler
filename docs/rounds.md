@@ -2169,6 +2169,23 @@
   - [x] 待人工确认首页入口
   - [x] agent_gate round_111 冒烟
 
+### Round 112 - 扫描收件箱反馈与链路联动
+
+- 目标：「扫描本地收件箱」toast/摘要增强，与 `chain_summary` 联动；扫描前轻量 inbox 预检。
+- 范围：`scan_preflight`、`scan_summary`、`/api/scan`、`admin_template`。
+- 非目标：真实联网；收件箱解析规则变更。
+- 输入：round_091 chain_summary、既有 `scan_inbox`。
+- 输出：`scan_summary`/`chain_hint`；`GET /api/scan-preflight`；概览 `#chainScanHint`。
+- 验收标准：`test_round_112_wechat_p0`；mock@8080 点击扫描。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_112_wechat_p0.py -q`。
+- 退出标准：gate round_112。
+- 风险：无。
+- 回滚点：恢复 scan 简单 human 返回。
+- 交付项：
+  - [x] 扫描反馈与 chain 联动
+  - [x] inbox 路径预检
+  - [x] agent_gate round_112 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

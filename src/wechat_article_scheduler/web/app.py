@@ -23,6 +23,11 @@ from wechat_article_scheduler.schedule_assign import (
     parse_scheduled_at,
 )
 from wechat_article_scheduler.scanner import scan_inbox
+from wechat_article_scheduler.web.scan_preflight import build_scan_preflight
+from wechat_article_scheduler.web.scan_summary import (
+    chain_hint_after_scan,
+    format_scan_stats,
+)
 from wechat_article_scheduler.content_library import (
     discover_collection_configs,
     list_collections,
@@ -1268,9 +1273,34 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="封面素材不存在")
         return FileResponse(str(asset))
 
+    @app.get("/api/scan-preflight")
+    def api_scan_preflight() -> dict[str, Any]:
+        return build_scan_preflight(cfg)
+
     @app.post("/api/scan")
     def trigger_scan() -> dict[str, Any]:
-        result = scan_inbox(cfg)
+        preflight = build_scan_preflight(cfg)
+        if preflight.get("blocked"):
+            return {
+                "ok": False,
+                "blocked_by_scan_preflight": True,
+                "scanned": 0,
+                "imported": 0,
+                "scan_preflight": preflight,
+                "human": [preflight.get("reason") or "收件箱路径不可用，无法扫描"],
+            }
+        result = dict(scan_inbox(cfg))
+        with db.connect(cfg.database_path) as conn:
+            from wechat_article_scheduler.wechat_chain_summary import (
+                build_wechat_chain_summary,
+            )
+
+            chain = build_wechat_chain_summary(cfg, conn)
+        result["ok"] = True
+        result["scan_preflight"] = preflight
+        result["scan_summary"] = format_scan_stats(result)
+        result["chain_summary"] = chain
+        result["chain_hint"] = chain_hint_after_scan(chain)
         result["human"] = humanize_scan_result(result)
         return result
 

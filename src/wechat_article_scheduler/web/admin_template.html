@@ -125,7 +125,9 @@
   .alert.warn { background: var(--warn-soft); border-color: #ead8a6; color: var(--warn); }
   .alert.err { background: var(--err-soft); border-color: #edc9c4; color: var(--err); }
 
-  .stats { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  .main { min-width: 0; overflow-x: hidden; }
+  .chain-scan-hint { word-break: break-word; }
   .stat { padding: 13px 14px; border-right: 1px solid var(--line); }
   .stat:last-child { border-right: 0; }
   .stat .num { font-size: 22px; font-weight: 700; letter-spacing: -.03em; }
@@ -259,6 +261,9 @@
   }
   .waiting-confirm-entry ul { margin: 8px 0; padding-left: 18px; color: var(--muted); font-size: 12.5px; }
   .waiting-confirm-entry .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .scan-hint { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+  .scan-hint.blocked { color: #b91c1c; background: #fde8e8; padding: 8px 10px; border-radius: 8px; border: 1px solid #f5c2c2; }
+  .chain-scan-hint { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
   #events.flash-highlight .card { box-shadow: 0 0 0 2px var(--accent-soft); transition: box-shadow .3s; }
   .stat.clickable { cursor: pointer; }
   .stat.clickable:hover { border-color: var(--accent); }
@@ -463,6 +468,7 @@
               <ul id="nextStepsList"></ul>
             </div>
             <div id="waitingConfirmEntry" hidden></div>
+            <p class="chain-scan-hint" id="chainScanHint" hidden></p>
           </section>
 
           <!-- 作品库 + 上传 -->
@@ -531,12 +537,13 @@
             <div class="card pad">
               <div class="banner" id="scheduleBanner">读取计划中…</div>
               <div class="upload-actions">
-                <button class="btn-ghost" id="btnScan" type="button">扫描本地收件箱</button>
+                <button class="btn-ghost" id="btnScan" type="button" title="扫描 articles/inbox 与合集收件箱">扫描本地收件箱</button>
                 <button class="btn-primary" id="btnPlan" type="button" title="按合集规则自动推荐发布时间">生成排期</button>
                 <button class="btn-ghost" id="btnOpenSchedule" type="button">自定义安排…</button>
                 <button class="btn-primary" id="btnRun" type="button">执行到点发布</button>
                 <button class="btn-ghost" id="btnRefresh">刷新</button>
               </div>
+              <p class="scan-hint" id="scanBlockReason" hidden></p>
               <p class="plan-hint" id="planBlockReason" hidden></p>
               <p class="run-once-hint" id="runOnceBlockReason" hidden></p>
               <p class="preview-hint" style="margin-top:8px;">在作品库可单篇或批量指定发布时间；「自动推荐」按配置偏好时段排期。</p>
@@ -958,7 +965,7 @@ async function boot(){
   setupWorksSelection();
   setupCoverBatchModal();
   setupScheduleModal();
-  el('btnScan').addEventListener('click', () => runAction('scan', '/api/scan'));
+  el('btnScan').addEventListener('click', onScan);
   el('btnPlan').addEventListener('click', onPlan);
   el('btnOpenSchedule').addEventListener('click', () => {
     if (selectedWorkIds.size > 0) openScheduleModal('batch');
@@ -1103,6 +1110,92 @@ async function submitUpload(){
 
 /* ---------- 主操作 ---------- */
 let lastPublishPreflight = null;
+let lastScanSummary = null;
+
+const CHAIN_ACTION_LABELS = {
+  scan: '扫描收件箱', plan: '生成排期', 'run-once': '执行到点发布', 'retry-failed': '重试失败', idle: '暂无待办',
+};
+
+function applyScanPreflightGate(pre){
+  const btn = el('btnScan');
+  const hint = el('scanBlockReason');
+  if (!btn) return;
+  const blocked = !!(pre && pre.blocked);
+  btn.disabled = blocked;
+  btn.title = blocked ? (pre.reason || '') : '扫描 articles/inbox 与合集收件箱';
+  btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+  if (!hint) return;
+  if (blocked) {
+    hint.hidden = false;
+    hint.className = 'scan-hint blocked';
+    hint.textContent = '无法扫描：' + (pre.reason || '收件箱路径不可用');
+  } else if (pre && pre.hint) {
+    hint.hidden = false;
+    hint.className = 'scan-hint';
+    hint.textContent = pre.hint;
+  } else {
+    hint.hidden = true;
+    hint.textContent = '';
+  }
+}
+
+function renderChainScanHint(ov){
+  const box = el('chainScanHint');
+  if (!box) return;
+  const chain = (ov && ov.wechat_chain_summary) || {};
+  const wb = (ov && ov.workbench) || {};
+  const action = chain.recommended_next_action || wb.chain_recommended_action;
+  if (!action || action === 'idle') {
+    box.hidden = true;
+    box.textContent = '';
+    return;
+  }
+  const label = CHAIN_ACTION_LABELS[action] || action;
+  let text = '微信闭环建议：' + label;
+  if (lastScanSummary && lastScanSummary.summary_label) {
+    text = '上次扫描 ' + lastScanSummary.summary_label + ' · ' + text;
+  }
+  box.hidden = false;
+  box.textContent = text;
+}
+
+function scanToastKind(data){
+  if (data && data.blocked_by_scan_preflight) return 'err';
+  const errors = int(data && data.errors);
+  const imported = int(data && (data.imported || (data.scan_summary && data.scan_summary.imported)));
+  if (errors > 0) return 'warn';
+  if (imported > 0) return 'ok';
+  return 'info';
+}
+
+function showScanOutcome(data){
+  if (data && data.scan_summary) lastScanSummary = data.scan_summary;
+  const lines = (data && data.human) || ['扫描完成'];
+  const kind = scanToastKind(data);
+  setAlert(kind, lines.join('；'));
+  const boxKind = kind === 'info' ? 'ok' : kind;
+  showResult(lines, boxKind);
+  flashEventsPanel();
+}
+
+async function onScan(){
+  const btn = el('btnScan');
+  if (btn && btn.disabled) {
+    setAlert('err', el('scanBlockReason')?.textContent || '收件箱不可用');
+    return;
+  }
+  let pre = null;
+  try { pre = await (await fetch('/api/scan-preflight')).json(); } catch(e){}
+  if (pre && pre.blocked) {
+    setAlert('err', pre.reason || '无法扫描收件箱');
+    applyScanPreflightGate(pre);
+    return;
+  }
+  if (pre && pre.hint && (pre.inbox_file_count || 0) === 0) {
+    if (!window.confirm(pre.hint + '\n\n仍要继续扫描吗？')) return;
+  }
+  await runAction('scan', '/api/scan');
+}
 
 function applyActionPreflightGate(preflight, btnId, hintId, gateKey, prefix){
   const btn = el(btnId);
@@ -1211,6 +1304,8 @@ async function runAction(name, url){
     } else if (name === 'plan') {
       showPlanOutcome(data);
       if (data && data.publish_preflight) applyPreflightGates(data.publish_preflight);
+    } else if (name === 'scan') {
+      showScanOutcome(data);
     } else {
       showResult(data.human || ['完成']);
     }
@@ -1304,10 +1399,14 @@ async function refreshAll(){
     await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
     applyPreflightGates(ov.publish_preflight);
+    let scanPre = null;
+    try { scanPre = await (await fetch('/api/scan-preflight')).json(); } catch(e){}
+    applyScanPreflightGate(scanPre);
     renderWaitingConfirmationEntry(ov.waiting_confirmation);
+    renderChainScanHint(ov);
     renderStats(ov);
     renderNextSteps(ov.workbench);
-    renderSchedule(ov.schedule_summary);
+    renderSchedule(ov.schedule_summary, ov);
     renderQueue(queueJobsList);
     renderEvents(ov.recent_events);
     renderWorks(arts);
@@ -1417,9 +1516,17 @@ function renderStats(ov){
   });
 }
 
-function renderSchedule(s){
-  if (!s) { el('scheduleBanner').textContent = '暂无发布计划'; return; }
-  el('scheduleBanner').textContent = s.next_summary || '暂无发布计划';
+function renderSchedule(s, ov){
+  const sched = el('scheduleBanner');
+  if (!sched) return;
+  if (!s) { sched.textContent = '暂无发布计划'; return; }
+  let text = s.next_summary || '暂无发布计划';
+  const chain = (ov && ov.wechat_chain_summary) || {};
+  const action = chain.recommended_next_action;
+  if (action && action !== 'idle') {
+    text += ' · 建议：' + (CHAIN_ACTION_LABELS[action] || action);
+  }
+  sched.textContent = text;
 }
 
 function renderNextSteps(wb){

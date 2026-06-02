@@ -135,24 +135,34 @@ def label_mode(mode: str | None) -> str:
 
 
 def humanize_scan_result(payload: dict[str, Any]) -> list[str]:
-    imported = int(payload.get("imported") or 0)
-    scanned = int(payload.get("scanned") or 0)
-    errors = int(payload.get("errors") or 0)
-    reconciled = payload.get("reconciled_articles") or []
-    lines = [f"已检查 {scanned} 个文件"]
-    if imported:
-        lines.append(f"新收录 {imported} 篇文章")
-    elif reconciled:
-        for item in reconciled:
-            title = str(item.get("title") or "该作品")
-            if item.get("status_reset"):
-                lines.append(f"《{title}》已在作品库中，已识别为重新上传并重置为待发布")
-            else:
-                lines.append(f"《{title}》已在作品库中，可继续安排发布")
+    summary = payload.get("scan_summary") or {}
+    if summary.get("summary_label"):
+        lines = [str(summary["summary_label"])]
     else:
-        lines.append("没有发现新的文章")
-    if errors:
-        lines.append(f"有 {errors} 个文件处理失败，请检查收件箱格式")
+        imported = int(payload.get("imported") or 0)
+        scanned = int(payload.get("scanned") or 0)
+        errors = int(payload.get("errors") or 0)
+        reconciled = payload.get("reconciled_articles") or []
+        lines = [f"已检查 {scanned} 个文件"]
+        if imported:
+            lines.append(f"新收录 {imported} 篇文章")
+        elif reconciled:
+            for item in reconciled:
+                title = str(item.get("title") or "该作品")
+                if item.get("status_reset"):
+                    lines.append(f"《{title}》已在作品库中，已识别为重新上传并重置为待发布")
+                else:
+                    lines.append(f"《{title}》已在作品库中，可继续安排发布")
+        else:
+            lines.append("没有发现新的文章")
+        if errors:
+            lines.append(f"有 {errors} 个文件处理失败，请检查收件箱格式")
+    pre = payload.get("scan_preflight") or {}
+    if pre.get("hint"):
+        lines.append(str(pre["hint"]))
+    chain_hint = payload.get("chain_hint")
+    if chain_hint:
+        lines.append(str(chain_hint))
     return lines
 
 

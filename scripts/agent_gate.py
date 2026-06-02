@@ -166,6 +166,7 @@ ROUND_ORDER = [
     "round_109",
     "round_110",
     "round_111",
+    "round_112",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1314,7 +1315,19 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 点击生成排期与待确认路径验证",
         ],
         "next_actions": [
-            "继续微信闭环或 round_112",
+            "推进 round_112 扫描收件箱反馈增强",
+        ],
+    },
+    "round_112": {
+        "name": "Round 112 - 扫描收件箱反馈与链路联动",
+        "acceptance_criteria": [
+            "扫描 toast 与 scan_summary 摘要",
+            "scan 结果与 chain_summary 联动展示",
+            "scan 前轻量预检 inbox 路径",
+            "mock@8080 点击扫描路径验证",
+        ],
+        "next_actions": [
+            "继续微信闭环或 round_113",
         ],
     },
 }
@@ -2314,6 +2327,24 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "pytest",
                     "tests/test_round_110_wechat_p0.py",
                     "tests/test_publish_proof.py",
+                    "-q",
+                ],
+                "pytest wechat regression",
+            ),
+        ]
+    elif round_id == "round_112":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_112_wechat_p0.py", "-q"],
+                "pytest wechat p0 round_112",
+            ),
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_wechat_chain_summary.py",
+                    "tests/test_web_console_mvp.py",
                     "-q",
                 ],
                 "pytest wechat regression",
