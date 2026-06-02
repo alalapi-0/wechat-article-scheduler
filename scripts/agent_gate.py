@@ -141,6 +141,8 @@ ROUND_ORDER = [
     "round_085",
     "round_086",
     "round_087",
+    "round_088",
+    "round_089",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1021,7 +1023,29 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "/debug 可见 registry 与干跑 JSON",
         ],
         "next_actions": [
-            "Phase2 Round 28 博客评估或注册 round_088",
+            "local_blog 博客评估 round_088",
+        ],
+    },
+    "round_088": {
+        "name": "Round 88 - 个人博客 local_blog 评估",
+        "acceptance_criteria": [
+            "static_site/wordpress/local_files dry-run 计划",
+            "registry 含 local_blog 能力",
+            "local-blog-plan CLI 与 /debug",
+        ],
+        "next_actions": [
+            "Webhook 评估 round_089",
+        ],
+    },
+    "round_089": {
+        "name": "Round 89 - Webhook 适配器评估",
+        "acceptance_criteria": [
+            "webhook dry-run 不发起 HTTP",
+            "notification+webhook 在 registry",
+            "webhook-plan CLI 与 /debug",
+        ],
+        "next_actions": [
+            "注册 round_090 或微信修复轮",
         ],
     },
 }
@@ -1760,6 +1784,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_manifest_dry_run.py", "-q"],
                 "pytest manifest dry run",
+            ),
+        ]
+    elif round_id == "round_088":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_local_blog_eval.py", "-q"],
+                "pytest local blog eval",
+            ),
+        ]
+    elif round_id == "round_089":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_webhook_eval.py", "-q"],
+                "pytest webhook eval",
             ),
         ]
     else:

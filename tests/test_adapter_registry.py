@@ -24,6 +24,8 @@ def test_filter_by_platform():
 
 def test_is_known_adapter():
     assert is_known_adapter("wechat_mp", "official_api")
+    assert is_known_adapter("static_site", "local_blog")
+    assert is_known_adapter("notification", "webhook")
     assert not is_known_adapter("wechat_mp", "webhook")
 
 

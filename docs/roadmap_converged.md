@@ -319,16 +319,22 @@ Phase 2 暂不开发。只有 Phase 1 验收通过后，才允许启动。
 - 不做什么：不实现 Round 28 博客 adapter；不导入 SQLite。
 - 下一轮衔接：Phase 2 Round 28 博客评估，或继续 Phase 5 manifest 导入。
 
-### Round 28：个人博客 / WordPress 适配评估
+### Round 28：个人博客 / WordPress 适配评估（已完成 — agent `round_088`）
 
 - 本轮目标：评估低风险文本发布目的地。
-- 具体任务：比较本地静态站、WordPress API、手工导出。
-- 交付物：评估报告。
-- 验收标准：选出是否进入后续实现。
-- 不做什么：不影响微信公众号主线。
-- 允许改动范围：docs only。
+- 具体任务：local_blog dry-run（static_site / wordpress / local_files）；registry 能力；CLI/API/`/debug`。
+- 交付物：`docs/local_blog_adapter_assessment.md`；不真发、不写 WordPress。
+- 验收标准：static_site 与 local_files 推荐；WordPress 有条件。
+- 不做什么：不影响微信公众号主线；不自动部署。
+- 允许改动范围：local_blog 评估模块、docs、tests。
 - 风险边界：凭证不入库。
-- 下一轮衔接：如需继续，另开治理轮；否则进入 Phase 3 预研。
+- 下一轮衔接：Webhook 评估（`round_089`）或 Phase 3 预研。
+
+### Round 28b：Webhook 通知评估（已完成 — agent `round_089`）
+
+- 本轮目标：明确 webhook 仅作通知，不作发布 proof。
+- 交付物：`docs/webhook_adapter_assessment.md`；dry-run 不发起 HTTP。
+- 下一轮衔接：Phase 3 预研或注册 round_090。
 
 ## Phase 3：图文与视频平台，P2
 

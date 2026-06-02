@@ -122,3 +122,9 @@ round_086:
 
 round_087:
   - python3 -m pytest tests/test_manifest_dry_run.py -q
+
+round_088:
+  - python3 -m pytest tests/test_local_blog_eval.py -q
+
+round_089:
+  - python3 -m pytest tests/test_webhook_eval.py -q

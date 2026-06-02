@@ -420,6 +420,54 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         caps = list_adapter_capabilities(platform=platform, adapter_type=adapter_type)
         return {"count": len(caps), "capabilities": caps}
 
+    @app.get("/api/local-blog/destinations")
+    def api_local_blog_destinations() -> dict[str, Any]:
+        from wechat_article_scheduler.adapters.local_blog.plans import list_destinations
+
+        items = list_destinations()
+        return {"count": len(items), "destinations": items}
+
+    @app.get("/api/local-blog-plan")
+    def api_local_blog_plan(
+        destination: str = "static_site",
+        article_id: str | None = None,
+        output_dir: str | None = None,
+    ) -> dict[str, Any]:
+        from wechat_article_scheduler.adapters.local_blog.plans import build_plan
+
+        try:
+            return build_plan(
+                destination=destination,
+                article_id=article_id,
+                output_dir=output_dir,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/webhook/channels")
+    def api_webhook_channels() -> dict[str, Any]:
+        from wechat_article_scheduler.adapters.webhook.plans import list_channels
+
+        items = list_channels()
+        return {"count": len(items), "channels": items}
+
+    @app.get("/api/webhook-plan")
+    def api_webhook_plan(
+        channel: str = "generic",
+        article_id: str | None = None,
+        event_type: str = "article.ready",
+    ) -> dict[str, Any]:
+        from wechat_article_scheduler.adapters.webhook.plans import build_plan
+
+        try:
+            return build_plan(
+                channel=channel,
+                article_id=article_id,
+                event_type=event_type,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.get("/api/manifest/sample-dry-run")
     def api_manifest_sample_dry_run() -> dict[str, Any]:
         from pathlib import Path
@@ -1210,6 +1258,9 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>豆瓣 browser_assist 评估</h2><pre id="browser-assist-douban">加载中…</pre>
 <h2>Adapter Registry</h2><pre id="adapter-registry">加载中…</pre>
 <h2>publish_manifest 干跑（示例）</h2><pre id="manifest-dry-run">加载中…</pre>
+<h2>local_blog 评估（静态站）</h2><pre id="local-blog-static">加载中…</pre>
+<h2>local_blog 评估（WordPress）</h2><pre id="local-blog-wp">加载中…</pre>
+<h2>Webhook 评估（generic）</h2><pre id="webhook-plan">加载中…</pre>
 <h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
 <h2>outbox 导出包</h2><pre id="outbox">加载中…</pre>
 <script>
@@ -1222,9 +1273,12 @@ Promise.all([
   fetch('/api/browser-assist-plan?platform=douban'),
   fetch('/api/adapter-registry'),
   fetch('/api/manifest/sample-dry-run'),
+  fetch('/api/local-blog-plan?destination=static_site'),
+  fetch('/api/local-blog-plan?destination=wordpress'),
+  fetch('/api/webhook-plan?channel=generic'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1233,7 +1287,10 @@ Promise.all([
   document.getElementById('browser-assist-douban').textContent = JSON.stringify(await f.json(), null, 2);
   document.getElementById('adapter-registry').textContent = JSON.stringify(await g.json(), null, 2);
   document.getElementById('manifest-dry-run').textContent = JSON.stringify(await h.json(), null, 2);
-  document.getElementById('waiting').textContent = JSON.stringify(await i.json(), null, 2);
-  document.getElementById('outbox').textContent = JSON.stringify(await j.json(), null, 2);
+  document.getElementById('local-blog-static').textContent = JSON.stringify(await i.json(), null, 2);
+  document.getElementById('local-blog-wp').textContent = JSON.stringify(await j.json(), null, 2);
+  document.getElementById('webhook-plan').textContent = JSON.stringify(await k.json(), null, 2);
+  document.getElementById('waiting').textContent = JSON.stringify(await l.json(), null, 2);
+  document.getElementById('outbox').textContent = JSON.stringify(await m.json(), null, 2);
 });
 </script></body></html>"""

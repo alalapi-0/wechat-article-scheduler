@@ -113,6 +113,46 @@ BUILTIN_CAPABILITIES: tuple[AdapterCapability, ...] = (
         risk_level="low",
         notes="通用 Markdown/HTML 导出包。",
     ),
+    AdapterCapability(
+        platform="static_site",
+        adapter_type="local_blog",
+        content_types=("article",),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="low",
+        notes="静态站 Markdown 输出评估；用户自行 build/deploy。",
+    ),
+    AdapterCapability(
+        platform="wordpress",
+        adapter_type="local_blog",
+        content_types=("article",),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="medium",
+        notes="WordPress REST 草稿评估；凭证仅环境变量。",
+    ),
+    AdapterCapability(
+        platform="local_blog",
+        adapter_type="local_blog",
+        content_types=("article", "note"),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="low",
+        notes="本地目录写入评估；不触网。",
+    ),
+    AdapterCapability(
+        platform="notification",
+        adapter_type="webhook",
+        content_types=("article",),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="low",
+        notes="Webhook 通知；成功不等于平台已发布。",
+    ),
 )
 
 
@@ -160,4 +200,12 @@ def infer_platform_from_account_id(platform_account_id: str) -> str | None:
         return "douban"
     if lower.startswith("generic"):
         return "generic"
+    if "wordpress" in lower or lower.startswith("wp_"):
+        return "wordpress"
+    if "static" in lower or "hugo" in lower or "jekyll" in lower:
+        return "static_site"
+    if "blog" in lower:
+        return "local_blog"
+    if "webhook" in lower or "feishu" in lower or "slack" in lower:
+        return "notification"
     return None

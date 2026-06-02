@@ -1776,6 +1776,38 @@
   - [x] 干跑与 API
   - [x] agent_gate round_087 冒烟
 
+### Round 88 - 个人博客 local_blog 评估
+
+- 目标：路线图 Round 28 — 评估静态站/WordPress/本地目录（dry-run，不真发）。
+- 范围：`local_blog/eval_workflow.py`、`local_blog_adapter_assessment.md`、registry、CLI/API、`/debug`。
+- 非目标：真实写文件；WordPress REST 联网；替代微信 scan/plan。
+- 输入：round_085 adapter registry、Phase2 文本平台经验。
+- 输出：三目的地 assessment；`GET /api/local-blog-plan`。
+- 验收标准：static_site 推荐；wordpress 有条件；guardrails 含凭证不入库。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_local_blog_eval.py -q`。
+- 退出标准：gate round_088；`/debug` 可见 static_site 与 wordpress JSON。
+- 风险：误实现为自动建站。
+- 回滚点：移除 local-blog API。
+- 交付项：
+  - [x] local_blog 干跑与测试
+  - [x] agent_gate round_088 冒烟
+
+### Round 89 - Webhook 适配器评估
+
+- 目标：评估通知类 webhook（dry-run，不发起 HTTP）。
+- 范围：`webhook/eval_workflow.py`、`webhook_adapter_assessment.md`、CLI/API、`/debug`。
+- 非目标：真实 POST；将 webhook 当作发布 proof。
+- 输入：round_088 local_blog 评估模式。
+- 输出：generic/feishu/slack 渠道干跑；registry notification+webhook。
+- 验收标准：terminal_policy 明示 webhook≠published；`WEBHOOK_URL` 仅环境变量。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_webhook_eval.py -q`。
+- 退出标准：gate round_089；`/debug` 可见 webhook JSON。
+- 风险：泄露 URL 到日志。
+- 回滚点：移除 webhook-plan。
+- 交付项：
+  - [x] webhook 干跑与测试
+  - [x] agent_gate round_089 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -62,6 +62,24 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     mdry.add_argument("--manifest", type=str, required=True)
 
+    lb = sub.add_parser(
+        "local-blog-plan",
+        help="local_blog 评估干跑 JSON（静态站/WordPress/本地目录，不真发）",
+    )
+    lb.add_argument(
+        "--destination",
+        type=str,
+        default="static_site",
+        help="static_site | wordpress | local_files",
+    )
+    lb.add_argument("--article-id", type=str, default=None)
+    lb.add_argument("--output-dir", type=str, default=None)
+
+    wh = sub.add_parser("webhook-plan", help="Webhook 评估干跑 JSON（不发起 HTTP）")
+    wh.add_argument("--channel", type=str, default="generic", help="generic | feishu | slack")
+    wh.add_argument("--article-id", type=str, default=None)
+    wh.add_argument("--event-type", type=str, default="article.ready")
+
     mark_wc = sub.add_parser(
         "mark-waiting-confirmation",
         help="将发布任务标为待人工确认（browser_assist/manual_export）",
@@ -229,6 +247,40 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         summary["manifest_path"] = str(path.resolve())
         print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "local-blog-plan":
+        import json
+
+        from wechat_article_scheduler.adapters.local_blog.plans import build_plan
+
+        try:
+            plan = build_plan(
+                destination=args.destination,
+                article_id=args.article_id,
+                output_dir=args.output_dir,
+            )
+        except ValueError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "webhook-plan":
+        import json
+
+        from wechat_article_scheduler.adapters.webhook.plans import build_plan
+
+        try:
+            plan = build_plan(
+                channel=args.channel,
+                article_id=args.article_id,
+                event_type=args.event_type,
+            )
+        except ValueError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "mark-waiting-confirmation":
