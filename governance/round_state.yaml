@@ -5,8 +5,8 @@ current_round:
   updated_at: '2026-06-02T07:14:23.971942+00:00'
   completed_at: '2026-06-02'
 last_completed_round:
-  id: round_070
-  completed_at: '2026-06-02T07:14:23.971942+00:00'
+  id: round_071
+  completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - mock/real update_draft 与 draft/update 路径
