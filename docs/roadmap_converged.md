@@ -130,7 +130,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不得让用户误以为 mock 草稿已真实创建。
 - 下一轮衔接：进入发布队列页面。
 
-### Round 12：发布队列页面
+### Round 12：发布队列页面（已完成 — agent `round_067`）
 
 - 本轮目标：把 pending、running、failed、done 任务以队列表格呈现。
 - 具体任务：筛选状态、显示计划时间、失败原因、重试入口和批量操作。

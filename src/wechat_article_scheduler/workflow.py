@@ -39,21 +39,47 @@ def reject_article(config: AppConfig, article_id: int) -> bool:
     return True
 
 
-def retry_failed_jobs(config: AppConfig) -> int:
-    """将 failed 的 publish_jobs 重置为 pending。"""
+def _reset_job_to_pending(conn, job_id: int) -> bool:
+    row = conn.execute(
+        "SELECT id, status FROM publish_jobs WHERE id = ?",
+        (int(job_id),),
+    ).fetchone()
+    if row is None or row["status"] != "failed":
+        return False
+    conn.execute(
+        """
+        UPDATE publish_jobs
+        SET status = 'pending', retry_count = 0, updated_at = datetime('now')
+        WHERE id = ?
+        """,
+        (int(job_id),),
+    )
+    db.log_event(conn, entity_type="publish_job", entity_id=int(job_id), event_type="retry_failed")
+    return True
+
+
+def retry_publish_job(config: AppConfig, job_id: int) -> bool:
+    """将单条 failed 任务重置为 pending。"""
+    with db.connect(config.database_path) as conn:
+        ok = _reset_job_to_pending(conn, job_id)
+        if ok:
+            conn.commit()
+        return ok
+
+
+def retry_failed_jobs(config: AppConfig, job_ids: list[int] | None = None) -> int:
+    """将 failed 的 publish_jobs 重置为 pending（可指定 id 列表）。"""
     count = 0
     with db.connect(config.database_path) as conn:
-        rows = conn.execute("SELECT id FROM publish_jobs WHERE status = 'failed'").fetchall()
-        for row in rows:
-            conn.execute(
-                """
-                UPDATE publish_jobs
-                SET status = 'pending', retry_count = 0, updated_at = datetime('now')
-                WHERE id = ?
-                """,
-                (int(row["id"]),),
-            )
-            db.log_event(conn, entity_type="publish_job", entity_id=int(row["id"]), event_type="retry_failed")
-            count += 1
+        if job_ids:
+            ids = [int(x) for x in job_ids]
+            for jid in ids:
+                if _reset_job_to_pending(conn, jid):
+                    count += 1
+        else:
+            rows = conn.execute("SELECT id FROM publish_jobs WHERE status = 'failed'").fetchall()
+            for row in rows:
+                if _reset_job_to_pending(conn, int(row["id"])):
+                    count += 1
         conn.commit()
     return count

@@ -236,6 +236,11 @@
   .queue-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .queue-filters button { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; }
   .queue-filters button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  .queue-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .queue-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .queue-table th, .queue-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  .queue-table .fail-reason { max-width: 220px; color: var(--muted); font-size: 12px; }
+  .queue-table .hint-cell { font-size: 12px; color: var(--muted); }
   .next-steps { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--line); font-size: 13px; color: var(--text); }
   .next-steps ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
   .events ul { margin: 0; padding: 0; list-style: none; }
@@ -523,8 +528,12 @@
           </section>
 
           <section id="queue" class="section">
-            <div class="section-head"><h2>发布队列</h2><span class="hint">任务状态</span></div>
+            <div class="section-head"><h2>发布队列</h2><span class="hint" id="queueHint">任务状态</span></div>
             <div class="card queue-box pad">
+              <div class="queue-actions">
+                <button type="button" class="btn-ghost btn-sm" id="btnRetryAllFailed" hidden>重试全部失败</button>
+                <button type="button" class="btn-ghost btn-sm" id="btnRefreshQueue">刷新队列</button>
+              </div>
               <div class="queue-filters" id="queueFilters" role="tablist" aria-label="队列筛选">
                 <button type="button" class="active" data-qf="wait">待发布</button>
                 <button type="button" data-qf="active">发布中</button>
@@ -942,6 +951,10 @@ async function boot(){
   el('modalClose').addEventListener('click', () => el('modalBack').classList.remove('open'));
   el('modalBack').addEventListener('click', e => { if(e.target===el('modalBack')) el('modalBack').classList.remove('open'); });
   setupQueueFilters();
+  const btnRetryAll = el('btnRetryAllFailed');
+  if (btnRetryAll) btnRetryAll.addEventListener('click', () => bulkRetryFailed());
+  const btnRefreshQ = el('btnRefreshQueue');
+  if (btnRefreshQ) btnRefreshQ.addEventListener('click', refreshAll);
   renderSteps();
   await refreshAll();
 }
@@ -1085,13 +1098,15 @@ async function refreshAll(){
     const jobsUrl = apiStatus
       ? `/api/jobs?limit=40&status=${encodeURIComponent(apiStatus)}`
       : '/api/jobs?limit=40';
-    const [ov, arts, trash, jobs] = await Promise.all([
+    const [ov, arts, trash, jobs, qsum] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
       (await fetch(jobsUrl)).json(),
+      (await fetch('/api/queue-summary')).json(),
     ]);
     queueJobsList = jobs || [];
+    renderQueueSummary(qsum);
     await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
     renderStats(ov);
@@ -1151,6 +1166,15 @@ function renderNextSteps(wb){
     : '<li>按右侧主操作继续即可</li>';
 }
 
+function renderQueueSummary(qsum){
+  const hint = el('queueHint');
+  const btnAll = el('btnRetryAllFailed');
+  if (!hint) return;
+  if (qsum && qsum.summary_label) hint.textContent = qsum.summary_label;
+  const failedCnt = (qsum && qsum.counts && qsum.counts.failed) ? qsum.counts.failed : 0;
+  if (btnAll) btnAll.hidden = !(failedCnt > 0);
+}
+
 function renderQueue(jobs){
   if (!jobs || !jobs.length) {
     const emptyMsg = queueFilterKey === 'wait'
@@ -1159,20 +1183,56 @@ function renderQueue(jobs){
     el('queueBox').innerHTML = `<div class="empty" style="padding:14px;">${esc(emptyMsg)}</div>`;
     return;
   }
+  const showFailCol = queueFilterKey === 'err' || queueFilterKey === 'all' ||
+    jobs.some(j => j.failure_reason);
   const rows = jobs.map(j => {
-    const cancelBtn = j.status === 'pending'
-      ? `<button class="btn-ghost btn-sm" type="button" onclick="cancelJob(${j.id})">取消</button>`
+    const due = j.is_due_now ? '<span class="pill warn">已到点</span> ' : '';
+    const statusCell = `${due}<span class="pill ${pillForJob(j.status)}">${esc(j.status_label || L(COPY.job_status, j.status, j.status))}</span>`;
+    const failCol = showFailCol
+      ? `<td class="fail-reason">${esc(j.failure_reason_short || j.failure_reason || '—')}</td>`
       : '';
+    let acts = `<a class="btn-ghost btn-sm" href="${esc(j.detail_url || '/articles/'+j.article_id)}">详情</a> `;
+    if (j.status === 'pending') {
+      acts += `<button class="btn-ghost btn-sm" type="button" onclick="cancelJob(${j.id})">取消</button>`;
+    }
+    if (j.status === 'failed') {
+      acts += `<button class="btn-ghost btn-sm" type="button" onclick="retryJob(${j.id})">重试</button>`;
+    }
+    const hintRow = j.next_hint ? `<div class="hint-cell">${esc(j.next_hint)}</div>` : '';
     return `
     <tr>
-      <td>${esc(j.title||'（无标题）')}</td>
+      <td>${esc(j.title||'（无标题）')}<div class="hint-cell">${esc(j.collection_name||'')}</div>${hintRow}</td>
       <td>${esc(j.scheduled_at_label||'未安排')}</td>
       <td>${esc(j.publish_config_label||'—')}</td>
-      <td><span class="pill ${pillForJob(j.status)}">${esc(L(COPY.job_status, j.status, j.status))}</span></td>
-      <td>${cancelBtn}</td>
+      <td>${statusCell}</td>
+      ${failCol}
+      <td class="acts">${acts}</td>
     </tr>`;
   }).join('');
-  el('queueBox').innerHTML = `<table><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const failTh = showFailCol ? '<th>失败原因</th>' : '';
+  el('queueBox').innerHTML = `<table class="queue-table"><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th>${failTh}<th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function retryJob(jobId){
+  if (!window.confirm('将该失败任务重新加入待发布队列？')) return;
+  try {
+    const d = await (await fetch(`/api/jobs/${jobId}/retry`, { method:'POST' })).json();
+    setAlert('ok', (d.human||['已重试']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '重试失败：'+e); }
+}
+
+async function bulkRetryFailed(){
+  if (!window.confirm('将所有失败任务重新加入待发布队列？')) return;
+  try {
+    const d = await (await fetch('/api/jobs/bulk-retry', {
+      method:'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ retry_all: true }),
+    })).json();
+    setAlert('ok', (d.human||['已完成']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '批量重试失败：'+e); }
 }
 function pillForJob(s){ return s==='done'?'ok':(s==='failed'?'err':(s==='running'?'warn':'')); }
 

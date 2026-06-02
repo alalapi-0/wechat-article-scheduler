@@ -49,6 +49,7 @@ from wechat_article_scheduler.web.user_copy import (
     article_workflow_hint,
     export_labels_json,
     humanize_plan_result,
+    humanize_retry_jobs_result,
     humanize_run_once_result,
     humanize_scan_result,
     humanize_schedule_batch_result,
@@ -57,6 +58,8 @@ from wechat_article_scheduler.web.user_copy import (
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
 from wechat_article_scheduler.web.workbench_mvp import build_workbench_hints
 from wechat_article_scheduler.web.article_detail import build_article_detail
+from wechat_article_scheduler.web.queue_display import list_queue_jobs, queue_summary
+from wechat_article_scheduler.workflow import retry_failed_jobs, retry_publish_job
 from wechat_article_scheduler.publish_config import (
     defaults_from_rules,
     human_publish_config_summary,
@@ -541,27 +544,40 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/api/jobs")
     def jobs(limit: int = 50, status: str | None = None) -> list[dict[str, Any]]:
         with db.connect(cfg.database_path) as conn:
-            sql = """
-                SELECT j.id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       j.adapter_mode, j.updated_at, j.publish_config_json, a.title
-                FROM publish_jobs j
-                JOIN articles a ON a.id = j.article_id
-                WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
-                  AND j.status != 'cancelled'
-            """
-            params: list[Any] = []
-            if status and status.strip():
-                sql += " AND j.status = ?"
-                params.append(status.strip().lower())
-            sql += " ORDER BY j.scheduled_at ASC LIMIT ?"
-            params.append(limit)
-            rows = conn.execute(sql, params).fetchall()
-        out: list[dict[str, Any]] = []
-        for r in rows:
-            row = _enrich_job_row(dict(r), cfg)
-            row["scheduled_at_label"] = format_scheduled_at(row.get("scheduled_at"))
-            out.append(row)
-        return out
+            return list_queue_jobs(conn, cfg, limit=limit, status=status)
+
+    @app.get("/api/queue-summary")
+    def api_queue_summary() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            return queue_summary(conn)
+
+    @app.post("/api/jobs/{job_id}/retry")
+    async def retry_job(job_id: int) -> dict[str, Any]:
+        if not retry_publish_job(cfg, job_id):
+            raise HTTPException(status_code=404, detail="任务不存在或不是失败状态")
+        await _sync_web_auto_runner(app, cfg)
+        return {
+            "ok": True,
+            "job_id": job_id,
+            "retried": 1,
+            "human": humanize_retry_jobs_result({"retried": 1}),
+        }
+
+    @app.post("/api/jobs/bulk-retry")
+    async def bulk_retry_jobs(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+        job_ids = [int(x) for x in (payload.get("job_ids") or [])]
+        if payload.get("retry_all"):
+            count = retry_failed_jobs(cfg)
+        elif job_ids:
+            count = retry_failed_jobs(cfg, job_ids)
+        else:
+            count = retry_failed_jobs(cfg)
+        await _sync_web_auto_runner(app, cfg)
+        return {
+            "ok": True,
+            "retried": count,
+            "human": humanize_retry_jobs_result({"retried": count}),
+        }
 
     @app.get("/api/publish-preflight")
     def publish_preflight() -> dict[str, Any]:

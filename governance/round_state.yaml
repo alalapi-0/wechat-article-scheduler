@@ -1,16 +1,15 @@
 current_round:
-  id: round_066
-  name: Round 66 - 文章详情与预览页面
-  status: completed
-  updated_at: '2026-06-02T06:40:00+00:00'
-  completed_at: '2026-06-02'
+  id: round_067
+  name: Round 67 - 发布队列页面
+  status: active
+  updated_at: '2026-06-02T06:45:00+00:00'
 last_completed_round:
   id: round_066
   completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- GET /articles/{id} 详情页与 /api/articles/{id} API
-- 展示封面、摘要、排期、草稿状态与发布前检查
-- 正文 render-preview 集成；mock 草稿有演练说明
+- 队列表格含计划时间、状态、失败原因与下一步提示
+- 单条/批量重试失败任务 API
+- 队列筛选与 queue-summary 摘要
 next_actions:
-- 按 docs/roadmap_converged.md 继续 Round 12：发布队列页面
+- 按 docs/roadmap_converged.md 继续 Round 13：草稿管理页面

@@ -199,6 +199,13 @@ def humanize_schedule_batch_result(stats: dict[str, Any]) -> list[str]:
     return lines
 
 
+def humanize_retry_jobs_result(payload: dict[str, Any]) -> list[str]:
+    retried = int(payload.get("retried") or 0)
+    if retried:
+        return [f"已将 {retried} 个失败任务重新加入待发布队列"]
+    return ["没有可重试的失败任务"]
+
+
 def humanize_run_once_result(payload: dict[str, Any]) -> list[str]:
     processed = int(payload.get("processed") or 0)
     drafted = int(payload.get("drafted") or 0)

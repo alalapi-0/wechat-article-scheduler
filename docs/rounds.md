@@ -1428,6 +1428,23 @@
   - [x] 预检与下一步提示
   - [x] agent_gate round_066 冒烟
 
+### Round 67 - 发布队列页面
+
+- 目标：pending/running/failed/done 队列表格可读，失败可重试。
+- 范围：`queue_display`、jobs API 增强、重试 API、Web 队列区、测试与文档。
+- 非目标：分布式队列；跨平台队列。
+- 输入：Round 65 队列 Tab、events.job_failed、workflow.retry。
+- 输出：`docs/publish_queue_page.md`、失败原因列、重试入口。
+- 验收标准：用户能看懂到点/失败任务并执行重试或取消。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_publish_queue_page.py -q`。
+- 退出标准：8080 队列 Tab API 无失败；pytest 通过。
+- 风险：失败原因依赖事件表完整性。
+- 回滚点：队列仅显示标题与时间。
+- 交付项：
+  - [x] 失败原因与已到点标记
+  - [x] retry / bulk-retry API
+  - [x] agent_gate round_067 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
