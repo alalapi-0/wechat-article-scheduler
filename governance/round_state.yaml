@@ -1,14 +1,14 @@
 current_round:
-  id: round_053
-  name: Round 53 - 发布前内容质量检查
+  id: round_054
+  name: Round 54 - 真实微信 API 闭环验证
   status: active
-  updated_at: '2026-06-02T05:43:49.055355+00:00'
+  updated_at: '2026-06-02T05:46:41.557607+00:00'
 last_completed_round:
-  id: round_052
-  completed_at: '2026-06-02T05:43:49.055355+00:00'
+  id: round_053
+  completed_at: '2026-06-02T05:46:41.557607+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 预检可发现标题重复、正文为空、疑似 HTML 源码等质量问题
-- 真实发布路径对严重内容问题给出明确阻断或提示
+- real_api_check 在 real 模式下完成样本草稿验证并保存报告
+- 不泄露 token；WECHAT_ENABLE_PUBLISH 关闭时不提交发布
 next_actions:
-- 推进 Round 54：真实微信 API 闭环验证
+- 推进 Round 55：Auto-Approved Real API Pipeline
