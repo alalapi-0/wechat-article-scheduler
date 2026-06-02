@@ -180,6 +180,7 @@ ROUND_ORDER = [
     "round_123",
     "round_124",
     "round_125",
+    "round_126",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1502,7 +1503,19 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 点击导出一种平台",
         ],
         "next_actions": [
-            "在 docs/rounds.md 规划 round_126 后续能力",
+            "推进 round_126 详情页导出下拉",
+        ],
+    },
+    "round_126": {
+        "name": "Round 126 - 详情页导出下拉",
+        "summary": "详情页导出下拉对齐 round_125；复用 platforms + export-outbox",
+        "acceptance_criteria": [
+            "详情页 export-drop 联动 manual-export/platforms",
+            "POST export-outbox 按所选平台导出",
+            "mock@8080 /articles/{id} 点击导出一种平台",
+        ],
+        "next_actions": [
+            "在 docs/rounds.md 规划 round_127 后续能力",
         ],
     },
 }
@@ -2698,6 +2711,17 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_round_114_wechat_p0.py::test_export_outbox_api", "-q"],
                 "pytest export-outbox regression",
+            ),
+        ]
+    elif round_id == "round_126":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_126_wechat_p0.py", "-q"],
+                "pytest wechat p0 round_126",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_round_125_wechat_p0.py::test_manual_export_platforms_api", "-q"],
+                "pytest platforms api regression",
             ),
         ]
     else:

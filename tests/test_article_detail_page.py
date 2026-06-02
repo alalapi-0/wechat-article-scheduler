@@ -60,6 +60,8 @@ def test_detail_api_and_page(app_config: AppConfig) -> None:
     assert "返回工作台" in page.text
     assert "render-preview" in page.text
     assert str(aid) in page.text
+    assert "export-drop" in page.text
+    assert "exportOutboxSlot" in page.text
 
 
 def test_detail_page_404(app_config: AppConfig) -> None:

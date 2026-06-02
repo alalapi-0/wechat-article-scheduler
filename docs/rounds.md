@@ -2431,6 +2431,23 @@
   - [x] POST export-outbox 按平台导出
   - [x] agent_gate round_125 冒烟
 
+### Round 126 - 详情页导出下拉
+
+- 目标：文章详情页与 round_125 同款「导出」平台下拉；复用 platforms API + export-outbox。
+- 范围：`article_detail_template.html` 下一步操作区。
+- 非目标：新后端；工作台作品卡改动。
+- 输入：round_125 导出下拉。
+- 输出：替换原三按钮为 `<details>` 导出菜单。
+- 验收标准：`test_round_126_wechat_p0`；mock@8080 `/articles/{id}` 点击导出一种平台。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_126_wechat_p0.py -q`。
+- 退出标准：gate round_126。
+- 风险：无。
+- 回滚点：恢复详情页分平台按钮。
+- 交付项：
+  - [x] 详情页 export-drop 与 platforms API
+  - [x] POST export-outbox 按平台
+  - [x] agent_gate round_126 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
