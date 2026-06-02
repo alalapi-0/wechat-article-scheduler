@@ -107,7 +107,7 @@ def should_submit_publish(*, app_config: AppConfig, job_config: PublishConfig) -
     if action == "draft":
         return False
     if action == "publish":
-        return app_config.wechat_mode == "real"
+        return app_config.wechat_mode == "real" and bool(app_config.wechat_enable_publish)
     return app_config.wechat_mode == "real" and bool(app_config.wechat_enable_publish)
 
 

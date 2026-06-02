@@ -4,7 +4,7 @@ protocol:
   status: draft
   purpose: "Provide a portable governance standard for AI-agent-readable repositories."
   portability: portable_to_other_repositories
-  last_updated: "2026-05-30"
+  last_updated: "2026-06-02"
   maintained_by:
     - user
     - repo_governance_agent
@@ -824,8 +824,8 @@ project_specific_extensions:
       symbols:
         - ROUND_ORDER
         - ROUND_META
-    round_ids: round_000..round_038
-    sync_rule: "docs/rounds.md is the human authority; ROUND_ORDER/ROUND_META in scripts/agent_gate.py, tests/test_agent_gate.py, and governance roadmap range fields must stay in sync in the same change set."
+    round_ids: round_000..round_056
+    sync_rule: "docs/rounds.md is the human authority for historical rounds; docs/roadmap_converged.md is the current execution roadmap; docs/backlog/ is long-term backlog only. ROUND_ORDER/ROUND_META in scripts/agent_gate.py, tests/test_agent_gate.py, and governance roadmap range fields must stay in sync in the same change set."
     web_console_policy:
       primary_layout: desktop_first_local_workbench
       responsive_boundary: "Narrow screens are compatibility targets only: no page-level horizontal overflow, tappable key actions, readable content."
@@ -837,6 +837,49 @@ project_specific_extensions:
         - articles/imported/sample_round0.md
         - articles/imported/chapter_*_cn.md
         - articles/published/chapter_001_cn.md
+    route_convergence_policy:
+      current_round: round_056
+      project_positioning: personal_local_wechat_mp_publishing_workbench
+      current_p0_goal: wechat_mp_end_to_end_loop
+      current_primary_chain: scan_plan_run_once_wechat_mp_draft_creation
+      backlog_platforms:
+        p1_text:
+          - zhihu
+          - douban
+          - wordpress
+          - local_blog
+        p2_graphic_video:
+          - xiaohongshu
+          - wechat_channels
+          - bilibili
+          - douyin
+          - kuaishou
+        p3_audio_music:
+          - netease_music
+          - podcast
+      rules:
+        - "Current P0 target is the WeChat Official Account publishing loop."
+        - "All new features must first serve the WeChat Official Account route."
+        - "Other platforms may only be documented in backlog and must not be implemented early."
+        - "Do not break existing WeChat scan/plan/run-once/draft creation code for multi-platform expansion."
+        - "Default mode remains WECHAT_MODE=mock with no network calls."
+        - "WECHAT_MODE=real is an explicit real API test mode for WeChat draft and publish validation."
+        - "Use WECHAT_ENABLE_PUBLISH=false when draft-only real API testing is required."
+        - "browser_assist is allowed only as a local personal fallback for WeChat fields that official APIs cannot cover."
+        - "browser_assist must not bypass captcha, QR login, risk controls or platform policy."
+        - "browser_assist must not store platform passwords."
+        - "browser_assist must not store backend cookies."
+        - "browser_assist must not click final publish by default."
+        - "Fields not supported by official APIs may enter a human-confirmation/browser_assist flow."
+        - "Task-level draft mode must not call final publish."
+        - "Large features must go through docs first, then skeleton, then implementation."
+        - "Do not introduce large frontend frameworks in the current phase."
+        - "Do not introduce multi-tenant, team or billing systems in the current phase."
+        - "Do not implement short-video platforms in the current phase."
+        - "Do not fork TryPost, embed Mixpost, or copy BrightBean source."
+        - "Do not introduce Laravel, Django, Redis, PostgreSQL, or SaaS dependencies during governance rounds."
+        - "Keep SQLite + JSONL + Python as the local-first baseline."
+        - "manual_export and future adapter designs are backlog until a later phase explicitly reactivates them."
   novel_pipeline:
     location: governance/novel_pipeline_contract.yaml
     portability: "Copy only to novel, narrative, content-generation or creative workflow repos. Do not force it onto general software projects."

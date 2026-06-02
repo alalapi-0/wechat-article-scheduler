@@ -45,6 +45,15 @@ def test_index_html(app_config: AppConfig) -> None:
     assert "高级排错" in r.text
 
 
+def test_round47_brand_polish(app_config: AppConfig) -> None:
+    """Round 47：轻量品牌标识与无审核概念回归。"""
+    client = TestClient(create_app(app_config))
+    html = client.get("/").text
+    assert "border-radius: 50%" in html
+    assert "review_status" not in html.lower()
+    assert ">发<" not in html
+
+
 def test_user_labels_endpoint(app_config: AppConfig) -> None:
     client = TestClient(create_app(app_config))
     r = client.get("/api/user-labels")

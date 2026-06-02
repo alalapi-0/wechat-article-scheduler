@@ -130,7 +130,7 @@ def _web_auto_runner_state(config: AppConfig) -> tuple[bool, str]:
     if (
         config.wechat_mode == "real"
         and config.wechat_enable_publish
-        and not getattr(config, "web_auto_publish", True)
+        and not getattr(config, "web_auto_publish", False)
     ):
         return False, "WEB_AUTO_PUBLISH=false，真实发布需手动执行到点"
     return True, f"已开启（{auto_count} 个到点自动执行任务）"

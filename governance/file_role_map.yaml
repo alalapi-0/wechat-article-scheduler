@@ -21,12 +21,39 @@ files:
     role: governance_audit_report
   - path: docs/product_vision.md
     role: product_vision_doc
+  - path: docs/route_convergence_audit.md
+    role: route_convergence_audit
+  - path: docs/roadmap_converged.md
+    role: current_execution_roadmap
+  - path: docs/platform_priority.md
+    role: platform_priority_policy
+  - path: docs/wechat_browser_assist_strategy.md
+    role: wechat_browser_assist_strategy
   - path: docs/migration_plan.md
     role: migration_plan_doc
   - path: src/wechat_article_scheduler/renderers/markdown.py
     role: source_code
   - path: src/wechat_article_scheduler/scheduler/__init__.py
     role: compatibility_shim
+
+  - path: docs/backlog/reference_absorption/05_auto_publish_synthesis.md
+    role: reference_architecture_absorption_report
+  - path: docs/backlog/reference_absorption/absorbed_methodology.md
+    role: absorbed_methodology_doc
+  - path: docs/backlog/roadmap_40_rounds.md
+    role: long_term_reference_absorption_roadmap
+  - path: docs/backlog/data_model_design.md
+    role: long_term_data_model_design
+  - path: docs/backlog/adapter_design.md
+    role: adapter_design_doc
+  - path: docs/backlog/platform_capability_matrix.md
+    role: platform_capability_matrix
+  - path: docs/backlog/review_and_proof_design.md
+    role: review_and_proof_design
+  - path: docs/backlog/multi_project_manifest_design.md
+    role: manifest_design_doc
+  - path: docs/reports/repo_governance_audit.md
+    role: governance_audit_report
 
 directories:
   - path: articles/inbox
@@ -49,3 +76,22 @@ directories:
     role: source_code_skeleton
   - path: src/wechat_article_scheduler/cover_assets
     role: source_code_skeleton
+
+  - path: docs/backlog
+    role: long_term_backlog_docs
+  - path: docs/backlog/reference_absorption
+    role: reference_absorption_docs
+  - path: src/wechat_article_scheduler/core
+    role: future_core_interfaces
+  - path: src/wechat_article_scheduler/content_packages
+    role: future_content_package_module
+  - path: src/wechat_article_scheduler/platform_payloads
+    role: future_platform_payload_module
+  - path: src/wechat_article_scheduler/review
+    role: future_review_and_proof_module
+  - path: src/wechat_article_scheduler/manifests
+    role: future_manifest_loader_module
+  - path: outbox
+    role: manual_export_output_root
+  - path: storage/logs
+    role: local_jsonl_audit_logs

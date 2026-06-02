@@ -1,6 +1,6 @@
 # 微信能力矩阵
 
-> 产品定位（Phase 10 / Round 43 起）：本工具是「本地作品 → 公众号」批量发布工作台，**没有"审核"步骤**。用户上传即视为想发布；真实发布安全 = 默认演练 + 显式开关 + 发布前二次确认 + 预检清单。
+> 产品定位：本工具是个人本地微信公众号发布工作台，**没有"审核"步骤**。默认 `WECHAT_MODE=mock` 不联网；显式切到 `WECHAT_MODE=real` 后进入真实 API 测试模式；需要草稿-only 时设置 `WECHAT_ENABLE_PUBLISH=false`。
 
 | 能力 | 当前状态 | 模式 | 说明 |
 |------|---------|------|------|
@@ -10,7 +10,9 @@
 | 封面素材上传 | 已实现 | real | `material/add_material`，按封面路径缓存 media_id |
 | 草稿创建 | 已实现 | real/mock | real 调 `draft/add`，mock 本地生成 |
 | 发布提交 | 已实现 | real/mock | 受 `WECHAT_ENABLE_PUBLISH` 控制 |
-| 发布安全闸门 | 已实现 | real | 默认演练 + 显式开关 + 执行到点二次确认（**已移除审核闸门**） |
+| 发布安全闸门 | 已实现 | real | 默认 mock 不联网；real 模式用于真实 API 测试；任务级“仅草稿”不发布；执行到点前二次确认（**已移除审核闸门**） |
+| 本地定时发布 | 已实现 | real/mock | `publish_jobs.scheduled_at` + 本地 scheduler 到点调用 API |
+| 微信后台定时群发字段 | 待核验 | browser_assist fallback | 当前代码没有把发布时间写入微信后台草稿箱；若官方 API 不支持，走 browser_assist + 人工确认 |
 | 扫描/排期/执行 CLI | 已实现 | all | 本地闭环保留，上传内部复用 scan |
 | Web 工作台 | 已实现 | all | 作品库网格、上传、定时 UX、预检清单 |
 | Web 定时发布 UX | 已实现 | all | 人话计划时间与下一篇摘要 |

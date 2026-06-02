@@ -20,7 +20,7 @@ schedule:
   preferred_hours: [9, 14, 20]
 
 publish:
-  # draft = 仅进草稿箱；publish = 到点正式发布（即使 WECHAT_ENABLE_PUBLISH=false 也可按任务覆盖）
+  # draft = 仅进草稿箱；publish = 到点正式发布（WECHAT_MODE=real 时用于真实 API 测试）
   default_action: draft
   auto_execute: false
   need_open_comment: false

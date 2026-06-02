@@ -4,8 +4,8 @@ agent_policy:
   roadmap_authority:
     human: docs/rounds.md
     machine_registry: scripts/agent_gate.py
-    round_range: round_000..round_053
-    sync_rule: "修改 docs/rounds.md 时须同次更新 ROUND_ORDER/ROUND_META、tests/test_agent_gate.py 与相关治理范围字段"
+    round_range: round_000..round_056
+    sync_rule: "修改 docs/rounds.md 时须同次更新 ROUND_ORDER/ROUND_META、tests/test_agent_gate.py 与相关治理范围字段；当前执行路线见 docs/roadmap_converged.md；长期多平台蓝图仅见 docs/backlog/"
   web_console_policy:
     default_view: ordinary_user_first
     primary_layout: desktop_first_local_workbench
@@ -40,3 +40,8 @@ agent_policy:
       warning: 1
       blocked: 2
     push_policy: "默认不 push；仅 advance --push 且人工授权时"
+
+  adapter_policy:
+    official_api: "默认 mock 不联网；WECHAT_MODE=real 是显式真实 API 测试模式；需要草稿-only 时设置 WECHAT_ENABLE_PUBLISH=false"
+    browser_assist: "当前只允许作为微信公众号本地自用后备方案；只能辅助打开后台、填表、截图和等待人工确认；不得绕过验证码或自动点击最终发布"
+    manual_export: "只生成 outbox，必须通过 proof_of_publish 确认"

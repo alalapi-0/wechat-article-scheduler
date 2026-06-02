@@ -103,12 +103,15 @@ def load_config(env_file: Path | None = None) -> AppConfig:
     rules = load_rules(rules_path)
     schedule_rules = rules.get("schedule", {}) if isinstance(rules.get("schedule"), dict) else {}
 
+    wechat_mode = os.getenv("WECHAT_MODE", "mock").strip().lower()
+    real_api_mode = wechat_mode == "real"
+
     return AppConfig(
         root=ROOT,
         database_path=db_path,
         inbox_dir=inbox,
         rules_path=rules_path,
-        wechat_mode=os.getenv("WECHAT_MODE", "mock").strip().lower(),
+        wechat_mode=wechat_mode,
         schedule_window_days=int(os.getenv("SCHEDULE_WINDOW_DAYS", "7")),
         scheduler_poll_seconds=int(os.getenv("SCHEDULER_POLL_SECONDS", "60")),
         max_articles_per_day=int(
@@ -124,9 +127,9 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         wechat_app_id=os.getenv("WECHAT_APP_ID", "").strip(),
         wechat_app_secret=os.getenv("WECHAT_APP_SECRET", "").strip(),
         wechat_default_thumb_path=os.getenv("WECHAT_DEFAULT_THUMB_PATH", "").strip(),
-        wechat_enable_publish=_env_bool("WECHAT_ENABLE_PUBLISH", True),
+        wechat_enable_publish=_env_bool("WECHAT_ENABLE_PUBLISH", real_api_mode),
         web_auto_run_due=_env_bool("WEB_AUTO_RUN_DUE", True),
-        web_auto_publish=_env_bool("WEB_AUTO_PUBLISH", True),
+        web_auto_publish=_env_bool("WEB_AUTO_PUBLISH", real_api_mode),
         web_host=os.getenv("WEB_HOST", "127.0.0.1").strip(),
         web_port=int(os.getenv("WEB_PORT", "8080")),
         rules=rules,

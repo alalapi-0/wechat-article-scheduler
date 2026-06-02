@@ -41,4 +41,4 @@ class WechatAdapter(ABC):
 
     @abstractmethod
     def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-        """提交发布（mock 仅返回成功结构）。force=True 时忽略全局 WECHAT_ENABLE_PUBLISH 关闭。"""
+        """提交发布（mock 仅返回成功结构）。force=True 只能由全局开关和任务级确认共同决定。"""

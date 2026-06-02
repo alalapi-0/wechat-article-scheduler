@@ -1,15 +1,16 @@
 current_round:
-  id: round_054
-  name: Round 54 - 真实微信 API 闭环验证
+  id: round_047
+  name: Round 47 - 轻量 UI 细节修正
   status: completed
-  updated_at: '2026-05-31T23:05:43.603367+00:00'
-  completed_at: '2026-05-31'
+  updated_at: '2026-06-02T13:30:00+08:00'
+  completed_at: '2026-06-02T13:30:00+08:00'
 last_completed_round:
-  id: round_054
-  completed_at: '2026-05-31T23:08:00+00:00'
-protocol_standard_sync_required: false
+  id: round_047
+  completed_at: '2026-06-02T13:30:00+08:00'
+protocol_standard_sync_required: true
 acceptance_criteria:
-- real_api_check 在 real 模式下完成样本草稿验证并保存报告
-- 不泄露 token；WECHAT_ENABLE_PUBLISH 关闭时不提交发布
+- 左上角品牌标识不突兀，作品列表与按钮视觉更克制
+- 普通视图不回归审核概念或内部字段
 next_actions:
-- 维护 docs/rounds.md；按能力矩阵规划 Round 55+
+- 推进 Round 48：微信草稿正文规范化与标题去重
+- 收敛路线图 Round 2：微信公众号现有链路稳定化（scan/plan/run-once）

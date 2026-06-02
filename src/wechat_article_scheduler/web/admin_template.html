@@ -962,7 +962,7 @@ async function onRun(){
       const p = await (await fetch('/api/publish-preflight')).json();
       pf = '\n\n' + (p.human||[]).join('\n');
     } catch(e){}
-    if (!window.confirm('当前是「真实发布」模式，执行后会真的发到公众号。确定继续吗？' + pf)) return;
+    if (!window.confirm('当前是「真实 API 测试」模式；任务选择「正式发布」时会真的发到公众号。确定继续吗？' + pf)) return;
   }
   await runAction('run-once', '/api/run-once');
 }
@@ -997,7 +997,7 @@ function renderSafety(status, preflight){
   const mode = status ? status.wechat_mode : 'mock';
   const auto = status && status.web_auto_runner_active ? ' · 自动到点执行' : '';
   if (mode === 'real' && status.wechat_enable_publish) {
-    pill.className = 'pill err'; pill.innerHTML = '<span class="dot"></span> 真实发布 · 会真的发到公众号';
+    pill.className = 'pill err'; pill.innerHTML = '<span class="dot"></span> 真实 API 测试 · 正式发布任务会真的发';
   } else if (mode === 'real') {
     pill.className = 'pill warn'; pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿，不会发布' + auto;
   } else {

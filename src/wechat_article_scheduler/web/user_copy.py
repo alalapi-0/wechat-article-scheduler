@@ -48,7 +48,7 @@ EVENT_TYPE: dict[str, str] = {
 
 MODE_LABELS: dict[str, str] = {
     "mock": "演练（不会真的发到公众号）",
-    "real": "真实连接（需人工确认才会发布）",
+    "real": "真实 API 测试（按任务设置创建草稿或正式发布）",
 }
 
 PUBLISH_SWITCH: dict[bool, str] = {

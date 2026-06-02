@@ -1,8 +1,8 @@
 """发布前预检清单（替代旧的审核闸门）。
 
 产品重定位后不再有"审核"步骤：用户上传的作品即视为想发布的内容。
-真实发布的安全保障 = 默认演练(mock) + 显式开关(WECHAT_ENABLE_PUBLISH) +
-执行到点前的二次确认 + 这里列出的可读检查项。
+真实 API 测试策略 = 默认演练(mock) 不联网；WECHAT_MODE=real 显式启用真实 API；
+需要草稿-only 时设置 WECHAT_ENABLE_PUBLISH=false。
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             else (
                 "真实连接已启用：执行到点会创建公众号草稿，不会提交发布"
                 if not publish_on
-                else "已连接真实公众号且允许发布"
+                else "真实 API 测试已启用：任务选择正式发布时会提交发布"
             ),
         }
     )
@@ -122,7 +122,7 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
     elif not publish_on:
         human.append("真实连接已启用，但发布开关关闭，不会真的发布。")
     else:
-        human.append("真实发布已启用，执行到点前请确认以下检查项。")
+        human.append("真实 API 测试已启用；任务选择「正式发布」时会真的发到公众号。")
     for c in checks:
         if c["required"] and not c["ok"]:
             human.append(f"需处理：{c['detail']}")

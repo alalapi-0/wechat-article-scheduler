@@ -48,6 +48,70 @@ def test_run_check_blocks_mock_mode(rac, monkeypatch):
     assert "real" in report.blocking_reason
 
 
+def test_run_check_real_mode_defaults_to_draft_only_without_blocking(
+    rac,
+    monkeypatch,
+):
+    from wechat_article_scheduler.adapters.base import DraftResult
+    import wechat_article_scheduler.adapters as adapters_mod
+
+    monkeypatch.setenv("WECHAT_MODE", "real")
+    monkeypatch.setenv("WECHAT_APP_ID", "wx")
+    monkeypatch.setenv("WECHAT_APP_SECRET", "sec")
+    monkeypatch.delenv("WECHAT_ENABLE_PUBLISH", raising=False)
+
+    class FakeAdapter:
+        def get_access_token(self) -> str:
+            return "token"
+
+        def create_draft(self, **kwargs):  # noqa: ANN001, ANN201
+            return DraftResult(media_id="draft-real", raw_response={"media_id": "draft-real"})
+
+        def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
+            assert force is False
+            return {"skipped": True, "media_id": media_id}
+
+    monkeypatch.setattr(adapters_mod, "get_adapter", lambda cfg: FakeAdapter())  # noqa: ARG005
+
+    report = rac.run_check(samples=1, dry_run=False, token_only=False)
+
+    assert report.blocking_reason == ""
+    assert report.token_ok is True
+    assert report.enable_publish is False
+    assert report.allow_publish is False
+    assert report.success_count == 1
+
+
+def test_run_check_publish_flag_allows_submit(rac, monkeypatch):
+    from wechat_article_scheduler.adapters.base import DraftResult
+    import wechat_article_scheduler.adapters as adapters_mod
+
+    monkeypatch.setenv("WECHAT_MODE", "real")
+    monkeypatch.setenv("WECHAT_APP_ID", "wx")
+    monkeypatch.setenv("WECHAT_APP_SECRET", "sec")
+    monkeypatch.delenv("WECHAT_ENABLE_PUBLISH", raising=False)
+
+    class FakeAdapter:
+        def get_access_token(self) -> str:
+            return "token"
+
+        def create_draft(self, **kwargs):  # noqa: ANN001, ANN201
+            return DraftResult(media_id="draft-real", raw_response={"media_id": "draft-real"})
+
+        def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
+            assert force is True
+            return {"publish_id": "pub-1", "media_id": media_id}
+
+    monkeypatch.setattr(adapters_mod, "get_adapter", lambda cfg: FakeAdapter())  # noqa: ARG005
+
+    report = rac.run_check(samples=1, dry_run=False, token_only=False, allow_publish=True)
+
+    assert report.blocking_reason == ""
+    assert report.enable_publish is True
+    assert report.allow_publish is True
+    assert report.success_count == 1
+
+
 def test_write_report_creates_files(rac, tmp_path, monkeypatch):
     monkeypatch.setattr(rac, "REPORTS_DIR", tmp_path)
     report = rac.RunReport(started_at="2026-01-01T00:00:00Z", wechat_mode="mock")

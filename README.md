@@ -1,134 +1,159 @@
 # wechat-article-scheduler
 
-本项目定位为**本地「作品 → 公众号」批量发布工作台**：用户在网页**批量上传文章与封面**，上传即视为想发布的作品，**没有"审核"步骤**。以 CLI 为基础闭环，Web 控制台作为电脑浏览器优先的本地工作台，围绕上传、排期、草稿创建与可审计发布构建闭环，默认安全保守。
+个人本地微信公众号发布工作台。
 
-## 核心特性
+当前项目不是多平台发布器，不是商业 SaaS，也不是团队协作后台。阶段一只优先打通微信公众号文章发布闭环；知乎、豆瓣、小红书、视频号、Bilibili、抖音、快手、网易云音乐等平台全部属于后期 backlog。
 
-- 网页**批量上传作品与封面**：拖拽即可收录，封面按文件名自动绑定到同名作品，每篇可单独换封面
-- CLI 闭环：`scan` / `plan` / `run-once` / `scheduler`（上传内部复用 scan 入库）
-- 默认 `WECHAT_MODE=mock`，不开启真实 API 调用
-- 摘要（digest）统一上限 **120 字**，发布前会再次兜底截断
-- 无审核流程：安全靠默认演练 + 显式发布开关 + 发布前二次确认 + 预检清单
-- 事件审计可追溯：上传/扫描、排期、执行、失败、截断 warning 均写入 `events`
-- Web 控制台原则：普通用户视图优先 + Desktop-first local workbench；手机/平板只做不横向溢出、关键按钮可点、页面可读的兼容
+## 当前第一阶段目标
+
+阶段一目标是把本地文章稳定发布到微信公众号草稿箱，并在用户显式确认后才允许正式发布。
+
+核心能力方向：
+
+- 本地文章导入、去重、排期
+- Markdown / TXT / HTML 到微信公众号正文
+- 摘要 digest 120 字限制
+- 封面上传、封面绑定和后续裁剪预览
+- 微信公众号草稿创建和后续草稿更新
+- 本地 scheduler 和失败重试
+- Web 控制台：文章列表、详情、预览、草稿、队列、设置、事件日志
+- 人工确认和可选正式发布
+- 必要时用 browser_assist 辅助公众号后台操作
+
+## 已实现能力
+
+- CLI 闭环：`scan` / `plan` / `run-once` / `scheduler`
+- SQLite 状态记录：`articles`、`publish_jobs`、`wechat_drafts`、`events`
+- 默认 `WECHAT_MODE=mock`，不联网；显式切到 `WECHAT_MODE=real` 后进入真实 API 测试模式
+- 微信公众号 real adapter：token、封面素材上传、`draft/add`、受控 `freepublish/submit`
+- `WECHAT_ENABLE_PUBLISH=false` 时只创建草稿，不正式发布
+- 摘要 120 字兜底截断和 warning 事件
+- Web 工作台基础能力：上传、文章列表、排期、预览、队列、预检、事件
+- 真实微信公众号草稿创建已通过本地验证
+
+## 尚未完成
+
+- 微信草稿更新能力
+- 更稳定的 Markdown 到微信公众号 HTML 排版
+- 更接近公众号效果的发布前预览
+- 封面裁剪与方形/横向双比例预览
+- 多合集/多专栏排期规则收口
+- scheduler 常驻运行手册与稳定化
+- API 不支持字段的微信公众号 browser_assist 后备流程
+- 完整微信公众号闭环验收
 
 ## 快速开始
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 cp config/rules.example.yaml config/rules.yaml
-python -m wechat_article_scheduler.cli init-db
+python3 -m wechat_article_scheduler.cli init-db
 ```
 
-启动 Web 工作台后，可直接在「作品库」**拖拽上传**文章与封面；或用 CLI：将 `.md` / `.txt` / `.html` 放入 `articles/inbox/` 后执行：
+启动 Web 工作台：
 
 ```bash
-python -m wechat_article_scheduler.cli serve   # 浏览器打开 http://127.0.0.1:8080/ 上传与排期
-# 或纯命令行：
-python -m wechat_article_scheduler.cli scan
-python -m wechat_article_scheduler.cli plan
-python -m wechat_article_scheduler.cli run-once
+python3 -m wechat_article_scheduler.cli serve
 ```
 
-仓库已纳入 `articles/imported/`、`articles/published/` 下的章节样稿，供 Agent 与本地测试 scan/plan 流程使用（不提交 `.env` 与运行时数据库）。
+打开 `http://127.0.0.1:8080/`。
 
-## 运行模式（三种）
+纯 CLI：
 
-1. `mock`（默认）：不联网，生成本地 mock 草稿/发布结果
-2. `real + WECHAT_ENABLE_PUBLISH=false`：默认只创建真实草稿；**可在 Web「批量发布设置」里为单篇/批量任务指定「正式发布」**
-3. `real + WECHAT_ENABLE_PUBLISH=true`：全局允许发布；配合任务级「到点自动执行」可无人值守排期发布
+```bash
+python3 -m wechat_article_scheduler.cli scan
+python3 -m wechat_article_scheduler.cli plan
+python3 -m wechat_article_scheduler.cli run-once
+```
 
-### 批量发布设置（Web）
+仓库已纳入 `articles/imported/` 与 `articles/published/` 下的章节样稿，供 scan/plan 测试使用。不要提交 `.env` 或运行时数据库。
 
-在作品库勾选多篇 → **批量发布设置**，可一次性配置：
+## 运行模式
 
-- 起始时间与错峰间隔
-- **发布方式**：仅草稿 / 正式发布
-- **到点自动执行**（勾选后 Web 后台会自动跑到期任务，无需手动点「执行到点发布」）
-- 留言开关、仅粉丝可评、作者、原文链接
+| 模式 | 行为 |
+|---|---|
+| `WECHAT_MODE=mock` | 默认模式，不联网，生成 mock 草稿/发布结果 |
+| `WECHAT_MODE=real` | 真实 API 测试模式，默认允许测试草稿创建和 `freepublish/submit` |
+| `WECHAT_MODE=real` + `WECHAT_ENABLE_PUBLISH=false` | 强制草稿-only：只创建真实微信草稿，不提交正式发布 |
+| `WECHAT_MODE=real` + 任务级正式发布 | 到点时允许调用 `freepublish/submit` |
 
-默认值可在 `config/rules.yaml` 的 `publish:` 段调整。环境变量 `WEB_AUTO_PUBLISH=true` 控制真实发布模式下是否允许 Web 后台自动提交。
+默认不联网；`WECHAT_MODE=real` 本身就是显式真实 API 测试开关。需要只测草稿箱时，设置 `WECHAT_ENABLE_PUBLISH=false`。任务级“仅草稿”仍不会触发正式发布。
+
+当前定时发布实现是**本地 scheduler 到点调用 API**：先创建草稿，再在到点时按任务设置调用 `freepublish/submit`。它还不是“把定时时间写进微信后台草稿箱”的能力；如果微信官方 API 不支持该字段，后续应走 browser_assist + 人工确认路线。
+
+## 真实 API 验证
+
+只验证 token、封面上传和草稿创建，不提交正式发布：
+
+```bash
+WECHAT_MODE=real python3 scripts/real_api_check.py --samples 3
+```
+
+验证正式发布接口，会调用 `freepublish/submit`：
+
+```bash
+WECHAT_MODE=real python3 scripts/real_api_check.py --samples 1 --publish
+```
+
+本地定时发布测试建议使用 Web 批量发布设置或 CLI 排期：把任务设为“正式发布”，并让本地 scheduler 到点执行。当前代码还没有把定时时间直接写入微信后台草稿箱。
 
 ## CLI 命令
 
 | 命令 | 说明 |
-|------|------|
+|---|---|
 | `init-db` | 初始化 SQLite |
 | `scan` | 扫描 inbox、去重、入库 |
 | `plan` | 生成 `publish_jobs` |
 | `run-once` | 执行到期任务 |
 | `scheduler` | 后台轮询调度 |
-| `reject --article-id N` | 从发布流程移除某篇作品 |
+| `reject --article-id N` | 从发布流程移除某篇文章 |
 | `retry-failed` | 重置失败任务为待执行 |
 | `events --limit N` | 查看审计事件 |
-| `serve` | 启动本地 FastAPI 工作台（含网页批量上传） |
+| `serve` | 启动本地 FastAPI 工作台 |
 
-## 配置说明
+## 文档入口
 
-- `.env`：环境变量（只放本地，不提交）
-- `config/rules.yaml`：扫描、去重、排期与 `summary_max_chars`（默认 120）
-
-## 文档索引与路线图
-
-- 文档入口：`docs/index.md`
-- 当前状态审计：`docs/current_state_audit.md`
+- 当前路线收敛审计：`docs/route_convergence_audit.md`
 - 产品愿景：`docs/product_vision.md`
-- 架构说明：`docs/architecture.md`
-- 轮次路线图：`docs/rounds.md`
-- 迁移计划：`docs/migration_plan.md`
-- 可用性诊断（面向非技术用户）：`docs/web_console_usability_review.md`
+- 微信公众号优先架构：`docs/architecture.md`
+- 收敛路线图：`docs/roadmap_converged.md`
+- 平台优先级：`docs/platform_priority.md`
+- 微信 browser_assist 策略：`docs/wechat_browser_assist_strategy.md`
+- 历史权威轮次记录：`docs/rounds.md`
+- 长期 backlog：`docs/backlog/`
 
-路线图现在按 Phase / Round 0-46 维护，每轮都要求目标、非目标、验收、建议测试与退出标准，并由 `scripts/agent_gate.py` 与 `tests/test_agent_gate.py` 做同步校验。Phase 6 / Phase 7 / Phase 8（Round 19–38）是普通用户友好的 Web 工作台可用性专项；**Phase 10（Round 43–46）完成产品重定位**：移除审核概念、新增网页批量上传作品与封面、重构工作台界面与配色。电脑浏览器是默认形态，窄屏只作为兼容验收。
+## browser_assist 安全边界
 
-## 真实 API 验证（Agent / 本地）
+browser_assist 只作为微信公众号路线的本地自用后备方案，用于 API 无法覆盖字段时辅助打开后台、定位草稿、填写字段、截图和停在人机确认。
 
-在 `.env` 配置 `WECHAT_MODE=real` 与公众号凭证，且 **`WECHAT_ENABLE_PUBLISH=false`**（只创建草稿）后：
+它不能：
+
+- 绕过登录、验证码或平台风控
+- 保存平台密码
+- 保存公众号后台 cookie
+- 默认点击最终发布
+- 批量灌水
+- 伪装成官方 API 能力
+
+## 多平台扩展
+
+多平台扩展属于未来 backlog：
+
+- P1：知乎、豆瓣、WordPress / 个人博客
+- P2：小红书、微信视频号、Bilibili、抖音、快手
+- P3：网易云音乐、播客平台
+
+阶段一完成前，不开发其他平台。
+
+## MCP 配置检查
+
+本项目在 Cursor 中要求启用 `chrome-devtools`、`context7`、`filesystem`、`github`、`playwright`。检查命令：
 
 ```bash
-python3 scripts/real_api_check.py --samples 3
-python3 scripts/auto_approve_pipeline.py --round 1 --samples 3
+npm run check:mcp
 ```
 
-报告写入 `reports/real_api_runs/` 与 `reports/auto_approve_pipeline/`（JSON + Markdown 摘要，不含 token）。
-
-**Auto-Approved Pipeline Mode**（Agent 推进轮默认）：真实 API 生成后自动标记 `review_status=auto_approved`，不等待人工审核，继续 scan/run-once 下游。切回人工模式：
-
-```bash
-export REVIEW_MODE=manual
-export AUTO_APPROVE_GENERATIONS=false
-```
-
-仅 token 探测：
-
-```bash
-python3 scripts/real_api_check.py --token-only
-```
-
-## 安全边界
-
-- 默认不自动发布真实公众号内容（建议先使用 mock 或 real-draft-only）
-- 不提交 `.env`、密钥、token、cookie
-- 不使用网页模拟登录公众号后台
-- 日志不打印 access token / secret
-
-## Workspace MCP Servers
-
-本项目在 Cursor 中需要启用以下 **Workspace MCP Servers**（见 `.cursor/mcp.json`）：
-
-- `chrome-devtools` — 浏览器调试、console、network
-- `context7` — 第三方库/框架文档查询
-- `filesystem` — 受控读写**当前项目目录**内文件
-- `github` — 仓库、提交、分支、issue、PR 等（需环境变量 token）
-- `playwright` — 浏览器自动化与 E2E 检查
-
-说明：
-
-1. `.cursor/mcp.json` 是本仓库的 Workspace MCP 配置；修改后 Cursor 可能需要**重启**或**重新加载窗口**才会显示为 enabled。
-2. **GitHub MCP** 通过环境变量提供 token（如 `GITHUB_TOKEN`），**不得**把真实 token 写入仓库或 `mcp.json`。
-3. **filesystem** 仅授权 `${workspaceFolder}`（当前项目根），不得指向 `/`、`~` 或用户主目录根路径。
-4. 配置检查：`npm run check:mcp`（需 `package.json`）或 `node scripts/check_mcp_config.js` / `python scripts/check_mcp_config.py`。
-
-详见 `AGENTS.md`、`docs/agent_skills/mcp_usage_skill.md`。
+GitHub token 必须通过环境变量注入，不得写入仓库或 `.cursor/mcp.json`。

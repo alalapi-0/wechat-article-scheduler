@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""真实微信 API 批量验证（默认 draft-only，不提交 freepublish）。
+"""真实微信 API 批量验证（默认 draft-only；--publish 才提交 freepublish）。
 
 从环境变量 / .env 读取凭证，不打印 secret。报告写入 reports/real_api_runs/。
 """
@@ -122,6 +122,7 @@ class RunReport:
     mock_used: bool = False
     auto_approve: bool = False
     auto_approved_count: int = 0
+    allow_publish: bool = False
     samples_requested: int = 0
     success_count: int = 0
     failure_count: int = 0
@@ -164,6 +165,7 @@ def run_check(
     samples: int,
     dry_run: bool,
     token_only: bool,
+    allow_publish: bool = False,
     auto_approve: bool | None = None,
 ) -> RunReport:
     _load_dotenv()
@@ -180,6 +182,7 @@ def run_check(
         enable_publish=bool(cfg.wechat_enable_publish),
         mock_used=cfg.wechat_mode != "real",
         auto_approve=approve,
+        allow_publish=allow_publish,
         samples_requested=samples,
     )
 
@@ -189,11 +192,11 @@ def run_check(
     if not cfg.wechat_app_id or not cfg.wechat_app_secret:
         report.blocking_reason = "缺少 WECHAT_APP_ID / WECHAT_APP_SECRET"
         return report
-    if cfg.wechat_enable_publish:
-        report.blocking_reason = (
-            "WECHAT_ENABLE_PUBLISH=true：为安全起见请设为 false 后再运行本脚本"
-        )
-        return report
+    if allow_publish:
+        cfg.wechat_enable_publish = True
+    else:
+        cfg.wechat_enable_publish = False
+    report.enable_publish = bool(cfg.wechat_enable_publish)
 
     adapter = get_adapter(cfg)
     try:
@@ -242,12 +245,18 @@ def run_check(
             )
             result.media_id = draft.media_id[:16] + "..." if len(draft.media_id) > 16 else draft.media_id
             result.content_len = len(sample["body"])
-            submit = adapter.submit_publish(draft.media_id)
-            if submit.get("skipped"):
+            submit = adapter.submit_publish(draft.media_id, force=allow_publish)
+            if submit.get("skipped") and not allow_publish:
+                result.ok = True
+            elif allow_publish and not submit.get("skipped"):
                 result.ok = True
             else:
                 result.ok = False
-                result.error = "意外提交了发布（应被 WECHAT_ENABLE_PUBLISH=false 跳过）"
+                result.error = (
+                    "发布提交未执行（--publish 模式下应调用 freepublish/submit）"
+                    if allow_publish
+                    else "意外提交了发布（draft-only 模式应跳过 freepublish/submit）"
+                )
         except Exception as exc:  # noqa: BLE001
             result.error = str(exc)[:500]
         result.quality_status = _quality_status(ok=result.ok, body=sample["body"], notes=notes)
@@ -286,6 +295,7 @@ def _write_report(report: RunReport) -> Path:
         f"- mock_used: {report.mock_used}",
         f"- auto_approve: {report.auto_approve}",
         f"- auto_approved_count: {report.auto_approved_count}",
+        f"- allow_publish: {report.allow_publish}",
         f"- enable_publish: {report.enable_publish}",
         f"- token_ok: {report.token_ok}",
         f"- samples: {report.samples_requested}",
@@ -318,10 +328,15 @@ def _write_report(report: RunReport) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="真实微信 API 闭环验证（draft-only）")
+    parser = argparse.ArgumentParser(description="真实微信 API 闭环验证（默认 draft-only）")
     parser.add_argument("--samples", type=int, default=3, help="草稿样本数量（默认 3）")
     parser.add_argument("--token-only", action="store_true", help="仅验证 access_token")
     parser.add_argument("--dry-run", action="store_true", help="不调用 draft/add")
+    parser.add_argument(
+        "--publish",
+        action="store_true",
+        help="真实提交 freepublish/submit；会消耗发布额度，仅用于明确的正式发布测试",
+    )
     parser.add_argument(
         "--auto-approve",
         action="store_true",
@@ -333,6 +348,7 @@ def main() -> int:
         samples=max(1, args.samples),
         dry_run=args.dry_run,
         token_only=args.token_only,
+        allow_publish=args.publish,
         auto_approve=True if args.auto_approve else None,
     )
     out = _write_report(report)

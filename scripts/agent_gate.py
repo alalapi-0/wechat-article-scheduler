@@ -51,7 +51,7 @@ PASS, WARNING, BLOCKED = "PASS", "WARNING", "BLOCKED"
 SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
-# 权威路线图：docs/rounds.md（Round 0–53）。修改路线图时须同步本表与 tests/test_agent_gate.py。
+# 权威路线图：docs/rounds.md（Round 0–56）。修改路线图时须同步本表与 tests/test_agent_gate.py。
 ROUND_ORDER = [
     "round_000",
     "round_001",
@@ -109,6 +109,7 @@ ROUND_ORDER = [
     "round_053",
     "round_054",
     "round_055",
+    "round_056",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -638,7 +639,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "下游 scan/run-once 可继续执行且不等待人工审核",
         ],
         "next_actions": [
-            "维护 docs/rounds.md；按能力矩阵规划 Round 56+",
+            "推进 Round 56：路线收敛治理轮",
+        ],
+    },
+    "round_056": {
+        "name": "Round 56 - 路线收敛治理轮",
+        "acceptance_criteria": [
+            "路线发散审计、产品愿景、架构、收敛路线图与平台优先级已更新",
+            "不破坏微信公众号 scan/plan/run-once/草稿创建链路",
+            "默认 mock 不联网；real 模式用于真实 API 测试；browser_assist 只作为个人本地自用后备方案",
+        ],
+        "next_actions": [
+            "下一轮优先执行 Round 2：当前微信公众号链路稳定化",
         ],
     },
 }
@@ -973,6 +985,11 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                 [py, "-m", "pytest", "tests/test_auto_approve_pipeline.py", "-q"],
                 "pytest auto_approve_pipeline",
             ),
+        ]
+    elif round_id == "round_056":
+        steps = [
+            ([py, "scripts/check_rounds_doc.py"], "check rounds doc"),
+            ([py, "-m", "pytest", "tests/test_agent_gate.py", "tests/test_check_rounds_doc.py", "-q"], "pytest governance"),
         ]
     else:
         return True, "unknown round skipped"
