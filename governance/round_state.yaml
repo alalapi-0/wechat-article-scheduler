@@ -1,11 +1,12 @@
 current_round:
   id: round_058
   name: Round 58 - 摘要错误码与草稿幂等
-  status: active
-  updated_at: '2026-06-02T06:00:00+00:00'
+  status: completed
+  updated_at: '2026-06-02T06:02:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_057
-  completed_at: '2026-06-02T05:57:00+00:00'
+  id: round_058
+  completed_at: '2026-06-02T06:02:00+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
   - 摘要 120 字统一截断且超长有 warning 事件

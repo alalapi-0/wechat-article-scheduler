@@ -101,7 +101,7 @@
 | Round 55 | Auto-Approved Real API Pipeline | 已完成 |
 | Round 56 | 路线收敛治理轮 | 已完成 |
 | Round 57 | 收敛后微信链路稳定化 | 已完成 |
-| Round 58 | 摘要错误码与草稿幂等 | 进行中 |
+| Round 58 | 摘要错误码与草稿幂等 | 已完成 |
 
 ## 轮次字段规范
 
