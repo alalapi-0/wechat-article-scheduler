@@ -1,15 +1,16 @@
 current_round:
-  id: round_096
-  name: Round 96 - 微信视频号 manual_export
-  status: active
-  updated_at: '2026-06-02T29:00:00+00:00'
-last_completed_round:
-  id: round_095
+  id: round_097
+  name: Round 97 - 微信视频号 browser_assist
+  status: completed
+  updated_at: '2026-06-02T18:20:47.201305+00:00'
   completed_at: '2026-06-02'
+last_completed_round:
+  id: round_097
+  completed_at: '2026-06-02T18:20:47.201305+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- wechat_channels outbox 文件集
-- 与公众号 API 分离说明
-- 不真上传
+- platform=wechat_channels dry-run
+- terminal_policy 区分视频号与公众号
+- /debug 可见视频号 JSON
 next_actions:
-- 视频号 browser_assist round_097
+- 注册 round_098 或微信修复轮
