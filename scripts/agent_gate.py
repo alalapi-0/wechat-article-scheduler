@@ -169,6 +169,7 @@ ROUND_ORDER = [
     "round_112",
     "round_113",
     "round_114",
+    "round_115",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1351,7 +1352,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 上传与导出路径验证",
         ],
         "next_actions": [
-            "继续微信闭环或 round_115",
+            "推进 round_115 仓库卫生与冒烟扩展",
+        ],
+    },
+    "round_115": {
+        "name": "Round 115 - 仓库卫生与维护冒烟",
+        "acceptance_criteria": [
+            ".gitignore 忽略 outbox 测试包与 .playwright-mcp",
+            "test_round_102 覆盖上传/export-outbox API",
+            "git status 无密钥；mock@8080 首页回归",
+        ],
+        "next_actions": [
+            "在 docs/rounds.md 规划后续轮次并扩展 ROUND_ORDER",
         ],
     },
 }
@@ -2408,6 +2420,17 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest upload export regression",
+            ),
+        ]
+    elif round_id == "round_115":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_102_maintenance_smoke.py", "-q"],
+                "pytest maintenance smoke round_115",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_round_114_wechat_p0.py", "-q"],
+                "pytest round_114 regression",
             ),
         ]
     else:

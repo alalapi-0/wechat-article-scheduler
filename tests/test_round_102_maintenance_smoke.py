@@ -1,7 +1,11 @@
-"""Round 102 维护收口：微信主链路 API 冒烟（首页→scan→plan→预览→队列→草稿→/debug）。"""
+"""Round 102 维护收口：微信主链路 API 冒烟（首页→scan→plan→预览→队列→草稿→/debug）。
+
+Round 115 起纳入上传与 export-outbox 轻量回归（覆盖 round_114 API）。
+"""
 
 from __future__ import annotations
 
+import io
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -118,3 +122,33 @@ def test_maintenance_wechat_chain_api_smoke(smoke_env: tuple[TestClient, Path]) 
     for path in DEBUG_APIS:
         r = c.get(path)
         assert r.status_code == 200, path
+
+
+def test_gitignore_covers_local_test_artifacts() -> None:
+    text = (Path(__file__).resolve().parents[1] / ".gitignore").read_text(encoding="utf-8")
+    assert "outbox/*" in text
+    assert ".playwright-mcp/" in text
+    assert "articles/imported/r114_*" in text
+
+
+def test_upload_and_export_outbox_api_smoke(smoke_env: tuple[TestClient, Path]) -> None:
+    """Round 114 上传 enrichment 与 export-outbox（隔离 tmp，不写仓库 outbox）。"""
+    c, tmp_path = smoke_env
+    home = c.get("/")
+    assert "showUploadOutcome" in home.text
+    assert "exportOutboxArticle" in home.text
+
+    body = b"# Maint smoke upload\n\nround 114 API regression body\n"
+    files = [("articles", ("maint_upload.md", io.BytesIO(body), "text/markdown"))]
+    up = c.post("/api/upload", files=files).json()
+    assert up.get("ok") is True
+    assert up.get("upload_summary", {}).get("summary_label")
+
+    arts = c.get("/api/articles").json()
+    assert len(arts) >= 1
+    aid = int(arts[0]["id"])
+    exp = c.post(f"/api/articles/{aid}/export-outbox?platform=generic").json()
+    assert exp.get("ok") is True
+    assert exp.get("relative_path")
+    rel = exp["relative_path"]
+    assert (tmp_path / rel).exists() or Path(rel).name.startswith("outbox_")

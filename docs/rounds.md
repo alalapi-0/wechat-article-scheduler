@@ -2220,6 +2220,23 @@
   - [x] 作品卡导出 outbox
   - [x] agent_gate round_114 冒烟
 
+### Round 115 - 仓库卫生与维护冒烟
+
+- 目标：忽略本地 outbox 测试包、Playwright 诊断与 r114 测试稿；扩展维护冒烟覆盖 round_114 API。
+- 范围：`.gitignore`、`test_round_102_maintenance_smoke`。
+- 非目标：删除用户真实 `articles/` 数据；提交业务 outbox 包。
+- 输入：round_114 上传/导出 API。
+- 输出：`outbox/*`、`.playwright-mcp/`、`articles/imported/r114_*` 忽略规则；上传+export-outbox 冒烟。
+- 验收标准：`test_round_102` 新用例；`git status` 无密钥；mock@8080 首页。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_102_maintenance_smoke.py -q`。
+- 退出标准：gate round_115。
+- 风险：无。
+- 回滚点：移除新增 gitignore 行。
+- 交付项：
+  - [x] .gitignore 卫生规则
+  - [x] 维护冒烟扩展
+  - [x] agent_gate round_115 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

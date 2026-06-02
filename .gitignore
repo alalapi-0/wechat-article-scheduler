@@ -28,3 +28,10 @@ config/rules.yaml
 .ui_review_tmp/
 storage/preview_snapshots/article_*.json
 storage/preview_snapshots/article_*.html
+# 本地 outbox 导出包（目录占位保留；勿提交测试/业务导出物）
+outbox/*
+!outbox/.gitkeep
+# Playwright MCP 页面快照与 console 日志
+.playwright-mcp/
+# Round 114 浏览器/API 测试稿（保留本地，不入库）
+articles/imported/r114_*
