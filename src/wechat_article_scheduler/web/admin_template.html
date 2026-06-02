@@ -400,6 +400,8 @@
       <a href="#works" class="active"><span class="ico">▦</span> 作品库</a>
       <a href="#actions"><span class="ico">▶</span> 主操作</a>
       <a href="#queue"><span class="ico">⧗</span> 发布队列</a>
+      <a href="#drafts"><span class="ico">✎</span> 微信草稿</a>
+      <a href="/drafts">草稿页</a>
       <a href="#trash"><span class="ico">⌫</span> 回收站</a>
       <a href="#events"><span class="ico">≣</span> 操作记录</a>
       <a href="#help"><span class="ico">?</span> 帮助</a>
@@ -542,6 +544,19 @@
                 <button type="button" data-qf="all">全部</button>
               </div>
               <div id="queueBox"></div>
+            </div>
+          </section>
+
+          <section id="drafts" class="section">
+            <div class="section-head"><h2>微信草稿</h2><span class="hint" id="draftsHint">本地记录</span></div>
+            <div class="card queue-box pad">
+              <p class="preview-hint" id="draftsModeNote" hidden></p>
+              <p class="preview-hint" style="margin-top:0;">仅显示本工具创建并写入数据库的草稿，不代表公众号后台全部草稿。</p>
+              <div class="queue-filters" id="draftFilters" role="tablist" aria-label="草稿筛选">
+                <button type="button" class="active" data-df="all">全部</button>
+                <button type="button" data-df="created">已创建</button>
+              </div>
+              <div id="draftsBox"></div>
             </div>
           </section>
 
@@ -951,6 +966,7 @@ async function boot(){
   el('modalClose').addEventListener('click', () => el('modalBack').classList.remove('open'));
   el('modalBack').addEventListener('click', e => { if(e.target===el('modalBack')) el('modalBack').classList.remove('open'); });
   setupQueueFilters();
+  setupDraftFilters();
   const btnRetryAll = el('btnRetryAllFailed');
   if (btnRetryAll) btnRetryAll.addEventListener('click', () => bulkRetryFailed());
   const btnRefreshQ = el('btnRefreshQueue');
@@ -970,6 +986,21 @@ function setupQueueFilters(){
     btn.addEventListener('click', async () => {
       queueFilterKey = btn.getAttribute('data-qf') || 'wait';
       box.querySelectorAll('button[data-qf]').forEach(b => b.classList.toggle('active', b === btn));
+      await refreshAll();
+    });
+  });
+}
+
+let draftFilterKey = 'all';
+const DRAFT_FILTER_API = { all: '', created: 'created' };
+
+function setupDraftFilters(){
+  const box = el('draftFilters');
+  if (!box) return;
+  box.querySelectorAll('button[data-df]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      draftFilterKey = btn.getAttribute('data-df') || 'all';
+      box.querySelectorAll('button[data-df]').forEach(b => b.classList.toggle('active', b === btn));
       await refreshAll();
     });
   });
@@ -1098,15 +1129,23 @@ async function refreshAll(){
     const jobsUrl = apiStatus
       ? `/api/jobs?limit=40&status=${encodeURIComponent(apiStatus)}`
       : '/api/jobs?limit=40';
-    const [ov, arts, trash, jobs, qsum] = await Promise.all([
+    const draftStatus = DRAFT_FILTER_API[draftFilterKey] ?? '';
+    const draftsUrl = draftStatus
+      ? `/api/drafts?limit=30&status=${encodeURIComponent(draftStatus)}`
+      : '/api/drafts?limit=30';
+    const [ov, arts, trash, jobs, qsum, drafts, dsum] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
       (await fetch(jobsUrl)).json(),
       (await fetch('/api/queue-summary')).json(),
+      (await fetch(draftsUrl)).json(),
+      (await fetch('/api/drafts-summary')).json(),
     ]);
     queueJobsList = jobs || [];
     renderQueueSummary(qsum);
+    renderDraftsSummary(dsum);
+    renderDrafts(drafts);
     await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
     renderStats(ov);
@@ -1164,6 +1203,40 @@ function renderNextSteps(wb){
   el('nextStepsList').innerHTML = hints.length
     ? hints.map(h => `<li>${esc(h)}</li>`).join('')
     : '<li>按右侧主操作继续即可</li>';
+}
+
+function renderDraftsSummary(dsum){
+  const hint = el('draftsHint');
+  const note = el('draftsModeNote');
+  if (hint && dsum && dsum.summary_label) hint.textContent = dsum.summary_label;
+  if (note && dsum && dsum.mode_note) {
+    note.textContent = dsum.mode_note;
+    note.hidden = false;
+  } else if (note) note.hidden = true;
+}
+
+function renderDrafts(drafts){
+  const box = el('draftsBox');
+  if (!box) return;
+  if (!drafts || !drafts.length) {
+    const emptyMsg = draftFilterKey === 'created'
+      ? '当前筛选下没有已创建草稿'
+      : '还没有微信草稿记录。执行到点发布（演练）后会出现在这里。';
+    box.innerHTML = `<div class="empty" style="padding:14px;">${esc(emptyMsg)}</div>`;
+    return;
+  }
+  const rows = drafts.map(d => {
+    const mockNote = d.mock_note ? `<div class="hint-cell">${esc(d.mock_note)}</div>` : '';
+    const hintRow = d.next_hint ? `<div class="hint-cell">${esc(d.next_hint)}</div>` : '';
+    return `<tr>
+      <td>${esc(d.title||'（无标题）')}<div class="hint-cell">${esc(d.collection_name||'')}</div>${mockNote}${hintRow}</td>
+      <td>${esc(d.created_at_label)}</td>
+      <td>${esc(d.media_id_label)}</td>
+      <td><span class="pill ok">${esc(d.status_label)}</span></td>
+      <td class="acts"><a class="btn-ghost btn-sm" href="${esc(d.article_detail_url)}">作品详情</a></td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `<table class="queue-table"><thead><tr><th>作品</th><th>创建时间</th><th>草稿 ID</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderQueueSummary(qsum){

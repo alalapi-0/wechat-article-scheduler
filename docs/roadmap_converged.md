@@ -141,7 +141,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不能误触真实发布；危险操作必须确认。
 - 下一轮衔接：进入草稿管理页面。
 
-### Round 13：草稿管理页面
+### Round 13：草稿管理页面（已完成 — agent `round_068`）
 
 - 本轮目标：管理已创建的微信公众号草稿记录。
 - 具体任务：展示 `wechat_drafts`、media_id、创建时间、关联文章、草稿状态和可执行操作。

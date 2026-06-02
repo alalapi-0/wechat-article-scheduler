@@ -59,6 +59,11 @@ from wechat_article_scheduler.web.schedule_display import format_scheduled_at, s
 from wechat_article_scheduler.web.workbench_mvp import build_workbench_hints
 from wechat_article_scheduler.web.article_detail import build_article_detail
 from wechat_article_scheduler.web.queue_display import list_queue_jobs, queue_summary
+from wechat_article_scheduler.web.drafts_display import (
+    drafts_summary,
+    get_wechat_draft,
+    list_wechat_drafts,
+)
 from wechat_article_scheduler.workflow import retry_failed_jobs, retry_publish_job
 from wechat_article_scheduler.publish_config import (
     defaults_from_rules,
@@ -95,6 +100,7 @@ from wechat_article_scheduler.web.trash import (
 _TEMPLATE_PATH = Path(__file__).parent / "admin_template.html"
 _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exists() else "<html><body>模板缺失</body></html>"
 _DETAIL_TEMPLATE_PATH = Path(__file__).parent / "article_detail_template.html"
+_DRAFTS_PAGE_TEMPLATE_PATH = Path(__file__).parent / "drafts_page_template.html"
 logger = logging.getLogger(__name__)
 
 
@@ -550,6 +556,31 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     def api_queue_summary() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
             return queue_summary(conn)
+
+    @app.get("/drafts", response_class=HTMLResponse)
+    def drafts_page() -> str:
+        path = _DRAFTS_PAGE_TEMPLATE_PATH
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+        return "<html><body>草稿页模板缺失</body></html>"
+
+    @app.get("/api/drafts")
+    def api_drafts(limit: int = 50, status: str | None = None) -> list[dict[str, Any]]:
+        with db.connect(cfg.database_path) as conn:
+            return list_wechat_drafts(conn, cfg, limit=limit, status=status)
+
+    @app.get("/api/drafts-summary")
+    def api_drafts_summary() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            return drafts_summary(conn, cfg)
+
+    @app.get("/api/drafts/{draft_id}")
+    def api_draft_detail(draft_id: int) -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            detail = get_wechat_draft(conn, cfg, draft_id)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="草稿记录不存在")
+        return detail
 
     @app.post("/api/jobs/{job_id}/retry")
     async def retry_job(job_id: int) -> dict[str, Any]:

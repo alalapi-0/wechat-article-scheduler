@@ -121,6 +121,7 @@ ROUND_ORDER = [
     "round_065",
     "round_066",
     "round_067",
+    "round_068",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -784,6 +785,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "按 docs/roadmap_converged.md 继续 Round 13：草稿管理页面",
         ],
     },
+    "round_068": {
+        "name": "Round 68 - 微信草稿管理页面",
+        "acceptance_criteria": [
+            "wechat_drafts 列表/筛选/关联作品 API",
+            "工作台 #drafts 与 /drafts 页面",
+            "mock 演练说明，不误导为公众号后台全量草稿",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 14：本地 scheduler 稳定化",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1271,6 +1283,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest publish queue page",
+            ),
+        ]
+    elif round_id == "round_068":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_wechat_drafts_page.py",
+                    "tests/test_web_console_mvp.py",
+                    "-q",
+                ],
+                "pytest wechat drafts page",
             ),
         ]
     else:

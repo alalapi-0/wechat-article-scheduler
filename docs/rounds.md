@@ -1445,6 +1445,23 @@
   - [x] retry / bulk-retry API
   - [x] agent_gate round_067 冒烟
 
+### Round 68 - 微信草稿管理页面
+
+- 目标：展示 `wechat_drafts` 记录，关联作品，mock 下不误导为公众号后台全量草稿。
+- 范围：`drafts_display`、drafts API、工作台 `#drafts`、`/drafts`、测试与文档。
+- 非目标：读取公众号后台全部草稿；暴露完整敏感 payload。
+- 输入：Round 67 队列页、scheduler 写入 `wechat_drafts`。
+- 输出：`docs/publish_drafts_page.md`、列表/筛选/摘要 API。
+- 验收标准：用户能看懂哪些作品已有本地微信草稿记录；8080 mock 浏览器无 API 失败。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_wechat_drafts_page.py -q`。
+- 退出标准：gate round_068 通过。
+- 风险：media_id 被误解为公开链接。
+- 回滚点：仅保留作品详情中的草稿提示。
+- 交付项：
+  - [x] drafts API 与列表展示
+  - [x] mock 演练说明
+  - [x] agent_gate round_068 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

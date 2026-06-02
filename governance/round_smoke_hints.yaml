@@ -62,3 +62,6 @@ round_066:
 
 round_067:
   - python3 -m pytest tests/test_publish_queue_page.py tests/test_web_console_mvp.py -q
+
+round_068:
+  - python3 -m pytest tests/test_wechat_drafts_page.py tests/test_web_console_mvp.py -q
