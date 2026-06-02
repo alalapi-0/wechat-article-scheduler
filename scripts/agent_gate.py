@@ -51,7 +51,8 @@ PASS, WARNING, BLOCKED = "PASS", "WARNING", "BLOCKED"
 SEVERITY_RANK = {PASS: 0, WARNING: 1, BLOCKED: 2}
 EXIT_CODE = {PASS: 0, WARNING: 1, BLOCKED: 2}
 
-# 权威路线图：docs/rounds.md（Round 0–56）。修改路线图时须同步本表与 tests/test_agent_gate.py。
+# 权威路线图：docs/rounds.md（Round 0–102，脚本轮注册表）。修改路线图时须同步本表与 tests/test_agent_gate.py。
+# 里程碑：round_000–101 为 Phase0–4 与微信工作台收敛；round_102 为维护收口；Phase5+ 见 docs/roadmap_converged.md backlog。
 ROUND_ORDER = [
     "round_000",
     "round_001",
@@ -155,6 +156,7 @@ ROUND_ORDER = [
     "round_099",
     "round_100",
     "round_101",
+    "round_102",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1189,7 +1191,19 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "test_workbench_chain_hints 通过",
         ],
         "next_actions": [
-            "注册 round_102 或维护轮",
+            "维护收口 round_102",
+        ],
+    },
+    "round_102": {
+        "name": "Round 102 - 脚本轮维护收口",
+        "acceptance_criteria": [
+            "docs/rounds.md 与 ROUND_ORDER 同步",
+            "全量 pytest + maintenance API 冒烟",
+            "mock 主链路 scan→plan→预览→队列→草稿→debug API",
+        ],
+        "next_actions": [
+            "手工注册 round_103 或 Phase5 实现轮",
+            "见 docs/roadmap_converged.md Phase 5 backlog",
         ],
     },
 }
@@ -2040,6 +2054,17 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest workbench chain hints",
+            ),
+        ]
+    elif round_id == "round_102":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_102_maintenance_smoke.py", "-q"],
+                "pytest round_102 maintenance smoke",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_agent_gate.py", "-q"],
+                "pytest agent_gate registry",
             ),
         ]
     else:

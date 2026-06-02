@@ -450,6 +450,17 @@ Phase 4 暂不开发。音频、版权和审核复杂度高，仅保留长期 ba
 - 交付物：`workbench.recommended_cli`；空库 scan 提示。
 - 下一轮衔接：round_102 维护或 Phase 5 预研。
 
+### Round 36c：脚本轮维护收口（已完成 — agent `round_102`）
+
+- 本轮目标：脚本轮 0–101 用尽后的治理收口与主链路回归。
+- 具体任务：同步 `docs/rounds.md` / `agent_gate`；全量 pytest；API 冒烟（scan→plan→预览→队列→草稿→debug）。
+- 交付物：`tests/test_round_102_maintenance_smoke.py`；里程碑注释。
+- 验收标准：gate round_102；不引入 Phase5 实现。
+- 不做什么：不替换 scan/upload；不上传非微信平台。
+- 允许改动范围：tests、docs、governance、小 bugfix。
+- 风险边界：个人本地 mock 优先。
+- 下一轮衔接：手工注册 round_103 或 Phase 5 Round 39（多项目 manifest 预研，docs only）。
+
 ### Round 37：网易云音乐发布包预研
 
 - 本轮目标：评估网易云音乐是否适合进入后续路线。

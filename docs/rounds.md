@@ -2000,6 +2000,23 @@
   - [x] 工作台增强
   - [x] agent_gate round_101 冒烟
 
+### Round 102 - 脚本轮维护收口
+
+- 目标：Phase0–4 与微信工作台脚本轮（0–101）收尾；全量回归与主链路 API 冒烟。
+- 范围：`docs/rounds.md`、`roadmap_converged.md`、`agent_gate` 里程碑说明；`test_round_102_maintenance_smoke`。
+- 非目标：Phase5 多项目实现；真上传；改 articles 表结构。
+- 输入：round_101 完成态、现有 pytest 套件。
+- 输出：维护轮注册表同步；scan→plan→预览→队列→草稿→/debug 关键 API 通过。
+- 验收标准：全量 `pytest` + gate；维护冒烟测试通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_102_maintenance_smoke.py -q`；`python scripts/agent_gate.py gate`。
+- 退出标准：gate round_102。
+- 风险：无。
+- 回滚点：移除 round_102 注册项。
+- 交付项：
+  - [x] 文档与 ROUND_ORDER 同步
+  - [x] 全量 pytest + 维护冒烟
+  - [x] agent_gate round_102 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

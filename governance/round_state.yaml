@@ -1,16 +1,16 @@
 current_round:
-  id: round_101
-  name: Round 101 - 微信工作台链路提示增强
-  status: completed
-  updated_at: '2026-06-02T18:27:22.803228+00:00'
-  completed_at: '2026-06-02'
+  id: round_102
+  name: Round 102 - 脚本轮维护收口
+  status: active
+  updated_at: '2026-06-02T32:00:00+00:00'
 last_completed_round:
   id: round_101
   completed_at: '2026-06-02T18:27:22.803228+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- overview.workbench 含 recommended_cli
-- 空库时 primary_action=scan
-- test_workbench_chain_hints 通过
+- docs/rounds.md 与 ROUND_ORDER 同步
+- 全量 pytest + maintenance API 冒烟
+- mock 主链路 scan→plan→预览→队列→草稿→debug API
 next_actions:
-- 注册 round_102 或维护轮
+- gate 通过后 advance
+- Phase5 见 roadmap Round 39+

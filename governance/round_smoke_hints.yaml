@@ -164,3 +164,7 @@ round_100:
 
 round_101:
   - python3 -m pytest tests/test_workbench_chain_hints.py tests/test_web_console_mvp.py -q
+
+round_102:
+  - python3 -m pytest tests/test_round_102_maintenance_smoke.py -q
+  - python3 -m pytest tests/test_agent_gate.py -q
