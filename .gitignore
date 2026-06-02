@@ -13,6 +13,8 @@ data/reports/
 # 本地 real_api_check 每次运行产物（仓库内 20260531 示例报告除外）
 reports/real_api_runs/run_*.json
 reports/real_api_runs/run_*.md
+reports/auto_approve_pipeline/round_*.json
+reports/auto_approve_pipeline/round_*.md
 config/rules.yaml
 .DS_Store
 .idea/

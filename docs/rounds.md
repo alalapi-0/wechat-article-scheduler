@@ -1217,11 +1217,11 @@
 - 风险：误创建过多公众号草稿；与历史「审核」概念混淆（本仓库 Round 43 已移除审核，此处仅指 pipeline 元数据）。
 - 回滚点：仅保留 `real_api_check`，禁用 `auto_approve_pipeline`。
 - 交付项：
-  - [ ] auto_approve_pipeline 脚本
-  - [ ] real_api_check auto_approve 元数据
-  - [ ] reports/auto_approve_pipeline 报告
-  - [ ] README / .env.example 说明
-  - [ ] agent_gate round_055 冒烟
+  - [x] auto_approve_pipeline 脚本
+  - [x] real_api_check auto_approve 元数据
+  - [x] reports/auto_approve_pipeline 报告
+  - [x] README / .env.example 说明
+  - [x] agent_gate round_055 冒烟
 
 
 ### Round 56 - 路线收敛治理轮

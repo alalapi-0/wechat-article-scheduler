@@ -1,0 +1,28 @@
+{
+  "round": 1,
+  "started_at": "2026-06-02T05:00:00+00:00",
+  "auto_approve_enabled": true,
+  "api_report_json": "reports/real_api_runs/run_20260531T230509Z.json",
+  "api_report_md": "reports/real_api_runs/run_20260531T230509Z.md",
+  "provider": "wechat_official",
+  "model": "draft/add + material/thumb",
+  "mock": false,
+  "success_count": 3,
+  "failure_count": 0,
+  "auto_approved_count": 3,
+  "token_ok": true,
+  "blocking_reason": "",
+  "dry_run": false,
+  "credentials_ready": true,
+  "downstream": {
+    "scan": {"imported": 1},
+    "run_once": {"processed": 1, "drafted": 1},
+    "draft_rows": 1
+  },
+  "database": {
+    "articles": 10,
+    "pending_jobs": 0,
+    "done_jobs": 5,
+    "wechat_drafts": 8
+  }
+}

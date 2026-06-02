@@ -60,6 +60,42 @@ def test_quality_status_pass_with_issues(rac):
     assert status == "pass_with_issues"
 
 
+def test_run_pipeline_mock_skip_downstream(pipeline, monkeypatch, tmp_path):
+    monkeypatch.setenv("WECHAT_MODE", "mock")
+    monkeypatch.delenv("WECHAT_APP_ID", raising=False)
+    monkeypatch.delenv("WECHAT_APP_SECRET", raising=False)
+    monkeypatch.setattr(pipeline, "REPORTS_DIR", tmp_path)
+    payload = pipeline.run_pipeline(
+        round_num=88,
+        samples=1,
+        skip_downstream=True,
+        dry_run=True,
+    )
+    assert payload["mock"] is True
+    assert payload["auto_approve_enabled"] is True
+    assert payload["round"] == 88
+    assert payload["downstream"] is None
+
+
+def test_main_skip_if_blocked_mock(pipeline, monkeypatch, capsys):
+    monkeypatch.setenv("WECHAT_MODE", "mock")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "auto_approve_pipeline",
+            "--round",
+            "1",
+            "--dry-run",
+            "--skip-downstream",
+            "--skip-if-blocked",
+        ],
+    )
+    assert pipeline.main() == 0
+    captured = capsys.readouterr()
+    assert "pipeline_report:" in captured.out
+
+
 def test_write_round_report(pipeline, tmp_path, monkeypatch):
     monkeypatch.setattr(pipeline, "REPORTS_DIR", tmp_path)
     payload = {

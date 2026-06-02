@@ -137,7 +137,13 @@ def _db_summary(database_path: Path) -> dict[str, int]:
         return out
 
 
-def run_pipeline(*, round_num: int, samples: int, skip_downstream: bool) -> dict[str, Any]:
+def run_pipeline(
+    *,
+    round_num: int,
+    samples: int,
+    skip_downstream: bool,
+    dry_run: bool = False,
+) -> dict[str, Any]:
     _load_dotenv()
     if _pipeline_auto_approve_enabled():
         os.environ.setdefault("AUTO_APPROVE_GENERATIONS", "true")
@@ -146,14 +152,15 @@ def run_pipeline(*, round_num: int, samples: int, skip_downstream: bool) -> dict
     rac = _load_real_api_check()
     api_report = rac.run_check(
         samples=max(1, samples),
-        dry_run=False,
+        dry_run=dry_run,
         token_only=False,
         auto_approve=True,
     )
     api_report_path = rac._write_report(api_report)
 
     downstream: dict[str, Any] | None = None
-    if not skip_downstream and api_report.token_ok and not api_report.blocking_reason:
+    can_run_downstream = api_report.token_ok and not api_report.blocking_reason
+    if not skip_downstream and can_run_downstream and not api_report.mock_used:
         try:
             downstream = _run_cli_downstream(round_num=round_num)
         except Exception as exc:  # noqa: BLE001
@@ -179,6 +186,8 @@ def run_pipeline(*, round_num: int, samples: int, skip_downstream: bool) -> dict
         "auto_approved_count": api_report.auto_approved_count,
         "token_ok": api_report.token_ok,
         "blocking_reason": api_report.blocking_reason,
+        "dry_run": dry_run,
+        "credentials_ready": api_report.credentials.ready,
         "downstream": downstream,
         "database": db_stats,
     }
@@ -262,12 +271,23 @@ def main() -> int:
         action="store_true",
         help="跳过 scan/run-once 下游（仅 real_api_check）",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="仅 token/配置检查，不调用 draft/add（与 real_api_check --dry-run 一致）",
+    )
+    parser.add_argument(
+        "--skip-if-blocked",
+        action="store_true",
+        help="mock/无凭证/阻断时仍写报告并以 0 退出（Agent 门控不硬停）",
+    )
     args = parser.parse_args()
 
     payload = run_pipeline(
         round_num=max(1, args.round),
         samples=max(1, args.samples),
         skip_downstream=args.skip_downstream,
+        dry_run=args.dry_run,
     )
     out = _write_round_report(payload)
     print(f"pipeline_report: {out.with_suffix('.json')}")
@@ -275,10 +295,14 @@ def main() -> int:
         f"round={payload['round']} success={payload['success_count']} "
         f"auto_approved={payload['auto_approved_count']}"
     )
+    blocked = bool(payload.get("blocking_reason")) and not payload.get("token_ok")
     if payload.get("blocking_reason"):
         print(f"blocking: {payload['blocking_reason']}", file=sys.stderr)
-        return 2
+    if args.skip_if_blocked and (payload.get("mock") or blocked or payload.get("dry_run")):
+        return 0
     if payload.get("mock"):
+        return 2
+    if blocked and not args.dry_run:
         return 2
     if payload.get("failure_count", 0) > 0:
         return 1

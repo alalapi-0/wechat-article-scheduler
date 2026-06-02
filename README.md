@@ -106,6 +106,18 @@ python3 scripts/real_api_check.py --dry-run --skip-if-blocked
 WECHAT_MODE=real python3 scripts/real_api_check.py --samples 1 --publish
 ```
 
+Auto-Approved 端到端（真实草稿 + auto_approved 元数据 + 可选 scan/run-once 下游），报告见 `reports/auto_approve_pipeline/`：
+
+```bash
+WECHAT_MODE=real WECHAT_ENABLE_PUBLISH=false python3 scripts/auto_approve_pipeline.py --round 1 --samples 3
+```
+
+无凭证时：
+
+```bash
+python3 scripts/auto_approve_pipeline.py --round 1 --dry-run --skip-downstream --skip-if-blocked
+```
+
 本地定时发布测试建议使用 Web 批量发布设置或 CLI 排期：把任务设为“正式发布”，并让本地 scheduler 到点执行。当前代码还没有把定时时间直接写入微信后台草稿箱。
 
 ## CLI 命令
