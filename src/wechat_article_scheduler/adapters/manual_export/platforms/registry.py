@@ -5,6 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
+from wechat_article_scheduler.adapters.manual_export.platforms.bilibili import (
+    build_bilibili_publish_pack,
+)
 from wechat_article_scheduler.adapters.manual_export.platforms.douban import (
     build_douban_publish_pack,
 )
@@ -27,11 +30,16 @@ SUPPORTED_PLATFORMS: dict[str, dict[str, str]] = {
         "label": "豆瓣",
         "description": "标题、正文、标签提示与封面说明（仅复制，不自动发布）",
     },
+    "bilibili": {
+        "label": "Bilibili",
+        "description": "标题、简介、封面说明、上传清单与视频占位（不自动上传）",
+    },
 }
 
 _BUILDERS: dict[str, PackBuilder] = {
     "zhihu": build_zhihu_publish_pack,
     "douban": build_douban_publish_pack,
+    "bilibili": build_bilibili_publish_pack,
 }
 
 

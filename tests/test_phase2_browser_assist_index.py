@@ -20,8 +20,8 @@ def test_supported_platforms_include_text_sites() -> None:
         assert plan["assessment"]["recommendation"] == "conditional"
 
 
-def test_api_lists_three_assist_platforms(tmp_path) -> None:
+def test_api_lists_assist_platforms_including_bilibili(tmp_path) -> None:
     cfg = make_test_config(tmp_path, tmp_path / "x.sqlite3")
     client = TestClient(create_app(cfg))
     ids = {p["id"] for p in client.get("/api/browser-assist/platforms").json()["platforms"]}
-    assert {"wechat_official", "zhihu", "douban"}.issubset(ids)
+    assert {"wechat_official", "zhihu", "douban", "bilibili"}.issubset(ids)

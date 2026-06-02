@@ -357,27 +357,27 @@ Phase 3 暂不开发。短视频和图文平台风控更高，当前仅保留 ba
 - 交付物：`wechat_chain_summary` CLI/API；overview 聚合。
 - 下一轮衔接：Bilibili manual_export 或 round_092。
 
-### Round 30：Bilibili manual_export
+### Round 30：Bilibili manual_export（已完成 — agent `round_092`）
 
 - 本轮目标：生成 Bilibili 人工上传包。
-- 具体任务：导出视频、封面、标题、简介、标签说明。
-- 交付物：Bilibili outbox 模板。
-- 验收标准：只导出，不登录。
+- 具体任务：`build_bilibili_publish_pack`、video placeholder、upload checklist、`export-outbox --platform bilibili`。
+- 交付物：`docs/bilibili_manual_export.md`。
+- 验收标准：只导出，不登录；不含视频二进制。
 - 不做什么：不调用上传接口。
-- 允许改动范围：manual_export、docs。
+- 允许改动范围：manual_export、docs、tests。
 - 风险边界：上传成功需人工 proof。
-- 下一轮衔接：进入 Bilibili browser_assist 评估。
+- 下一轮衔接：Bilibili browser_assist（`round_093`）。
 
-### Round 31：Bilibili browser_assist
+### Round 31：Bilibili browser_assist（已完成 — agent `round_093`）
 
 - 本轮目标：评估 Bilibili 本地辅助上传。
-- 具体任务：安全边界、人工确认、截图和 proof。
-- 交付物：评估报告。
-- 验收标准：不绕过登录或风控。
+- 具体任务：`bilibili_workflow.py` dry-run；`/api/browser-assist-plan?platform=bilibili`。
+- 交付物：`docs/bilibili_browser_assist.md`。
+- 验收标准：不绕过登录或风控；优先 manual_export。
 - 不做什么：不做无人值守上传。
-- 允许改动范围：docs、dry-run。
+- 允许改动范围：browser_assist、docs、tests。
 - 风险边界：高风险则停止。
-- 下一轮衔接：进入小红书发布包。
+- 下一轮衔接：小红书发布包或 round_094。
 
 ### Round 32：小红书图文/视频发布包
 

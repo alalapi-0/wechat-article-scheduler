@@ -145,6 +145,8 @@ ROUND_ORDER = [
     "round_089",
     "round_090",
     "round_091",
+    "round_092",
+    "round_093",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1069,7 +1071,29 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "scan/plan 主线不回归",
         ],
         "next_actions": [
-            "注册 round_092 或 Bilibili 导出预研",
+            "Bilibili manual_export round_092",
+        ],
+    },
+    "round_092": {
+        "name": "Round 92 - Bilibili manual_export 发布包",
+        "acceptance_criteria": [
+            "export-outbox --platform bilibili 生成完整文件集",
+            "含 video placeholder 与 upload checklist",
+            "不真上传、不标已发布",
+        ],
+        "next_actions": [
+            "Bilibili browser_assist 评估 round_093",
+        ],
+    },
+    "round_093": {
+        "name": "Round 93 - Bilibili browser_assist 评估",
+        "acceptance_criteria": [
+            "platform=bilibili browser-assist-plan",
+            "browser-assist/platforms 含 bilibili",
+            "/debug 可见 bilibili 评估 JSON",
+        ],
+        "next_actions": [
+            "注册 round_094 或微信修复轮",
         ],
     },
 }
@@ -1843,6 +1867,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest wechat chain summary and stability",
+            ),
+        ]
+    elif round_id == "round_092":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_bilibili_publish_pack.py", "-q"],
+                "pytest bilibili publish pack",
+            ),
+        ]
+    elif round_id == "round_093":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_bilibili_browser_assist.py", "-q"],
+                "pytest bilibili browser assist",
             ),
         ]
     else:

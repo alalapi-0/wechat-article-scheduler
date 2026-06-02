@@ -43,7 +43,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--platform",
         type=str,
         default="wechat_official",
-        help="wechat_official | zhihu | douban（评估 dry-run）",
+        help="wechat_official | zhihu | douban | bilibili（评估 dry-run）",
     )
 
     sub.add_parser("adapter-registry", help="列出 adapter registry 能力声明 JSON")
@@ -106,7 +106,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
     export_ob = sub.add_parser("export-outbox", help="导出作品为 manual_export outbox 包")
     export_ob.add_argument("--article-id", type=int, required=True)
-    export_ob.add_argument("--platform", type=str, default="generic")
+    export_ob.add_argument(
+        "--platform",
+        type=str,
+        default="generic",
+        help="generic | zhihu | douban | bilibili",
+    )
 
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
     reject_p.add_argument("--article-id", type=int, required=True)

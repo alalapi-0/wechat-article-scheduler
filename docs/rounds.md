@@ -1840,6 +1840,38 @@
   - [x] 链路摘要与测试
   - [x] agent_gate round_091 冒烟
 
+### Round 92 - Bilibili manual_export 发布包
+
+- 目标：路线图 Round 30 — Bilibili 人工上传包骨架（不真上传）。
+- 范围：`platforms/bilibili.py`、`bilibili_manual_export.md`、`export-outbox --platform bilibili`。
+- 非目标：视频二进制导出；B 站 API；自动投稿。
+- 输入：round_090 视频预研、manual_export 框架。
+- 输出：title/description/checklist/video_placeholder 等文件。
+- 验收标准：`test_bilibili_publish_pack` 通过；manifest 仍不写库视频。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_bilibili_publish_pack.py -q`。
+- 退出标准：gate round_092 通过。
+- 风险：用户误以为已上传。
+- 回滚点：从 registry 移除 bilibili。
+- 交付项：
+  - [x] Bilibili 发布包
+  - [x] agent_gate round_092 冒烟
+
+### Round 93 - Bilibili browser_assist 评估
+
+- 目标：路线图 Round 31 — 投稿页辅助评估 dry-run。
+- 范围：`bilibili_workflow.py`、`browser-assist-plan --platform bilibili`、`/debug`。
+- 非目标：自动上传视频；保存 cookie。
+- 输入：round_092 发布包。
+- 输出：assessment manual_export_first；platforms API 含 bilibili。
+- 验收标准：干跑含 checkpoints；不绕过审核。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_bilibili_browser_assist.py -q`。
+- 退出标准：gate round_093；`/debug` 可见 bilibili JSON。
+- 风险：误作无人值守投稿工具。
+- 回滚点：移除 bilibili 分支。
+- 交付项：
+  - [x] bilibili dry-run
+  - [x] agent_gate round_093 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

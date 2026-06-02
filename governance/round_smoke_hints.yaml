@@ -134,3 +134,9 @@ round_090:
 
 round_091:
   - python3 -m pytest tests/test_wechat_chain_summary.py tests/test_wechat_chain_stability.py -q
+
+round_092:
+  - python3 -m pytest tests/test_bilibili_publish_pack.py -q
+
+round_093:
+  - python3 -m pytest tests/test_bilibili_browser_assist.py -q

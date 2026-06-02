@@ -13,6 +13,9 @@ from wechat_article_scheduler.adapters.browser_assist.zhihu_workflow import (
 from wechat_article_scheduler.adapters.browser_assist.douban_workflow import (
     build_douban_dry_run_plan,
 )
+from wechat_article_scheduler.adapters.browser_assist.bilibili_workflow import (
+    build_bilibili_dry_run_plan,
+)
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.adapters.manual_export import list_outbox_packages
 
@@ -28,6 +31,10 @@ SUPPORTED_BROWSER_ASSIST: dict[str, dict[str, str]] = {
     "douban": {
         "label": "豆瓣",
         "description": "日记/笔记辅助评估（dry-run，不自动发布）",
+    },
+    "bilibili": {
+        "label": "Bilibili",
+        "description": "视频投稿页辅助评估（dry-run，不自动上传）",
     },
 }
 
@@ -63,6 +70,12 @@ def build_dry_run_plan(
     if key == "douban":
         ob = outbox_relative_path or _latest_outbox_path(config, article_id, "douban")
         return build_douban_dry_run_plan(
+            article_id=article_id,
+            outbox_relative_path=ob,
+        )
+    if key == "bilibili":
+        ob = outbox_relative_path or _latest_outbox_path(config, article_id, "bilibili")
+        return build_bilibili_dry_run_plan(
             article_id=article_id,
             outbox_relative_path=ob,
         )

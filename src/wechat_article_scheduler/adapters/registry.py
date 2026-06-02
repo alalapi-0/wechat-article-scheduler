@@ -161,7 +161,7 @@ BUILTIN_CAPABILITIES: tuple[AdapterCapability, ...] = (
         supports_automated_publish=False,
         requires_human_proof=True,
         risk_level="high",
-        notes="Phase3 预研占位：Bilibili 人工上传包，未实现导出。",
+        notes="Bilibili 人工上传包（export-outbox --platform bilibili）；不含视频二进制。",
     ),
     AdapterCapability(
         platform="bilibili",
