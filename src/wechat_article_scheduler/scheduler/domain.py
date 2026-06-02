@@ -9,9 +9,15 @@ from pathlib import Path
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters import get_adapter
-from wechat_article_scheduler.adapters.base import DraftOptions
+from wechat_article_scheduler.adapters.base import DraftOptions, DraftResult
+from wechat_article_scheduler.adapters.wechat_http import WechatApiError
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.parser import clamp_summary
+from wechat_article_scheduler.scheduler.draft_idempotency import (
+    draft_result_from_reuse,
+    find_reusable_draft_media_id,
+)
+from wechat_article_scheduler.wechat_errors import format_job_failure
 from wechat_article_scheduler.publish_config import (
     defaults_from_rules,
     parse_publish_config,
@@ -79,20 +85,39 @@ def execute_due_job(
             author=pub_cfg.author,
             content_source_url=pub_cfg.content_source_url,
         )
-        draft = adapter.create_draft(
-            title=job["title"],
-            summary=digest_summary,
-            body=job["body"],
-            cover_path=_row_get(job, "cover_path"),
-            options=draft_opts,
+        content_hash = _row_get(job, "content_hash")
+        reused_media = find_reusable_draft_media_id(
+            conn, article_id=article_id, content_hash=content_hash
         )
-        conn.execute(
-            """
-            INSERT INTO wechat_drafts (article_id, media_id, status, payload_json)
-            VALUES (?, ?, 'created', ?)
-            """,
-            (article_id, draft.media_id, safe_payload(draft.raw_response)),
-        )
+        draft: DraftResult
+        if reused_media:
+            draft = draft_result_from_reuse(reused_media)
+            db.log_event(
+                conn,
+                entity_type="publish_job",
+                entity_id=job_id,
+                event_type="draft_idempotent_reuse",
+                payload=json.dumps(
+                    {"article_id": article_id, "media_id": reused_media[:32]},
+                    ensure_ascii=False,
+                ),
+            )
+            stats["draft_reused"] = stats.get("draft_reused", 0) + 1
+        else:
+            draft = adapter.create_draft(
+                title=job["title"],
+                summary=digest_summary,
+                body=job["body"],
+                cover_path=_row_get(job, "cover_path"),
+                options=draft_opts,
+            )
+            conn.execute(
+                """
+                INSERT INTO wechat_drafts (article_id, media_id, status, payload_json)
+                VALUES (?, ?, 'created', ?)
+                """,
+                (article_id, draft.media_id, safe_payload(draft.raw_response)),
+            )
         force_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
         pub = adapter.submit_publish(draft.media_id, force=force_publish)
         conn.execute(
@@ -144,9 +169,17 @@ def execute_due_job(
             entity_type="publish_job",
             entity_id=job_id,
             event_type="job_failed",
-            payload=str(exc)[:500],
+            payload=format_job_failure(exc),
         )
-        logger.exception("任务 %s 失败 (retry %s)", job_id, new_retry)
+        if isinstance(exc, WechatApiError):
+            logger.warning(
+                "任务 %s 失败 (retry %s): %s",
+                job_id,
+                new_retry,
+                exc.human_hint,
+            )
+        else:
+            logger.exception("任务 %s 失败 (retry %s)", job_id, new_retry)
         stats["failed"] += 1
 
 

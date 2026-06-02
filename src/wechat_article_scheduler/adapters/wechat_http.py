@@ -23,7 +23,13 @@ class WechatApiError(RuntimeError):
         self.errcode = errcode
         self.errmsg = errmsg
         self.endpoint = endpoint
-        super().__init__(f"微信 API 错误 {errcode}: {errmsg} ({endpoint})")
+        try:
+            from wechat_article_scheduler.wechat_errors import human_wechat_error
+
+            self.human_hint = human_wechat_error(errcode, errmsg)
+        except Exception:  # noqa: BLE001
+            self.human_hint = f"微信 API 错误 {errcode}: {errmsg}"
+        super().__init__(f"{self.human_hint} ({endpoint})" if endpoint else self.human_hint)
 
 
 class TokenCache:

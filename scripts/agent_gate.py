@@ -111,6 +111,7 @@ ROUND_ORDER = [
     "round_055",
     "round_056",
     "round_057",
+    "round_058",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -661,7 +662,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "draft-only 与正式发布路径在文档和测试中可区分",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 3：摘要、错误码与幂等",
+            "推进 Round 58：摘要、错误码与幂等（收敛 Phase 1 Round 3）",
+        ],
+    },
+    "round_058": {
+        "name": "Round 58 - 摘要错误码与草稿幂等",
+        "acceptance_criteria": [
+            "摘要 120 字统一截断且超长有 warning 事件",
+            "常见微信 errcode 有可读 human_hint",
+            "相同 content_hash 不重复 create_draft",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 4：Markdown 到微信公众号 HTML 渲染器",
         ],
     },
 }
@@ -1015,6 +1027,21 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_wechat_chain_stability.py", "tests/test_scheduler_hardening.py", "-q"],
                 "pytest wechat chain stability",
+            ),
+        ]
+    elif round_id == "round_058":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_digest_limits.py",
+                    "tests/test_wechat_digest_errors_idempotency.py",
+                    "tests/test_real_adapter.py",
+                    "-q",
+                ],
+                "pytest digest errors idempotency",
             ),
         ]
     else:

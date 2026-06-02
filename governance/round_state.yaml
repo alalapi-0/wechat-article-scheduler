@@ -1,15 +1,15 @@
 current_round:
-  id: round_057
-  name: Round 57 - 收敛后微信链路稳定化（启动）
-  status: completed
-  updated_at: '2026-06-02T05:54:59.470737+00:00'
-  completed_at: '2026-06-02'
+  id: round_058
+  name: Round 58 - 摘要错误码与草稿幂等
+  status: active
+  updated_at: '2026-06-02T06:00:00+00:00'
 last_completed_round:
-  id: round_056
-  completed_at: '2026-06-02T05:54:59.470737+00:00'
+  id: round_057
+  completed_at: '2026-06-02T05:57:00+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- scan/plan/run-once mock 主链路测试通过
-- draft-only 与正式发布路径在文档和测试中可区分
+  - 摘要 120 字统一截断且超长有 warning 事件
+  - 常见微信 errcode 有可读 human_hint
+  - 相同 content_hash 不重复 create_draft
 next_actions:
-- 按 docs/roadmap_converged.md 继续 Round 3：摘要、错误码与幂等
+  - 按 docs/roadmap_converged.md 继续 Round 4：Markdown 到微信公众号 HTML 渲染器

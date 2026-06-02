@@ -1,4 +1,4 @@
-# 开发路线图（Round 0 ~ Round 57）
+# 开发路线图（Round 0 ~ Round 58）
 
 本文件是路线图**人类权威源**；机器可读状态见 `governance/round_state.yaml`，机器轮次注册表见 `scripts/agent_gate.py` 的 `ROUND_ORDER` / `ROUND_META`。
 任何轮次调整都必须同次同步 `tests/test_agent_gate.py` 与治理范围字段。
@@ -101,6 +101,7 @@
 | Round 55 | Auto-Approved Real API Pipeline | 已完成 |
 | Round 56 | 路线收敛治理轮 | 已完成 |
 | Round 57 | 收敛后微信链路稳定化 | 已完成 |
+| Round 58 | 摘要错误码与草稿幂等 | 进行中 |
 
 ## 轮次字段规范
 
@@ -1265,6 +1266,24 @@
   - [x] 收敛路线图 Round 2 入口登记（agent_gate `round_057`）
   - [x] 链路稳定性审计文档
   - [x] mock/real draft-only 行为对照测试补强
+
+### Round 58 - 摘要错误码与草稿幂等
+
+- 目标：降低真实草稿创建失败和重复创建风险。
+- 范围：统一 digest 120 字；微信 errcode 可读映射；同 content_hash 草稿幂等复用。
+- 非目标：草稿更新大功能；默认真实发布。
+- 输入：Round 57 主链路、`parser.clamp_summary`、RealWechatAdapter。
+- 输出：`wechat_errors.py`、`draft_idempotency.py`、`docs/wechat_digest_errors_idempotency.md`。
+- 验收标准：长摘要不超限；`WechatApiError` 含 human_hint；重复执行不新增 draft 行。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_digest_limits.py tests/test_wechat_digest_errors_idempotency.py tests/test_real_adapter.py -q`。
+- 退出标准：job_failed 事件不含 secret；幂等复用有 `draft_idempotent_reuse` 审计。
+- 风险：内容变更但 hash 未更新时仍复用旧草稿。
+- 回滚点：移除幂等查询，仅保留摘要截断与错误码说明。
+- 交付项：
+  - [x] 错误码说明与 human_hint
+  - [x] 摘要统一与测试
+  - [x] 草稿创建幂等实现与测试
+  - [x] agent_gate round_058 冒烟
 
 ## 历史说明
 

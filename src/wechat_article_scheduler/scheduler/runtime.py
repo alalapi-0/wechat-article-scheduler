@@ -64,6 +64,7 @@ def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[
         "skipped_max_retries": 0,
         "skipped_content": 0,
         "drafted": 0,
+        "draft_reused": 0,
         "skipped_manual": 0,
     }
     now = datetime.now().replace(microsecond=0)
@@ -76,7 +77,8 @@ def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[
             """
             SELECT j.id AS job_id, j.article_id, j.scheduled_at, j.status, j.retry_count,
                    j.publish_config_json,
-                   a.title, a.summary, a.body, a.source_path, a.cover_path
+                   a.title, a.summary, a.body, a.source_path, a.cover_path,
+                   a.content_hash
             FROM publish_jobs j
             JOIN articles a ON a.id = j.article_id
             WHERE j.status = 'pending'
