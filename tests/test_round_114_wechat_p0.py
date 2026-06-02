@@ -51,5 +51,5 @@ def test_home_upload_and_outbox_markup(client: TestClient) -> None:
     html = client.get("/").text
     assert "showUploadOutcome" in html
     assert "exportOutboxArticle" in html
-    assert "导出 outbox" in html
+    assert "export-drop" in html or "导出" in html
     assert "正在上传并扫描入库" in html

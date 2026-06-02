@@ -213,6 +213,21 @@ try {
   .work .acts { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
   .work .acts .btn-ghost { border-color: var(--line); color: var(--muted); }
   .work .acts .btn-ghost:hover { color: var(--text); }
+  .export-drop { display: inline-block; position: relative; }
+  .export-drop-summary { list-style: none; cursor: pointer; }
+  .export-drop-summary::-webkit-details-marker { display: none; }
+  .export-drop-menu {
+    position: absolute; right: 0; top: calc(100% + 4px); z-index: 30;
+    min-width: 168px; max-height: 240px; overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--line-strong);
+    border-radius: 8px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  }
+  .export-drop-item {
+    display: block; width: 100%; text-align: left; padding: 6px 10px;
+    border: none; background: transparent; font: inherit; font-size: 13px;
+    color: var(--text); border-radius: 6px; cursor: pointer;
+  }
+  .export-drop-item:hover { background: var(--surface-soft); }
 
   .steps { display: flex; flex-direction: column; gap: 8px; }
   .step {
@@ -788,6 +803,7 @@ let scheduleMode = 'batch'; // 'single' | 'batch'
 let scheduleSingleArticleId = null;
 let fpSingle = null;
 let fpBatch = null;
+let manualExportPlatforms = [{ id: 'generic', label: '通用 outbox', description: '' }];
 
 function defaultScheduleMoment(){
   const d = new Date();
@@ -1076,6 +1092,7 @@ async function boot(){
   const btnRefreshQ = el('btnRefreshQueue');
   if (btnRefreshQ) btnRefreshQ.addEventListener('click', refreshAll);
   renderSteps();
+  await loadManualExportPlatforms();
   await refreshAll();
   applyInitialWorkbenchSection();
 }
@@ -1316,9 +1333,47 @@ function showUploadOutcome(data){
   flashEventsPanel();
 }
 
+async function loadManualExportPlatforms(){
+  try {
+    const d = await (await fetch('/api/manual-export/platforms')).json();
+    const list = (d.platforms || []).map(p => ({
+      id: p.id,
+      label: p.label || p.id,
+      description: p.description || '',
+    }));
+    if (list.length) {
+      list.sort((a, b) => {
+        if (a.id === 'generic') return -1;
+        if (b.id === 'generic') return 1;
+        return String(a.label).localeCompare(String(b.label), 'zh');
+      });
+      manualExportPlatforms = list;
+    }
+  } catch (e) { /* 非阻塞，回退 generic */ }
+}
+
+function manualExportPlatformLabel(platformId){
+  const p = manualExportPlatforms.find(x => x.id === platformId);
+  return (p && p.label) ? p.label : platformId;
+}
+
+function workExportMenuHtml(articleId){
+  const platforms = manualExportPlatforms.length
+    ? manualExportPlatforms
+    : [{ id: 'generic', label: '通用 outbox' }];
+  const buttons = platforms.map(p => {
+    const pid = String(p.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const title = p.description ? ` title="${esc(p.description)}"` : '';
+    return `<button type="button" class="export-drop-item"${title} onclick="event.stopPropagation(); exportOutboxArticle(${articleId},'${pid}')">${esc(p.label || p.id)}</button>`;
+  }).join('');
+  return `<details class="export-drop" onclick="event.stopPropagation()"><summary class="btn-ghost btn-sm export-drop-summary">导出</summary><div class="export-drop-menu" role="menu">${buttons}</div></details>`;
+}
+
 async function exportOutboxArticle(articleId, platform){
   const plat = platform || 'generic';
-  if (!window.confirm('导出 outbox 包到本地目录？不会联网或自动发布。')) return;
+  const label = manualExportPlatformLabel(plat);
+  if (!window.confirm(`导出「${label}」outbox 包到本地目录？不会联网或自动发布。`)) return;
+  document.querySelectorAll('.export-drop[open]').forEach(el => el.removeAttribute('open'));
   try {
     const d = await (await fetch(
       `/api/articles/${articleId}/export-outbox?platform=${encodeURIComponent(plat)}`,
@@ -2035,7 +2090,7 @@ function renderWorks(arts){
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
             <button class="btn-ghost btn-sm" onclick="scheduleArticle(${a.id})">安排时间</button>
             <button class="btn-ghost btn-sm" onclick="changeCover(${a.id})">换封面</button>
-            <button class="btn-ghost btn-sm" onclick="exportOutboxArticle(${a.id})">导出 outbox</button>
+            ${workExportMenuHtml(a.id)}
             <button class="btn-ghost btn-sm" onclick="trashArticle(${a.id})">删除</button>
           </div>
         </div>

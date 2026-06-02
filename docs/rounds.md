@@ -2414,6 +2414,23 @@
   - [x] 高级面板 advAgentGate
   - [x] agent_gate round_124 冒烟
 
+### Round 125 - 作品卡导出下拉
+
+- 目标：作品卡「导出」下拉：通用 outbox + 已注册 manual_export 平台；复用 POST export-outbox 与 GET manual-export/platforms。
+- 范围：`admin_template.html` 作品库 acts 区。
+- 非目标：新导出后端逻辑。
+- 输入：round_124 完成态；round_114 export API。
+- 输出：每卡 `<details>` 导出菜单；boot 预载平台列表。
+- 验收标准：`test_round_125_wechat_p0`；mock@8080 点击导出一种平台成功。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_125_wechat_p0.py -q`。
+- 退出标准：gate round_125。
+- 风险：无。
+- 回滚点：恢复单按钮「导出 outbox」。
+- 交付项：
+  - [x] 导出下拉与平台列表 API 联动
+  - [x] POST export-outbox 按平台导出
+  - [x] agent_gate round_125 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
