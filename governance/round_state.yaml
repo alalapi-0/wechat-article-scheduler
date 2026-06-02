@@ -1,11 +1,12 @@
 current_round:
   id: round_127
   name: Round 127 - 统一 export-outbox 成功 toast
-  status: active
+  status: completed
   updated_at: '2026-06-02T20:07:23.037668+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_126
-  completed_at: '2026-06-02T20:07:23.037668+00:00'
+  id: round_127
+  completed_at: '2026-06-02T20:08:34.683407+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - /assets/export-outbox-ui.js 工作台与详情共用
