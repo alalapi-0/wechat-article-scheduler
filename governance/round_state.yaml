@@ -1,11 +1,12 @@
 current_round:
   id: round_061
   name: Round 61 - 封面资产管理
-  status: active
+  status: completed
   updated_at: '2026-06-02T06:12:01.271375+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_060
-  completed_at: '2026-06-02T06:12:01.271375+00:00'
+  id: round_061
+  completed_at: '2026-06-02T06:12:30+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - 封面素材库可扫描并汇总绑定/孤儿状态
