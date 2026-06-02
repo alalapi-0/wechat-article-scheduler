@@ -1,0 +1,8 @@
+{
+  "name": "wechat-article-scheduler",
+  "private": true,
+  "description": "Workspace MCP config checks (no runtime Node app)",
+  "scripts": {
+    "check:mcp": "node scripts/check_mcp_config.js"
+  }
+}

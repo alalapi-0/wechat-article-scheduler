@@ -41,18 +41,36 @@ Agent 循环：`status` → 实现任务 → `gate` → `advance --commit`。默
 
 ## MCP Tools
 
-- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP（playwright、chrome-devtools、context7、filesystem、github）。
-- 自动推进轮开始前运行 `python scripts/check_mcp_config.py`，并在 Cursor **Tools & MCP** 确认 server 已加载；修改 `mcp.json` 后通常需重启 Cursor。
-- 浏览器相关任务必须优先使用 **Playwright MCP**（深层 console/network 用 Chrome DevTools MCP）；页面实现必须边实现边浏览器检查（页面 + console + network + 核心流程）。
-- 文件操作必须确认真实文件状态；filesystem 仅授权 `${workspaceFolder}`，不得授权系统根目录或用户主目录。
-- GitHub 操作必须在提交前检查 `git diff`，避免泄露密钥；token 通过环境变量 `GITHUB_TOKEN` 注入，禁止写入仓库。
-- 若 MCP 不可用，Agent 应记录原因并按 `docs/agent_skills/mcp_usage_skill.md` 使用替代方案继续推进。
+当前项目要求启用以下 **Workspace MCP Servers**（配置见 `.cursor/mcp.json`）：
+
+- `chrome-devtools`
+- `context7`
+- `filesystem`
+- `github`
+- `playwright`
+
+用途：
+
+- **chrome-devtools**：浏览器调试、console、network、页面状态检查。
+- **context7**：查询第三方库和框架文档。
+- **filesystem**：安全读取和检查当前项目文件（仅 `${workspaceFolder}`）。
+- **github**：仓库、提交、分支、issue、PR 等相关操作。
+- **playwright**：浏览器自动化、页面操作、E2E 检查。
+
+自动推进轮开始前，Agent 必须确认上述 MCP 已在 Cursor 中加载；并运行 `node scripts/check_mcp_config.js` 或 `npm run check:mcp`（亦可 `python scripts/check_mcp_config.py`）。修改 `mcp.json` 后通常需 **重启 Cursor** 或重新加载窗口。
+
+若某个 MCP 不可用，Agent 需记录原因，并按 `docs/agent_skills/mcp_usage_skill.md` 使用可用替代方案继续推进；不因单个非阻塞 MCP 停止整轮。
+
+涉及页面、审核台、生成结果、预览、发布流程的任务，必须使用 **chrome-devtools** 或 **playwright** 进行真实浏览器检查（页面 + console + network + 核心流程），不得仅凭代码或截图判断成功。
+
+- GitHub 操作前必须 `git diff`；token 通过环境变量 `GITHUB_TOKEN`（或 `GITHUB_PERSONAL_ACCESS_TOKEN`）注入，禁止写入仓库或 MCP 配置。
 - 若缺少第三方 token/API Key 且任务可 mock/dry-run，不要卡死整体流程；仅当 token 为当前子任务唯一阻塞时才暂停该子任务。
 
 ## 常用命令
 
 ```bash
-python scripts/check_mcp_config.py          # MCP 配置与安全检查
+npm run check:mcp                           # MCP 配置与安全检查（Node）
+python scripts/check_mcp_config.py          # MCP 配置与安全检查（Python）
 python -m wechat_article_scheduler.cli init-db
 python -m wechat_article_scheduler.cli scan
 python -m wechat_article_scheduler.cli plan

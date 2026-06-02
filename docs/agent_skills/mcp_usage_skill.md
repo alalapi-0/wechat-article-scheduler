@@ -98,7 +98,7 @@ export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxxxxxx
 推荐循环：
 
 1. `python scripts/agent_gate.py status` — 当前轮次与验收项
-2. `python scripts/check_mcp_config.py` — MCP 配置摘要与安全检查
+2. `npm run check:mcp` 或 `node scripts/check_mcp_config.js` / `python scripts/check_mcp_config.py` — MCP 配置摘要与安全检查
 3. 确认 Cursor 中 MCP 已加载（Settings → Tools & MCP）
 4. 实现任务；UI 相关必须 Playwright + console/network 验证
 5. `python scripts/agent_gate.py gate` — pytest + 轮次冒烟
@@ -128,6 +128,9 @@ use context7 查询 FastAPI File Upload 最新用法
 
 ```bash
 # MCP 配置检查
+npm run check:mcp
+# 或
+node scripts/check_mcp_config.js
 python scripts/check_mcp_config.py
 
 # JSON 格式（需 jq 或 python）

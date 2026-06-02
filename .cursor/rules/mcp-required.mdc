@@ -1,0 +1,38 @@
+---
+description: "Workspace MCP 必需项、启动前检查与安全边界"
+alwaysApply: true
+---
+
+# Workspace MCP（必需）
+
+当前仓库默认需要以下 **Workspace MCP Servers**（见 `.cursor/mcp.json`）：
+
+- `chrome-devtools`
+- `context7`
+- `filesystem`
+- `github`
+- `playwright`
+
+## 启动前检查
+
+- Agent 开始自动推进前必须运行 `node scripts/check_mcp_config.js` 或 `npm run check:mcp`（亦可 `python scripts/check_mcp_config.py`），并在 Cursor **Tools & MCP** 确认 server 已加载。
+- 修改 `.cursor/mcp.json` 后通常需要 **重启 Cursor** 或重新加载窗口。
+- 单个 MCP 不可用：记录原因，按 `docs/agent_skills/mcp_usage_skill.md` 降级；不要无意义反复安装。
+
+## 任务与工具映射
+
+- **UI / 浏览器任务**：必须使用 **chrome-devtools** 或 **playwright** 做真实浏览器检查（页面 + console + network + 核心流程），不得仅凭代码或截图判断成功。
+- **文档与依赖不确定**：优先用 **context7** 查询第三方库/框架文档。
+- **文件读写**：仅当前项目目录；filesystem 仅 `${workspaceFolder}`，禁止 `/`、`~`、用户主目录根、磁盘根。
+- **GitHub 操作**：提交前必须 `git status` 与 `git diff`；禁止把 token、API Key、cookie 写入仓库或 MCP 配置。
+
+## 提交前
+
+- 确认未纳入 `.env`、密钥、无关大文件。
+- 结合 `python scripts/agent_gate.py gate` 或 pytest 完成验证。
+
+## 参考
+
+- `AGENTS.md`（MCP Tools）
+- `.cursor/rules/mcp-agent-tools.mdc`
+- `.cursor/rules/verification-gate.mdc`

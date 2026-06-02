@@ -113,3 +113,22 @@ python3 scripts/real_api_check.py --token-only
 - 不提交 `.env`、密钥、token、cookie
 - 不使用网页模拟登录公众号后台
 - 日志不打印 access token / secret
+
+## Workspace MCP Servers
+
+本项目在 Cursor 中需要启用以下 **Workspace MCP Servers**（见 `.cursor/mcp.json`）：
+
+- `chrome-devtools` — 浏览器调试、console、network
+- `context7` — 第三方库/框架文档查询
+- `filesystem` — 受控读写**当前项目目录**内文件
+- `github` — 仓库、提交、分支、issue、PR 等（需环境变量 token）
+- `playwright` — 浏览器自动化与 E2E 检查
+
+说明：
+
+1. `.cursor/mcp.json` 是本仓库的 Workspace MCP 配置；修改后 Cursor 可能需要**重启**或**重新加载窗口**才会显示为 enabled。
+2. **GitHub MCP** 通过环境变量提供 token（如 `GITHUB_TOKEN`），**不得**把真实 token 写入仓库或 `mcp.json`。
+3. **filesystem** 仅授权 `${workspaceFolder}`（当前项目根），不得指向 `/`、`~` 或用户主目录根路径。
+4. 配置检查：`npm run check:mcp`（需 `package.json`）或 `node scripts/check_mcp_config.js` / `python scripts/check_mcp_config.py`。
+
+详见 `AGENTS.md`、`docs/agent_skills/mcp_usage_skill.md`。

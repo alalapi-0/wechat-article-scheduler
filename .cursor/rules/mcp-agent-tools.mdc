@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## 基本原则
 
-- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP；自动推进轮开始前运行 `python scripts/check_mcp_config.py` 并确认 Cursor 已加载 MCP。
+- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP（chrome-devtools、context7、filesystem、github、playwright）；自动推进轮开始前运行 `npm run check:mcp` 或 `python scripts/check_mcp_config.py` 并确认 Cursor 已加载 MCP。详见 `.cursor/rules/mcp-required.mdc`。
 - 若 MCP 未加载，记录原因并尝试按 `docs/agent_skills/mcp_usage_skill.md` 修复；不因单个 MCP 不可用而停止整轮，除非该 MCP 是当前任务唯一阻塞。
 
 ## 浏览器与 UI

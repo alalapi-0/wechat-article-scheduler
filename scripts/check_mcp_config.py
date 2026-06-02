@@ -12,6 +12,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 MCP_PATH = ROOT / ".cursor" / "mcp.json"
 
+REQUIRED_SERVERS = (
+    "chrome-devtools",
+    "context7",
+    "filesystem",
+    "github",
+    "playwright",
+)
+
 SECRET_KEY_PATTERN = re.compile(
     r"(token|secret|password|api[_-]?key|authorization)",
     re.IGNORECASE,
@@ -95,8 +103,9 @@ def main() -> int:
     issues: list[str] = []
     warnings: list[str] = []
 
-    if "playwright" not in servers:
-        issues.append("缺少 playwright MCP（浏览器 E2E 验收必需）")
+    for required in REQUIRED_SERVERS:
+        if required not in servers:
+            issues.append(f"缺少必需 MCP server: {required}")
 
     for name, cfg in servers.items():
         if not isinstance(cfg, dict):
@@ -115,15 +124,16 @@ def main() -> int:
             else:
                 issues.append("filesystem args 必须是数组")
 
-    if "github" in servers and "GITHUB_TOKEN" not in str(
-        servers["github"].get("env", {})
-    ):
-        warnings.append(
-            "github MCP 未引用 ${env:GITHUB_TOKEN}；请确认 token 通过环境变量注入"
-        )
+    if "github" in servers:
+        env_str = str(servers["github"].get("env", {}))
+        if "GITHUB_TOKEN" not in env_str and "GITHUB_PERSONAL_ACCESS_TOKEN" not in env_str:
+            warnings.append(
+                "github MCP 未引用 GITHUB_TOKEN / GITHUB_PERSONAL_ACCESS_TOKEN 环境变量占位符"
+            )
 
     print("check_mcp_config: PASS" if not issues else "check_mcp_config: FAIL")
     print(f"  path: {MCP_PATH.relative_to(ROOT)}")
+    print(f"  required: {', '.join(REQUIRED_SERVERS)}")
     print(f"  servers ({len(servers)}): {', '.join(sorted(servers))}")
     for name in sorted(servers):
         if isinstance(servers[name], dict):
