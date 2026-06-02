@@ -1757,8 +1757,8 @@
 - 风险：schema 与 backlog 漂移。
 - 回滚点：仅保留 load_manifest。
 - 交付项：
-  - [ ] 校验器与示例
-  - [ ] agent_gate round_086 冒烟
+  - [x] 校验器与示例
+  - [x] agent_gate round_086 冒烟
 
 ### Round 87 - manifest 干跑 content_package
 
@@ -1773,8 +1773,8 @@
 - 风险：用户误以为已导入文章。
 - 回滚点：移除 from_manifest。
 - 交付项：
-  - [ ] 干跑与 API
-  - [ ] agent_gate round_087 冒烟
+  - [x] 干跑与 API
+  - [x] agent_gate round_087 冒烟
 
 ## 历史说明
 
