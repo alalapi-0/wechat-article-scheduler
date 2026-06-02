@@ -13,6 +13,11 @@ data/reports/
 config/rules.yaml
 .DS_Store
 .idea/
-.cursor/
+.cursor/*
+!.cursor/mcp.json
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
 # Playwright 诊断脚本的临时数据库/inbox（自动清理，仅以防万一）
 .ui_review_tmp/

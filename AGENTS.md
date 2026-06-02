@@ -39,9 +39,20 @@ Agent 循环：`status` → 实现任务 → `gate` → `advance --commit`。默
 - 日志打印 token
 - 未授权时 `WECHAT_MODE=real` 联网
 
+## MCP Tools
+
+- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP（playwright、chrome-devtools、context7、filesystem、github）。
+- 自动推进轮开始前运行 `python scripts/check_mcp_config.py`，并在 Cursor **Tools & MCP** 确认 server 已加载；修改 `mcp.json` 后通常需重启 Cursor。
+- 浏览器相关任务必须优先使用 **Playwright MCP**（深层 console/network 用 Chrome DevTools MCP）；页面实现必须边实现边浏览器检查（页面 + console + network + 核心流程）。
+- 文件操作必须确认真实文件状态；filesystem 仅授权 `${workspaceFolder}`，不得授权系统根目录或用户主目录。
+- GitHub 操作必须在提交前检查 `git diff`，避免泄露密钥；token 通过环境变量 `GITHUB_TOKEN` 注入，禁止写入仓库。
+- 若 MCP 不可用，Agent 应记录原因并按 `docs/agent_skills/mcp_usage_skill.md` 使用替代方案继续推进。
+- 若缺少第三方 token/API Key 且任务可 mock/dry-run，不要卡死整体流程；仅当 token 为当前子任务唯一阻塞时才暂停该子任务。
+
 ## 常用命令
 
 ```bash
+python scripts/check_mcp_config.py          # MCP 配置与安全检查
 python -m wechat_article_scheduler.cli init-db
 python -m wechat_article_scheduler.cli scan
 python -m wechat_article_scheduler.cli plan

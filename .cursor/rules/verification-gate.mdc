@@ -1,0 +1,39 @@
+---
+description: "所有涉及前端、审核页面、浏览器交互、API 调用、文件保存/删除/移动逻辑的任务都必须执行验证闭环"
+alwaysApply: true
+---
+
+# Verification Gate
+
+当任务涉及以下内容时，必须执行验证闭环：
+
+- 前端页面
+- 审核工作台
+- 浏览器交互
+- 文件上传、删除、移动、保存
+- API 请求
+- 本地生成内容预览
+- 数据库读写
+- 生成内容审核流程
+
+默认验证顺序：
+
+1. 阅读 `AGENTS.md`
+2. 阅读 `README.md`
+3. 阅读 `docs/`
+4. 阅读 `.cursor/rules/`
+5. 修改代码
+6. 启动服务
+7. 使用 Playwright MCP 或 Chrome DevTools MCP 验证关键路径
+8. 检查 console
+9. 检查 network
+10. 执行 lint/test/build
+11. 输出验证报告
+
+必须优先使用项目内已有验证命令。
+
+如果没有统一验证入口，需要先补充最小验证脚本。
+
+不允许仅凭代码静态阅读判断完成。
+不允许只看页面截图就判断功能正确。
+不允许忽略失败的测试、构建、console error、network error。

@@ -1,0 +1,41 @@
+---
+description: "Agent 使用 MCP 工具时的安全边界、浏览器验证与降级策略"
+alwaysApply: true
+---
+
+# MCP Agent Tools
+
+## 基本原则
+
+- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP；自动推进轮开始前运行 `python scripts/check_mcp_config.py` 并确认 Cursor 已加载 MCP。
+- 若 MCP 未加载，记录原因并尝试按 `docs/agent_skills/mcp_usage_skill.md` 修复；不因单个 MCP 不可用而停止整轮，除非该 MCP 是当前任务唯一阻塞。
+
+## 浏览器与 UI
+
+- 修改 UI、Web 工作台、文件上传/删除、API 交互时，**必须**使用 Playwright MCP 或 Chrome DevTools MCP 做浏览器检查。
+- **不得**只根据代码、静态阅读或单张截图判断页面成功。
+- 必须查看页面、走真实用户路径，并检查 **console** 与 **network**（核心 API 无失败）。
+- 启动 Web 验证前：`python -m wechat_article_scheduler.cli serve`（默认 `http://127.0.0.1:8080/`）。
+
+## 文件系统
+
+- 文件操作必须确认真实文件状态（filesystem MCP 或等效工具）。
+- **不得**授权 filesystem MCP 访问 `/`、`C:\`、用户主目录根路径或整个系统；仅 `${workspaceFolder}`。
+- 破坏性操作仅针对 mock/测试数据；默认 `WECHAT_MODE=mock`。
+
+## GitHub 与密钥
+
+- GitHub 操作前必须 `git diff`，避免泄露 `.env`、密钥、token、cookie。
+- **不得**打印密钥；**不得**把真实 API Key / token 写入仓库或 MCP 配置。
+- 缺少 `GITHUB_TOKEN` 时降级为本地 `git` / `gh`，记录原因后继续推进。
+
+## 提交前
+
+- 每轮提交前检查 `git diff` 与 `git status`，确认未纳入 `.env`、密钥、无关大文件。
+- 结合 `python scripts/agent_gate.py gate` 或对应 pytest 完成验证。
+
+## 参考
+
+- `docs/agent_skills/mcp_usage_skill.md`
+- `.cursor/skills/browser-debug-check/SKILL.md`
+- `.cursor/rules/verification-gate.mdc`
