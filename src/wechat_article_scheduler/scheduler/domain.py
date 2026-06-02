@@ -138,6 +138,19 @@ def execute_due_job(
             (job_id,),
         )
         draft_only = bool(pub.get("skipped"))
+        if draft_only and pub_cfg.publish_action == "publish" and not force_publish:
+            db.log_event(
+                conn,
+                entity_type="publish_job",
+                entity_id=job_id,
+                event_type="publish_skipped_draft_only",
+                payload=safe_payload(
+                    {
+                        "reason": "WECHAT_ENABLE_PUBLISH=false 或任务/模式不允许正式发布",
+                        "publish_action": pub_cfg.publish_action,
+                    }
+                ),
+            )
         if draft_only:
             conn.execute(
                 "UPDATE articles SET updated_at = datetime('now') WHERE id = ?",

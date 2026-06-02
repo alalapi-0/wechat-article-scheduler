@@ -9,6 +9,7 @@ from wechat_article_scheduler.content_quality import article_content_hints
 from wechat_article_scheduler.parser import clamp_summary
 from wechat_article_scheduler.publish_body import publish_body_for
 from wechat_article_scheduler.publish_config import human_publish_config_summary, parse_publish_config, defaults_from_rules
+from wechat_article_scheduler.publish_policy import resolve_effective_submit
 from wechat_article_scheduler.publish_preview import _maybe_unescape_html
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at
 from wechat_article_scheduler.review.proof import (
@@ -57,6 +58,9 @@ def _latest_job(conn: Any, article_id: int, config: AppConfig) -> dict[str, Any]
     out = dict(row)
     pub = parse_publish_config(out.get("publish_config_json"), defaults=defaults_from_rules(config))
     out["publish_config_label"] = " · ".join(human_publish_config_summary(pub))
+    eff = resolve_effective_submit(app_config=config, job_config=pub)
+    out["publish_effective_badge"] = eff["badge"]
+    out["publish_effective_label"] = eff["label"]
     out["scheduled_at_label"] = format_scheduled_at(out.get("scheduled_at"))
     out["status_label"] = label_job_status(out.get("status"))
     return out

@@ -218,7 +218,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：proof 是发布结果证明，不是审核流程。
 - 下一轮衔接：进入微信公众号可选正式发布。
 
-### Round 20：微信公众号可选正式发布
+### Round 20：微信公众号可选正式发布（已完成 — agent `round_075`）
 
 - 本轮目标：在真实 API 测试模式下支持可选正式发布。
 - 具体任务：`WECHAT_MODE=real`、可选 `WECHAT_ENABLE_PUBLISH=false` 草稿-only、任务级 publish、二次确认、预检阻断和事件记录。
@@ -229,7 +229,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：任何真实发布必须显式开启并可回滚。
 - 下一轮衔接：进入完整微信公众号闭环验收。
 
-### Round 21：完整微信公众号发布闭环验收
+### Round 21：完整微信公众号发布闭环验收（已完成 — agent `round_076`）
 
 - 本轮目标：验收阶段一 MVP 是否形成闭环。
 - 具体任务：端到端跑通导入、排期、预览、封面、草稿、重试、日志、人工确认和可选发布。

@@ -87,6 +87,10 @@ from wechat_article_scheduler.publish_config import (
     parse_publish_config,
     publish_config_from_payload,
 )
+from wechat_article_scheduler.publish_policy import (
+    global_publish_policy,
+    resolve_effective_submit,
+)
 from wechat_article_scheduler.content_quality import article_content_hints
 from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
 from wechat_article_scheduler.web.covers import (
@@ -274,6 +278,10 @@ def _enrich_job_row(row: dict[str, Any], config: AppConfig) -> dict[str, Any]:
     pub_cfg = parse_publish_config(row.get("publish_config_json"), defaults=defaults_from_rules(config))
     row["publish_config"] = pub_cfg.normalized().__dict__
     row["publish_config_label"] = " · ".join(human_publish_config_summary(pub_cfg))
+    eff = resolve_effective_submit(app_config=config, job_config=pub_cfg)
+    row["publish_effective"] = eff
+    row["publish_effective_badge"] = eff["badge"]
+    row["publish_effective_label"] = eff["label"]
     return row
 
 
@@ -402,6 +410,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "wechat_mode": cfg.wechat_mode,
             "dry_run": cfg.dry_run,
             "wechat_enable_publish": cfg.wechat_enable_publish,
+            "publish_policy": global_publish_policy(cfg),
             "web_auto_run_due": cfg.web_auto_run_due,
             "web_auto_publish": cfg.web_auto_publish,
             "web_auto_runner_active": bool(getattr(app.state, "web_auto_runner_active", False)),

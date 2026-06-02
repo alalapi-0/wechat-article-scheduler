@@ -1165,6 +1165,22 @@ function renderSafety(status, preflight){
   const pill = el('safetyTop');
   const mode = status ? status.wechat_mode : 'mock';
   const auto = status && status.web_auto_runner_active ? ' · 自动到点执行' : '';
+  const pol = status && status.publish_policy ? status.publish_policy : null;
+  if (pol && pol.headline) {
+    if (pol.badge === 'real_publish_enabled') {
+      const blocked = preflight && preflight.ready === false;
+      pill.className = blocked ? 'pill err' : 'pill err';
+      const hint = blocked ? ' · 内容质量未通过' : '';
+      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + hint + auto;
+    } else if (pol.badge === 'real_draft_only') {
+      pill.className = 'pill warn';
+      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + auto;
+    } else {
+      pill.className = 'pill ok';
+      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + auto;
+    }
+    return;
+  }
   if (mode === 'real' && status.wechat_enable_publish) {
     const blocked = preflight && preflight.ready === false;
     pill.className = blocked ? 'pill err' : 'pill err';
@@ -1276,7 +1292,7 @@ function renderQueue(jobs){
     <tr>
       <td>${esc(j.title||'（无标题）')}<div class="hint-cell">${esc(j.collection_name||'')}</div>${hintRow}</td>
       <td>${esc(j.scheduled_at_label||'未安排')}</td>
-      <td>${esc(j.publish_config_label||'—')}</td>
+      <td>${esc(j.publish_config_label||'—')}<div class="hint-cell">${esc(j.publish_effective_badge||'')}</div></td>
       <td>${statusCell}</td>
       ${failCol}
       <td class="acts">${acts}</td>

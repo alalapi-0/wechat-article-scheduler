@@ -11,6 +11,10 @@ from typing import Any
 
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.publish_body import publish_body_for
+from wechat_article_scheduler.publish_policy import (
+    count_pending_job_actions,
+    global_publish_policy,
+)
 from wechat_article_scheduler.publish_preview import _maybe_unescape_html
 
 
@@ -115,6 +119,26 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             }
         )
 
+    task_mix = count_pending_job_actions(conn, config)
+    if task_mix["publish_tasks"] > 0:
+        checks.append(
+            {
+                "id": "task_publish_mix",
+                "ok": task_mix["blocked_publish_tasks"] == 0 or publish_on,
+                "required": False,
+                "label": "任务级发布方式",
+                "detail": (
+                    f"待发布 {task_mix['draft_tasks']} 个仅草稿、"
+                    f"{task_mix['publish_tasks']} 个标记正式发布"
+                    + (
+                        f"（其中 {task_mix['will_submit_tasks']} 个到点会真的发）"
+                        if publish_on
+                        else f"（全局草稿-only，{task_mix['blocked_publish_tasks']} 个正式发布任务不会提交）"
+                    )
+                ),
+            }
+        )
+
     blocking = [c for c in checks if c.get("required") and not c["ok"]]
     human: list[str] = []
     if mode == "mock":
@@ -133,6 +157,8 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
         "ready": len(blocking) == 0,
         "mode": mode,
         "publish_enabled": publish_on,
+        "publish_policy": global_publish_policy(config),
+        "pending_task_mix": task_mix,
         "checks": checks,
         "human": human,
         "content_quality": quality,

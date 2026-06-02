@@ -43,6 +43,7 @@ EVENT_TYPE: dict[str, str] = {
     "job_done": "发布完成",
     "waiting_confirmation": "进入待人工确认",
     "proof_submitted": "已提交发布证明",
+    "publish_skipped_draft_only": "正式发布已跳过（草稿-only）",
     "draft_created": "微信草稿已创建",
     "job_failed": "发布失败",
     "digest_warning": "摘要提醒",

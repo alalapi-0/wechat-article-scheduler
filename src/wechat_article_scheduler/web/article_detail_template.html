@@ -156,6 +156,9 @@ async function boot(){
     const job = d.latest_job;
     if (job) {
       st += `<p style="margin:0;font-size:13px;color:var(--muted);">计划时间：${esc(job.scheduled_at_label)} · ${esc(job.status_label)} · ${esc(job.publish_config_label||'')}</p>`;
+      if (job.publish_effective_badge) {
+        st += `<p style="margin:4px 0 0;font-size:12px;color:var(--muted);">有效行为：${esc(job.publish_effective_badge)} — ${esc(job.publish_effective_label||'')}</p>`;
+      }
     } else {
       st += `<p style="margin:0;font-size:13px;color:var(--muted);">尚未创建发布任务</p>`;
     }

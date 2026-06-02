@@ -128,6 +128,8 @@ ROUND_ORDER = [
     "round_072",
     "round_073",
     "round_074",
+    "round_075",
+    "round_076",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -868,6 +870,28 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "按 docs/roadmap_converged.md 继续 Round 20：可选正式发布",
         ],
     },
+    "round_075": {
+        "name": "Round 75 - 可选正式发布策略",
+        "acceptance_criteria": [
+            "WECHAT_ENABLE_PUBLISH 与任务级 draft/publish 可区分",
+            "publish_policy 与 UI 徽章、预检任务分布",
+            "全局草稿-only 不调用 freepublish/submit",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 21：闭环验收",
+        ],
+    },
+    "round_076": {
+        "name": "Round 76 - 微信公众号闭环验收",
+        "acceptance_criteria": [
+            "wechat_mvp_acceptance.md 验收清单",
+            "核心模块可导入、路线图 Round 21 对齐",
+            "回归测试入口文档化",
+        ],
+        "next_actions": [
+            "Phase 1 完成后按 backlog 评估 Phase 2",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1450,6 +1474,34 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest publish proof",
+            ),
+        ]
+    elif round_id == "round_075":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_optional_real_publish.py",
+                    "tests/test_publish_config.py",
+                    "-q",
+                ],
+                "pytest optional real publish",
+            ),
+        ]
+    elif round_id == "round_076":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_wechat_mvp_acceptance.py",
+                    "tests/test_wechat_chain_stability.py",
+                    "-q",
+                ],
+                "pytest wechat mvp acceptance",
             ),
         ]
     else:

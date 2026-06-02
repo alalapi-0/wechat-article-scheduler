@@ -1562,6 +1562,39 @@
   - [x] Web/CLI 入口
   - [x] agent_gate round_074 冒烟
 
+### Round 75 - 可选正式发布策略
+
+- 目标：`WECHAT_MODE=real` 下可选正式发布；全局/任务级 draft-only 可区分。
+- 范围：`publish_policy.py`、`optional_real_publish.md`、预检/UI 徽章、`publish_skipped_draft_only` 事件。
+- 非目标：无人值守默认正式发布；绕过二次确认。
+- 输入：Round 74 proof 记录、现有 `publish_config`。
+- 输出：策略 API、工作台安全条与队列徽章。
+- 验收标准：mock 不联网；`WECHAT_ENABLE_PUBLISH=false` 不 freepublish；任务「仅草稿」不提交发布。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_optional_real_publish.py tests/test_publish_config.py -q`。
+- 退出标准：gate round_075 通过；`/api/status` 含 `publish_policy`。
+- 风险：误开 `WECHAT_ENABLE_PUBLISH` 导致意外发布。
+- 回滚点：移除 publish_policy，保留原有 should_submit_publish。
+- 交付项：
+  - [x] publish_policy 与 status/preflight API
+  - [x] 队列/详情有效行为徽章
+  - [x] agent_gate round_075 冒烟
+
+### Round 76 - 微信公众号闭环验收
+
+- 目标：阶段一 MVP 闭环验收清单与回归入口。
+- 范围：`wechat_mvp_acceptance.md`、`test_wechat_mvp_acceptance.py`。
+- 非目标：启动 Phase 2 多平台开发。
+- 输入：Round 0–75 交付物。
+- 输出：验收文档与回归命令清单。
+- 验收标准：文档含闭环步骤；核心模块可导入；chain_stability 冒烟通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_wechat_mvp_acceptance.py tests/test_wechat_chain_stability.py -q`。
+- 退出标准：gate round_076 通过。
+- 风险：验收清单与实现漂移。
+- 回滚点：仅保留文档，不阻塞后续修复轮。
+- 交付项：
+  - [x] MVP 验收文档
+  - [x] agent_gate round_076 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
