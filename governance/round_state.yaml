@@ -1,11 +1,12 @@
 current_round:
   id: round_070
   name: Round 70 - Scheduler 常驻运行文档
-  status: active
+  status: completed
   updated_at: '2026-06-02T06:57:55.208146+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_069
-  completed_at: '2026-06-02T06:57:55.208146+00:00'
+  id: round_070
+  completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - scheduler_runbook：launchd/systemd/cron/tmux 与故障处理
