@@ -2482,6 +2482,23 @@
   - [x] test_ui_e2e 普通视图导出（可选）
   - [x] agent_gate round_128 冒烟
 
+### Round 129 - 发布 dry-run API 与高级面板
+
+- 目标：暴露 `GET /api/articles/{id}/publish-dry-run`（只读 JSON、mock 安全）；高级面板 `#advDryRun` 展示模拟步骤。
+- 范围：`web/publish_dry_run.py`、`app.py` 路由、`admin_template.html` 高级区。
+- 非目标：真实微信联网发布、写库变更。
+- 输入：`core/state_machine` 枚举参考、`article_preflight` 预检。
+- 输出：dry-run 摘要含 `gate_summary`、`report.simulated_steps`、`mock_safe`。
+- 验收标准：`test_round_129` + round_128 回归；gate round_129。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_129_wechat_p0.py tests/test_round_128_wechat_p0.py -q`。
+- 退出标准：gate round_129。
+- 风险：无作品时面板为空提示。
+- 回滚点：移除 API 与 advDryRun。
+- 交付项：
+  - [x] publish-dry-run API
+  - [x] advDryRun 高级面板
+  - [x] agent_gate round_129 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

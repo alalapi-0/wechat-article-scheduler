@@ -1,16 +1,15 @@
 current_round:
-  id: round_128
-  name: Round 128 - 普通视图 export toast 回归
-  status: completed
-  updated_at: '2026-06-02T20:12:15.078905+00:00'
-  completed_at: '2026-06-02'
+  id: round_129
+  name: Round 129 - 发布 dry-run API 与高级面板
+  status: active
+  updated_at: '2026-06-02T20:30:00+00:00'
 last_completed_round:
   id: round_128
   completed_at: '2026-06-02T20:13:46.473360+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- test_round_128 普通视图导出下拉与 toast 文案
-- test_round_127 回归
-- mock@8080 普通视图导出（可选）
+- test_round_129 publish-dry-run API 与 advDryRun
+- test_round_128 回归
+- mock@8080 高级开 dry-run 面板（可选）
 next_actions:
-- 在 docs/rounds.md 规划 round_129 后续能力
+- 在 docs/rounds.md 规划 round_130 后续能力

@@ -233,3 +233,5 @@ round_127:
   - python3 -m pytest tests/test_round_127_wechat_p0.py -q
 round_128:
   - python3 -m pytest tests/test_round_128_wechat_p0.py tests/test_round_127_wechat_p0.py -q
+round_129:
+  - python3 -m pytest tests/test_round_129_wechat_p0.py tests/test_round_128_wechat_p0.py -q

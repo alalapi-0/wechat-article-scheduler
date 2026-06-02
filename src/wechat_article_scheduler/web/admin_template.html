@@ -666,6 +666,7 @@ try {
         <div class="card pad">
           <div id="advRoadmap" class="adv-roadmap-block" style="margin-bottom:12px;font-size:13px;"></div>
           <div id="advAgentGate" class="adv-agent-gate-block" style="margin-bottom:12px;font-size:13px;"></div>
+          <div id="advDryRun" class="adv-dry-run-block advanced-only" style="margin-bottom:12px;font-size:13px;"></div>
           <div id="advMeta" style="font-size:13px;color:var(--muted);"></div>
           <pre id="advRaw">…</pre>
         </div>
@@ -1054,6 +1055,7 @@ function initAdvancedToggle(){
   el('advToggle').addEventListener('change', e => {
     applyShowAdvanced(e.target.checked);
     persistShowAdvanced(e.target.checked);
+    if (e.target.checked) refreshAll();
   });
 }
 
@@ -1703,7 +1705,10 @@ async function refreshAll(){
       ? fetch('/api/waiting-confirmation').then(r => r.json())
       : Promise.resolve(null);
     const agPromise = fetch('/api/agent-gate-status').then(r => r.json()).catch(() => null);
-    const [ov, arts, trash, jobs, qsum, drafts, dsum, wc, agStatus] = await Promise.all([
+    const drPromise = document.documentElement.classList.contains('show-advanced')
+      ? fetchPublishDryRunForWorkbench()
+      : Promise.resolve(null);
+    const [ov, arts, trash, jobs, qsum, drafts, dsum, wc, agStatus, dryRun] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
@@ -1713,6 +1718,7 @@ async function refreshAll(){
       (await fetch('/api/drafts-summary')).json(),
       wcPromise,
       agPromise,
+      drPromise,
     ]);
     lastWaitingConfirmMeta = wc;
     queueJobsList = (queueFilterKey === 'confirm' && wc)
@@ -1736,7 +1742,7 @@ async function refreshAll(){
     renderEvents(ov.recent_events);
     renderWorks(arts);
     renderTrash(trash);
-    renderAdvanced(ov, agStatus);
+    renderAdvanced(ov, agStatus, dryRun);
   } catch(e){
     setAlert('err', '读取数据失败：' + e);
   }
@@ -2910,7 +2916,48 @@ function renderAgentGatePanel(ag){
   box.innerHTML = html;
 }
 
-function renderAdvanced(ov, agStatus){
+function resolveDryRunArticleId(){
+  const ids = [...selectedWorkIds];
+  if (ids.length === 1) return ids[0];
+  if (ids.length > 1) return ids[ids.length - 1];
+  if (workArticlesList.length) return workArticlesList[0].id;
+  return null;
+}
+
+async function fetchPublishDryRunForWorkbench(){
+  if (!document.documentElement.classList.contains('show-advanced')) return null;
+  const aid = resolveDryRunArticleId();
+  if (!aid) return null;
+  try {
+    return await (await fetch(`/api/articles/${aid}/publish-dry-run`)).json();
+  } catch (e) { return null; }
+}
+
+function renderPublishDryRunPanel(dr){
+  const box = el('advDryRun');
+  if (!box) return;
+  if (!dr || !dr.ok) {
+    box.innerHTML = '<span class="hint">发布 dry-run：请在作品库选择或加载作品</span>';
+    return;
+  }
+  let html = `<p style="margin:0 0 8px;"><b>发布 dry-run</b>（作品 #${esc(dr.article_id)}）</p>`;
+  html += `<p style="margin:0 0 8px;">${esc(dr.gate_summary || dr.summary || '')}</p>`;
+  if (dr.mock_safe) {
+    html += '<p style="margin:0 0 8px;padding:8px 10px;border-radius:8px;background:var(--warn-soft);color:var(--warn);font-size:12px;"><b>mock 安全</b>：只读模拟，不联网、不写库。</p>';
+  }
+  const steps = (dr.report && dr.report.simulated_steps) || [];
+  if (steps.length) {
+    html += '<ul style="margin:0 0 8px;padding-left:18px;font-size:12px;color:var(--muted);">' +
+      steps.map(s => `<li>${esc(s.label)} → ${esc(s.outcome)}</li>`).join('') + '</ul>';
+  }
+  const hum = dr.human || [];
+  if (hum.length > 1) {
+    html += '<p style="margin:0;font-size:11px;color:var(--muted);">' + hum.slice(1).map(h => esc(h)).join('<br/>') + '</p>';
+  }
+  box.innerHTML = html;
+}
+
+function renderAdvanced(ov, agStatus, dryRun){
   const st = ov.status || {};
   const hint = st.roadmap_hint || {};
   const lcr = st.last_completed_round;
@@ -2934,6 +2981,7 @@ function renderAdvanced(ov, agStatus){
   }
   el('advRoadmap').innerHTML = road || '<span class="hint">路线图状态未加载</span>';
   renderAgentGatePanel(agStatus);
+  renderPublishDryRunPanel(dryRun);
   el('advMeta').innerHTML = `运行模式 mode=${esc(st.wechat_mode)} · DRY_RUN=${esc(st.dry_run)} · 发布开关 wechat_enable_publish=${esc(st.wechat_enable_publish)}<br/>数据库 ${esc(st.database)}`;
   el('advRaw').textContent = JSON.stringify(ov, null, 2);
 }

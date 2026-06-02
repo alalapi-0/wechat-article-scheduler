@@ -374,6 +374,19 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="作品不存在")
         return detail
 
+    @app.get("/api/articles/{article_id}/publish-dry-run")
+    def article_publish_dry_run(article_id: int) -> dict[str, Any]:
+        """单篇发布 dry-run 摘要（只读、不联网、mock 安全）。"""
+        from wechat_article_scheduler.web.publish_dry_run import (
+            build_article_publish_dry_run,
+        )
+
+        with db.connect(cfg.database_path) as conn:
+            result = build_article_publish_dry_run(cfg, conn, article_id)
+        if not result.get("ok"):
+            raise HTTPException(status_code=404, detail=result.get("error", "作品不存在"))
+        return result
+
     @app.post("/api/articles/{article_id}/update-draft")
     async def article_update_draft(article_id: int) -> dict[str, Any]:
         """将当前作品内容同步到已有微信草稿（draft/update）。"""
