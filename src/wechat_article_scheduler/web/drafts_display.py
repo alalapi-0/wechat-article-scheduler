@@ -10,6 +10,8 @@ from wechat_article_scheduler.config import AppConfig
 
 DRAFT_STATUS_LABELS: dict[str, str] = {
     "created": "已创建",
+    "updated": "已更新",
+    "superseded": "已替代",
 }
 
 
@@ -85,6 +87,7 @@ def list_wechat_drafts(
         JOIN articles a ON a.id = d.article_id
         LEFT JOIN collections c ON c.id = a.collection_id
         WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
+          AND d.status IN ('created', 'updated')
     """
     params: list[Any] = []
     if status and status.strip():

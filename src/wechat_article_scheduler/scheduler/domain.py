@@ -24,6 +24,10 @@ from wechat_article_scheduler.publish_config import (
     should_submit_publish,
 )
 from wechat_article_scheduler.scheduler.claim import clear_job_claim, schedule_failure_retry
+from wechat_article_scheduler.draft_update import (
+    attach_fingerprint_to_payload,
+    draft_content_fingerprint,
+)
 from wechat_article_scheduler.scheduler.policies import safe_payload
 
 logger = logging.getLogger(__name__)
@@ -106,12 +110,18 @@ def execute_due_job(
                 cover_path=_row_get(job, "cover_path"),
                 options=draft_opts,
             )
+            fp = draft_content_fingerprint(
+                title=job["title"] or "",
+                summary=job["summary"] or "",
+                body=job["body"] or "",
+                cover_path=_row_get(job, "cover_path"),
+            )
             conn.execute(
                 """
                 INSERT INTO wechat_drafts (article_id, media_id, status, payload_json)
                 VALUES (?, ?, 'created', ?)
                 """,
-                (article_id, draft.media_id, safe_payload(draft.raw_response)),
+                (article_id, draft.media_id, attach_fingerprint_to_payload(draft, fp)),
             )
         force_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
         pub = adapter.submit_publish(draft.media_id, force=force_publish)

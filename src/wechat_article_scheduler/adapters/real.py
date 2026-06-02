@@ -167,20 +167,16 @@ class RealWechatAdapter(WechatAdapter):
         self._ensure_credentials()
         opts = options or DraftOptions()
         token = self.get_access_token()
-        thumb_media_id = self.upload_thumb_media(cover_path)
         url = f"{API_BASE}/cgi-bin/draft/add?access_token={token}"
         payload = {
             "articles": [
-                {
-                    "title": title,
-                    "author": opts.author or "",
-                    "digest": clamp_summary(summary or title, 120),
-                    "content": render_for_publish(title, body),
-                    "content_source_url": opts.content_source_url or "",
-                    "thumb_media_id": thumb_media_id,
-                    "need_open_comment": 1 if opts.need_open_comment else 0,
-                    "only_fans_can_comment": 1 if opts.only_fans_can_comment else 0,
-                }
+                self._build_article_fields(
+                    title=title,
+                    summary=summary,
+                    body=body,
+                    cover_path=cover_path,
+                    options=opts,
+                )
             ]
         }
         logger.info("创建草稿: title=%r", title[:80])
@@ -189,6 +185,59 @@ class RealWechatAdapter(WechatAdapter):
         if not media_id:
             raise WechatApiError(-1, "draft media_id 缺失", endpoint="draft/add")
         return DraftResult(media_id=media_id, raw_response=data)
+
+    def _build_article_fields(
+        self,
+        *,
+        title: str,
+        summary: str,
+        body: str,
+        cover_path: str | None,
+        options: DraftOptions,
+    ) -> dict[str, Any]:
+        thumb_media_id = self.upload_thumb_media(cover_path)
+        return {
+            "title": title,
+            "author": options.author or "",
+            "digest": clamp_summary(summary or title, 120),
+            "content": render_for_publish(title, body),
+            "content_source_url": options.content_source_url or "",
+            "thumb_media_id": thumb_media_id,
+            "need_open_comment": 1 if options.need_open_comment else 0,
+            "only_fans_can_comment": 1 if options.only_fans_can_comment else 0,
+        }
+
+    def update_draft(
+        self,
+        *,
+        media_id: str,
+        title: str,
+        summary: str,
+        body: str,
+        cover_path: str | None = None,
+        options: DraftOptions | None = None,
+        index: int = 0,
+    ) -> DraftResult:
+        """调用 draft/update 更新已有草稿（media_id 不变）。"""
+        self._ensure_credentials()
+        opts = options or DraftOptions()
+        token = self.get_access_token()
+        url = f"{API_BASE}/cgi-bin/draft/update?access_token={token}"
+        payload = {
+            "media_id": media_id,
+            "index": int(index),
+            "articles": self._build_article_fields(
+                title=title,
+                summary=summary,
+                body=body,
+                cover_path=cover_path,
+                options=opts,
+            ),
+        }
+        logger.info("更新草稿: media_id=%s title=%r", media_id[:16], title[:80])
+        data = self._http_post_json(url, payload)
+        out_id = str(data.get("media_id") or media_id)
+        return DraftResult(media_id=out_id, raw_response=data)
 
     def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
         """调用 freepublish/submit 提交发布（可通过 enable_publish=False 跳过）。"""

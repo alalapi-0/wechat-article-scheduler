@@ -71,3 +71,6 @@ round_069:
 
 round_070:
   - python3 -m pytest tests/test_scheduler_runbook.py -q
+
+round_071:
+  - python3 -m pytest tests/test_draft_update.py tests/test_mock_adapter.py tests/test_real_adapter.py -q

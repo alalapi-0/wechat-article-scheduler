@@ -124,6 +124,7 @@ ROUND_ORDER = [
     "round_068",
     "round_069",
     "round_070",
+    "round_071",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -820,6 +821,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "按 docs/roadmap_converged.md 继续 Round 16：微信草稿更新能力",
         ],
     },
+    "round_071": {
+        "name": "Round 71 - 微信草稿更新能力",
+        "acceptance_criteria": [
+            "mock/real update_draft 与 draft/update 路径",
+            "内容指纹幂等；superseded 历史不丢 media_id",
+            "CLI/Web 更新入口与测试",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 17：微信公众号字段能力矩阵核验",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1348,6 +1360,21 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest scheduler runbook",
+            ),
+        ]
+    elif round_id == "round_071":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_draft_update.py",
+                    "tests/test_mock_adapter.py",
+                    "tests/test_real_adapter.py",
+                    "-q",
+                ],
+                "pytest draft update",
             ),
         ]
     else:

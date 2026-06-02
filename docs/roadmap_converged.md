@@ -174,7 +174,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：文档必须区分默认 mock、real API 测试、草稿-only 和正式发布。
 - 下一轮衔接：进入微信草稿更新能力。
 
-### Round 16：微信公众号草稿更新能力
+### Round 16：微信公众号草稿更新能力（已完成 — agent `round_071`）
 
 - 本轮目标：在可行范围内支持更新已创建草稿。
 - 具体任务：核验微信 `draft/update` 能力；设计本地草稿记录与幂等关系；补 mock/real 测试。

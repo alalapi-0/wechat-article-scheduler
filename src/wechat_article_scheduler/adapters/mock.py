@@ -38,6 +38,36 @@ class MockWechatAdapter(WechatAdapter):
             },
         )
 
+    def update_draft(
+        self,
+        *,
+        media_id: str,
+        title: str,
+        summary: str,
+        body: str,
+        cover_path: str | None = None,
+        options: DraftOptions | None = None,
+        index: int = 0,
+    ) -> DraftResult:
+        opts = options or DraftOptions()
+        content_html = render_for_publish(title, body)
+        return DraftResult(
+            media_id=media_id,
+            raw_response={
+                "errcode": 0,
+                "errmsg": "ok",
+                "media_id": media_id,
+                "mode": "mock",
+                "updated": True,
+                "index": index,
+                "title": title,
+                "content": content_html,
+                "cover_path": cover_path or "",
+                "need_open_comment": opts.need_open_comment,
+                "only_fans_can_comment": opts.only_fans_can_comment,
+            },
+        )
+
     def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
         return {
             "errcode": 0,

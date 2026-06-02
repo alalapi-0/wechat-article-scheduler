@@ -1,16 +1,15 @@
 current_round:
-  id: round_070
-  name: Round 70 - Scheduler 常驻运行文档
-  status: completed
-  updated_at: '2026-06-02T06:57:55.208146+00:00'
-  completed_at: '2026-06-02'
+  id: round_071
+  name: Round 71 - 微信草稿更新能力
+  status: active
+  updated_at: '2026-06-02T07:14:23.971942+00:00'
 last_completed_round:
   id: round_070
-  completed_at: '2026-06-02'
+  completed_at: '2026-06-02T07:14:23.971942+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- scheduler_runbook：launchd/systemd/cron/tmux 与故障处理
-- deploy/examples/scheduler 可运行示例与包装脚本
-- README/用户手册/scheduler-daemon CLI
+- mock/real update_draft 与 draft/update 路径
+- 内容指纹幂等；superseded 历史不丢 media_id
+- CLI/Web 更新入口与测试
 next_actions:
-- 按 docs/roadmap_converged.md 继续 Round 16：微信草稿更新能力
+- 按 docs/roadmap_converged.md 继续 Round 17：微信公众号字段能力矩阵核验

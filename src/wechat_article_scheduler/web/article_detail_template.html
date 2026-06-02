@@ -56,6 +56,7 @@
       <ul id="nextList"></ul>
       <div class="actions">
         <button type="button" class="btn-primary" id="btnPreview">刷新正文预览</button>
+        <button type="button" class="btn" id="btnUpdateDraft" hidden>更新微信草稿</button>
         <a class="btn" id="btnWorkbench" href="/#works">去工作台安排发布</a>
       </div>
     </section>
@@ -119,6 +120,15 @@ async function boot(){
     document.body.classList.toggle('show-advanced', e.target.checked);
   });
   document.getElementById('btnPreview').addEventListener('click', loadPreview);
+  const btnUpd = document.getElementById('btnUpdateDraft');
+  if (btnUpd) btnUpd.addEventListener('click', async () => {
+    if (!window.confirm('将当前作品内容同步到已有微信草稿？演练模式不会改动公众号后台。')) return;
+    try {
+      const r = await (await fetch(`/api/articles/${ARTICLE_ID}/update-draft`, { method:'POST' })).json();
+      alert((r.human||['已更新']).join('\n'));
+      location.reload();
+    } catch(e) { alert('更新失败：'+e); }
+  });
   try {
     const d = await (await fetch(`/api/articles/${ARTICLE_ID}`)).json();
     if (!d.id) throw new Error('作品不存在');
@@ -140,7 +150,10 @@ async function boot(){
     const draft = d.wechat_draft || {};
     st += `<p style="margin:8px 0 0;font-size:13px;">${esc(draft.label||'')}</p>`;
     if (draft.mock_note) st += `<p class="warn" style="margin-top:6px;">${esc(draft.mock_note)}</p>`;
+    if (draft.update_hint) st += `<p style="margin-top:6px;font-size:12px;color:var(--muted);">${esc(draft.update_hint)}</p>`;
     document.getElementById('statusBlock').innerHTML = st;
+    const btnUpdDraft = document.getElementById('btnUpdateDraft');
+    if (btnUpdDraft) btnUpdDraft.hidden = !draft.can_update;
     document.getElementById('checksList').innerHTML = (d.preflight_checks||[]).map(c =>
       `<li class="${c.ok?'':'bad'}">${esc(c.label)}：${esc(c.detail)}</li>`).join('');
     document.getElementById('summaryEl').textContent = d.summary_preview || '（无摘要）';

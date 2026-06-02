@@ -14,6 +14,7 @@ from wechat_article_scheduler.content_cli import print_content_library
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.scheduler import run_due_jobs, scheduler_loop
 from wechat_article_scheduler.scheduler.health import print_scheduler_health
+from wechat_article_scheduler.draft_update import update_article_wechat_draft
 from wechat_article_scheduler.workflow import reject_article, retry_failed_jobs
 
 
@@ -36,6 +37,9 @@ def _build_parser() -> argparse.ArgumentParser:
     reject_p.add_argument("--article-id", type=int, required=True)
 
     sub.add_parser("retry-failed", help="重试失败的发布任务 (Round 1)")
+
+    upd_draft = sub.add_parser("update-draft", help="更新已有微信草稿 (draft/update)")
+    upd_draft.add_argument("--article-id", type=int, required=True)
 
     events_p = sub.add_parser("events", help="列出最近审计事件 (Round 2)")
     events_p.add_argument("--limit", type=int, default=20)
@@ -110,6 +114,12 @@ def main(argv: list[str] | None = None) -> int:
         n = retry_failed_jobs(config)
         print(f"已重置 {n} 条 failed 任务为 pending")
         return 0
+
+    if args.command == "update-draft":
+        result = update_article_wechat_draft(config, args.article_id)
+        for line in result.get("human") or [result.get("error") or "完成"]:
+            print(line)
+        return 0 if result.get("ok") else 1
 
     if args.command == "content":
         print_content_library(config, limit=args.limit)

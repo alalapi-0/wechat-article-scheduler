@@ -1496,6 +1496,23 @@
   - [x] run_scheduler_daemon.sh / cron_run_once.sh
   - [x] agent_gate round_070 冒烟
 
+### Round 71 - 微信草稿更新能力
+
+- 目标：在可行范围内更新已创建微信草稿（draft/update），不可更新时有替代说明。
+- 范围：`draft_update.py`、适配器 `update_draft`、CLI/Web API、指纹幂等、测试与文档。
+- 非目标：默认 browser_assist 改稿；覆盖错误 media_id。
+- 输入：Round 68 草稿列表、Round 69 稳定化执行链路。
+- 输出：`docs/draft_update.md`、能力矩阵更新。
+- 验收标准：mock 可更新本地记录；real 调 draft/update；未改内容跳过；旧草稿 superseded。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_draft_update.py -q`。
+- 退出标准：gate round_071 通过；详情页可触发更新 API。
+- 风险：微信 API 字段变更；无草稿时误点更新。
+- 回滚点：移除 update-draft API，仅保留创建草稿。
+- 交付项：
+  - [x] update_draft mock/real
+  - [x] CLI update-draft 与 Web 按钮
+  - [x] agent_gate round_071 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

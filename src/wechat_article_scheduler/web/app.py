@@ -59,6 +59,7 @@ from wechat_article_scheduler.web.schedule_display import format_scheduled_at, s
 from wechat_article_scheduler.web.workbench_mvp import build_workbench_hints
 from wechat_article_scheduler.web.article_detail import build_article_detail
 from wechat_article_scheduler.web.queue_display import list_queue_jobs, queue_summary
+from wechat_article_scheduler.draft_update import humanize_update_result, update_article_wechat_draft
 from wechat_article_scheduler.web.drafts_display import (
     drafts_summary,
     get_wechat_draft,
@@ -313,6 +314,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         if not detail:
             raise HTTPException(status_code=404, detail="作品不存在")
         return detail
+
+    @app.post("/api/articles/{article_id}/update-draft")
+    async def article_update_draft(article_id: int) -> dict[str, Any]:
+        """将当前作品内容同步到已有微信草稿（draft/update）。"""
+        result = update_article_wechat_draft(cfg, article_id)
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error", "更新失败"))
+        result.setdefault("human", humanize_update_result(result))
+        return result
 
     @app.get("/api/user-labels")
     def user_labels() -> dict[str, Any]:

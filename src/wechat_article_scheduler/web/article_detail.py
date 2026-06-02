@@ -60,22 +60,37 @@ def _latest_job(conn: Any, article_id: int, config: AppConfig) -> dict[str, Any]
 def _draft_info(conn: Any, article_id: int, *, mode: str) -> dict[str, Any]:
     row = conn.execute(
         """
-        SELECT media_id, created_at FROM wechat_drafts WHERE article_id = ?
+        SELECT id, media_id, status, created_at FROM wechat_drafts
+        WHERE article_id = ? AND status IN ('created', 'updated')
         ORDER BY id DESC LIMIT 1
         """,
         (article_id,),
     ).fetchone()
     if not row:
-        return {"has_draft": False, "label": "尚未创建微信草稿", "mock_note": None}
+        return {
+            "has_draft": False,
+            "can_update": False,
+            "label": "尚未创建微信草稿",
+            "mock_note": None,
+        }
     media = row["media_id"] or ""
     note = None
     if mode == "mock" and str(media).startswith("mock_"):
-        note = "当前为演练模式：草稿 ID 为本地模拟，未在公众号后台创建"
+        note = "当前为演练模式：更新仅写入本地记录，不会改动公众号后台"
+    status = row["status"] or "created"
+    label = "已更新微信草稿（演练）" if status == "updated" and mode == "mock" else (
+        "已更新微信草稿" if status == "updated" else (
+            "已创建微信草稿（演练记录）" if mode == "mock" else "已创建微信草稿"
+        )
+    )
     return {
         "has_draft": True,
-        "label": "已创建微信草稿（演练记录）" if mode == "mock" else "已创建微信草稿",
+        "can_update": True,
+        "draft_id": int(row["id"]),
+        "label": label,
         "created_at": row["created_at"],
         "mock_note": note,
+        "update_hint": "修改标题/正文/封面后，可点「更新微信草稿」同步到已有草稿",
     }
 
 
@@ -166,6 +181,8 @@ def suggest_detail_actions(
         primary = "cover"
         headline = "建议先设置封面"
         actions.append("返回工作台为作品上传或绑定封面")
+    elif bool(row.get("has_wechat_draft")):
+        actions.append("改稿后可在本页「更新微信草稿」同步（无草稿时需先执行发布流程）")
 
     failed_checks = [c for c in checks if not c.get("ok")]
     for c in failed_checks[:2]:

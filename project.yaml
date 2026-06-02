@@ -6,7 +6,7 @@ project:
   primary_language: zh-CN
   output_language: zh-CN
   current_stage: converged_phase1_round4
-  current_round: round_070
+  current_round: round_071
   summary: 个人本地微信公众号发布工作台；当前 P0 只服务微信公众号闭环，其他平台全部进入后期 backlog。
   long_term_goal: 阶段一先稳定微信公众号文章导入、预览、封面、草稿、排期、scheduler、人工确认和可选正式发布；阶段二以后才评估文本、图文/视频、音频/音乐平台扩展。
 repository:
@@ -39,7 +39,7 @@ protocol_standard:
     reason: 非小说专用生成管线项目，无 novel_pipeline_contract；本仓库只保留通用治理思想。
     owner: user
   - field: agent_policy_standard.automation_policy
-    reason: agent_gate 编排 round_000..round_070 与 pytest/CLI 冒烟，须与 docs/rounds.md 同步。
+    reason: agent_gate 编排 round_000..round_071 与 pytest/CLI 冒烟，须与 docs/rounds.md 同步。
     owner: agent
   - field: data_policy_standard.review_workbench_policy
     reason: 本仓库当前公众号链路无内容审核；未来 review/proof 仅用于 browser_assist/manual_export 的人工确认。

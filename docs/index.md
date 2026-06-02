@@ -16,6 +16,7 @@
 - [调度设计](scheduler_design.md)
 - [Scheduler 稳定化](scheduler_stability.md)
 - [Scheduler 常驻运行手册](scheduler_runbook.md)
+- [微信草稿更新](draft_update.md)
 - [数据库设计](database_design.md)
 - [内容库设计](content_library_design.md)
 - [渲染器设计](renderer_design.md)

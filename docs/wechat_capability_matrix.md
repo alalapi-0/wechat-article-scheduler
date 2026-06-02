@@ -9,6 +9,7 @@
 | 每篇作品独立封面 | 已实现 | real/mock | `articles.cover_path`，real 优先用该封面，回退默认 thumb |
 | 封面素材上传 | 已实现 | real | `material/add_material`，按封面路径缓存 media_id |
 | 草稿创建 | 已实现 | real/mock | real 调 `draft/add`，mock 本地生成 |
+| 草稿更新 | 已实现 | real/mock | real 调 `draft/update`；内容指纹幂等；旧记录 `superseded` 保留 |
 | 发布提交 | 已实现 | real/mock | 受 `WECHAT_ENABLE_PUBLISH` 控制 |
 | 发布安全闸门 | 已实现 | real | 默认 mock 不联网；real 模式用于真实 API 测试；任务级“仅草稿”不发布；执行到点前二次确认（**已移除审核闸门**） |
 | 本地定时发布 | 已实现 | real/mock | `publish_jobs.scheduled_at` + 本地 scheduler 到点调用 API |

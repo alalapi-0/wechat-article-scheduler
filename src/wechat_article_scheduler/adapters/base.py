@@ -40,5 +40,19 @@ class WechatAdapter(ABC):
         """将图文写入草稿箱（或 mock 记录）。cover_path 为该篇作品的本地封面，缺省回退默认封面。"""
 
     @abstractmethod
+    def update_draft(
+        self,
+        *,
+        media_id: str,
+        title: str,
+        summary: str,
+        body: str,
+        cover_path: str | None = None,
+        options: DraftOptions | None = None,
+        index: int = 0,
+    ) -> DraftResult:
+        """更新已有草稿（微信 draft/update；mock 仅更新本地记录语义）。"""
+
+    @abstractmethod
     def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
         """提交发布（mock 仅返回成功结构）。force=True 只能由全局开关和任务级确认共同决定。"""

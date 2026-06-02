@@ -152,6 +152,7 @@ bash scripts/run_scheduler_daemon.sh
 | `scheduler` | 后台轮询调度 |
 | `scheduler-daemon` | 常驻调度（同 scheduler，见运行手册） |
 | `scheduler-health` | 队列/锁/卡住任务健康检查 |
+| `update-draft --article-id N` | 更新已有微信草稿（需先有草稿记录） |
 | `reject --article-id N` | 从发布流程移除某篇文章 |
 | `retry-failed` | 重置失败任务为待执行 |
 | `events --limit N` | 查看审计事件 |
