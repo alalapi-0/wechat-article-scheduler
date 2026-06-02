@@ -140,6 +140,12 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
         )
 
     blocking = [c for c in checks if c.get("required") and not c["ok"]]
+    block_reasons = [str(c.get("detail") or c.get("label") or "") for c in blocking]
+    run_once_gate = {
+        "blocked": len(blocking) > 0,
+        "reason": block_reasons[0] if block_reasons else "",
+        "reasons": block_reasons,
+    }
     human: list[str] = []
     if mode == "mock":
         human.append("当前为演练模式，执行到点任务不会真的发到公众号。")
@@ -155,6 +161,7 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
 
     return {
         "ready": len(blocking) == 0,
+        "run_once_gate": run_once_gate,
         "mode": mode,
         "publish_enabled": publish_on,
         "publish_policy": global_publish_policy(config),

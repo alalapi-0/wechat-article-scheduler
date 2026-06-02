@@ -249,6 +249,9 @@
   .preflight-bar.err { background: #fde8e8; color: #b91c1c; border: 1px solid #f5c2c2; }
   .queue-fail-banner { margin-bottom: 10px; padding: 10px 12px; border-radius: 10px; background: #fde8e8; border: 1px solid #f5c2c2; font-size: 13px; color: #7f1d1d; }
   .queue-fail-banner .actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .run-once-hint { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+  .run-once-hint.blocked { color: #b91c1c; background: #fde8e8; padding: 8px 10px; border-radius: 8px; border: 1px solid #f5c2c2; }
+  #events.flash-highlight .card { box-shadow: 0 0 0 2px var(--accent-soft); transition: box-shadow .3s; }
   .stat.clickable { cursor: pointer; }
   .stat.clickable:hover { border-color: var(--accent); }
   .next-steps ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
@@ -522,9 +525,10 @@
                 <button class="btn-ghost" id="btnScan" type="button">扫描本地收件箱</button>
                 <button class="btn-primary" id="btnPlan">自动推荐时间</button>
                 <button class="btn-ghost" id="btnOpenSchedule" type="button">自定义安排…</button>
-                <button class="btn-primary" id="btnRun">执行到点发布</button>
+                <button class="btn-primary" id="btnRun" type="button">执行到点发布</button>
                 <button class="btn-ghost" id="btnRefresh">刷新</button>
               </div>
+              <p class="run-once-hint" id="runOnceBlockReason" hidden></p>
               <p class="preview-hint" style="margin-top:8px;">在作品库可单篇或批量指定发布时间；「自动推荐」按配置偏好时段排期。</p>
               <div id="resultBox" style="margin-top:10px;"></div>
             </div>
@@ -1085,25 +1089,101 @@ async function submitUpload(){
 }
 
 /* ---------- 主操作 ---------- */
+let lastPublishPreflight = null;
+
+function applyRunOncePreflightGate(preflight){
+  lastPublishPreflight = preflight || null;
+  const btn = el('btnRun');
+  const hint = el('runOnceBlockReason');
+  if (!btn) return;
+  const gate = (preflight && preflight.run_once_gate) || {};
+  const blocked = !!(gate.blocked || (preflight && preflight.ready === false &&
+    (preflight.checks || []).some(c => c.required && !c.ok)));
+  const reason = gate.reason || ((preflight && preflight.human) || []).find(h => String(h).startsWith('需处理：')) ||
+    '发布前检查未通过，请先处理待发布作品的内容问题';
+  btn.disabled = blocked;
+  btn.title = blocked ? reason : '';
+  btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+  if (hint) {
+    if (blocked) {
+      hint.hidden = false;
+      hint.className = 'run-once-hint blocked';
+      hint.textContent = '无法执行到点：' + reason;
+    } else {
+      hint.hidden = true;
+      hint.className = 'run-once-hint';
+      hint.textContent = '';
+    }
+  }
+}
+
+function runOnceToastKind(data){
+  if (data && data.blocked_by_preflight) return 'err';
+  const failed = int(data && data.failed);
+  const skippedContent = int(data && data.skipped_content);
+  if (failed > 0 || skippedContent > 0) return 'warn';
+  const processed = int(data && data.processed);
+  const drafted = int(data && data.drafted);
+  if (processed > 0 || drafted > 0) return 'ok';
+  return 'info';
+}
+function int(v){ return parseInt(v, 10) || 0; }
+
+function showRunOnceOutcome(data){
+  const lines = (data && data.human) || ['完成'];
+  const kind = runOnceToastKind(data);
+  setAlert(kind, lines.join('；'));
+  const boxKind = kind === 'info' ? 'ok' : kind;
+  showResult(lines, boxKind);
+  flashEventsPanel();
+}
+
+function flashEventsPanel(){
+  const sec = document.getElementById('events');
+  if (!sec) return;
+  sec.classList.add('flash-highlight');
+  setTimeout(() => sec.classList.remove('flash-highlight'), 1400);
+  sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 async function runAction(name, url){
   setAlert('info', '正在' + L(COPY.actions, name, '处理') + '…');
   try {
     const data = await (await fetch(url, { method:'POST' })).json();
-    showResult(data.human || ['完成']);
+    if (name === 'run-once') {
+      showRunOnceOutcome(data);
+      if (data && data.publish_preflight) applyRunOncePreflightGate(data.publish_preflight);
+    } else {
+      showResult(data.human || ['完成']);
+    }
   } catch(e){ setAlert('err', '操作失败：' + e); }
   await refreshAll();
 }
 
 async function onRun(){
+  const btn = el('btnRun');
+  if (btn && btn.disabled) {
+    const gate = (lastPublishPreflight && lastPublishPreflight.run_once_gate) || {};
+    setAlert('err', gate.reason || '发布前检查未通过，无法执行到点发布');
+    return;
+  }
   let st = {};
   try { st = await (await fetch('/api/status')).json(); } catch(e){}
-  let pf = null;
-  try { pf = await (await fetch('/api/publish-preflight')).json(); } catch(e){}
+  let pf = lastPublishPreflight;
+  if (!pf) {
+    try { pf = await (await fetch('/api/publish-preflight')).json(); } catch(e){}
+  }
+  if (pf && pf.run_once_gate && pf.run_once_gate.blocked) {
+    setAlert('err', pf.run_once_gate.reason || '发布前检查未通过');
+    applyRunOncePreflightGate(pf);
+    return;
+  }
   if (pf && pf.ready === false) {
     const blocking = (pf.checks || []).some(c => c.required && !c.ok);
     const msg = (pf.human || []).join(' ') || '发布前检查未通过，请先处理内容质量问题';
     if (blocking) {
       setAlert('err', msg);
+      applyRunOncePreflightGate(pf);
       return;
     }
     if (st.wechat_mode === 'mock') {
@@ -1118,8 +1198,9 @@ async function onRun(){
   await runAction('run-once', '/api/run-once');
 }
 
-function showResult(lines){
-  el('resultBox').innerHTML = `<div class="alert ok">${lines.map(esc).join('<br/>')}</div>`;
+function showResult(lines, kind){
+  const k = kind || 'ok';
+  el('resultBox').innerHTML = `<div class="alert ${k}">${lines.map(esc).join('<br/>')}</div>`;
 }
 
 /* ---------- 刷新与渲染 ---------- */
@@ -1164,6 +1245,7 @@ async function refreshAll(){
     renderDrafts(drafts);
     await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
+    applyRunOncePreflightGate(ov.publish_preflight);
     renderStats(ov);
     renderNextSteps(ov.workbench);
     renderSchedule(ov.schedule_summary);

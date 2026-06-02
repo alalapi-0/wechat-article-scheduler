@@ -1308,7 +1308,22 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.post("/api/run-once")
     async def trigger_run_once() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            pf = build_publish_preflight(cfg, conn)
+        gate = pf.get("run_once_gate") or {}
+        if gate.get("blocked"):
+            reasons = list(gate.get("reasons") or [])
+            human = ["发布前检查未通过，无法执行到点发布"]
+            human.extend(reasons[:3])
+            return {
+                "ok": False,
+                "blocked_by_preflight": True,
+                "processed": 0,
+                "human": human,
+                "publish_preflight": pf,
+            }
         result = run_due_jobs(cfg)
+        result["ok"] = True
         result["human"] = humanize_run_once_result(result)
         await _sync_web_auto_runner(app, cfg)
         return result

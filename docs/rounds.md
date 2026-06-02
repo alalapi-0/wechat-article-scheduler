@@ -2135,6 +2135,23 @@
   - [x] 队列失败 Tab 重试与错误摘要
   - [x] agent_gate round_109 冒烟
 
+### Round 110 - 执行到点与预检 blocking 联动
+
+- 目标：「执行到点发布」与 `publish_preflight` blocking 联动；run-once 结果 toast 并刷新事件区。
+- 范围：`publish_preflight.run_once_gate`、`/api/run-once` 服务端拦截、工作台 `btnRun` UI。
+- 非目标：真实联网发布；Phase5 新平台。
+- 输入：round_108–109 预检与队列体验。
+- 输出：按钮禁用+原因文案；run-once toast/resultBox；事件区高亮刷新；API 预检阻断。
+- 验收标准：`test_round_110_wechat_p0`；mock@8080 点击「执行到点发布」。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_110_wechat_p0.py -q`。
+- 退出标准：gate round_110。
+- 风险：无。
+- 回滚点：移除 run_once_gate 与按钮禁用逻辑。
+- 交付项：
+  - [x] 预检 blocking 禁用执行到点
+  - [x] run-once toast 与事件刷新
+  - [x] agent_gate round_110 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

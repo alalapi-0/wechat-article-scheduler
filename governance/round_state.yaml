@@ -1,15 +1,15 @@
 current_round:
-  id: round_109
-  name: Round 109 - 微信 P0 续（预检条与失败队列）
+  id: round_110
+  name: Round 110 - 执行到点与预检 blocking 联动
   status: in_progress
-  updated_at: '2026-06-02T19:00:00+00:00'
+  updated_at: '2026-06-02T19:10:00+00:00'
 last_completed_round:
-  id: round_108
-  completed_at: '2026-06-02T18:47:31.565956+00:00'
+  id: round_109
+  completed_at: '2026-06-02T18:52:59.838803+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 作品详情/卡片预检条与 blocking 联动
-- 队列失败 Tab 重试入口与错误摘要增强
-- mock@8080 核心路径浏览器验证
+- 执行到点按钮预检 blocking 禁用与原因文案
+- run-once 结果 toast 与事件区刷新
+- mock@8080 点击执行到点路径验证
 next_actions:
 - gate 通过后 advance

@@ -193,4 +193,6 @@ round_108:
   - python3 -m pytest tests/test_round_108_wechat_p0.py -q
 round_109:
   - python3 -m pytest tests/test_round_109_wechat_p0.py -q
+round_110:
+  - python3 -m pytest tests/test_round_110_wechat_p0.py -q
   - python3 -m pytest tests/test_web_console_mvp.py tests/test_workbench_chain_hints.py -q
