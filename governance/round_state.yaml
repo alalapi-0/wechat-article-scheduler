@@ -1,11 +1,12 @@
 current_round:
   id: round_129
   name: Round 129 - 发布 dry-run API 与高级面板
-  status: active
+  status: completed
   updated_at: '2026-06-02T20:30:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_128
-  completed_at: '2026-06-02T20:13:46.473360+00:00'
+  id: round_129
+  completed_at: '2026-06-02T20:18:42.912195+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - test_round_129 publish-dry-run API 与 advDryRun
