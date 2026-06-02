@@ -1,0 +1,8 @@
+slug: demo
+name: 演示合集
+description: Round 63 多合集扫描示例（小步扩展，兼容根 inbox）
+volume_label: 卷
+title_template: "【{title}】"
+sort_rule: source_name
+# 可选：default_cover: assets/covers/default.png
+legacy_inbox_subdir: demo

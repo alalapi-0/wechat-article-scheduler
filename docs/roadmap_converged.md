@@ -86,7 +86,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不得破坏现有上传和封面绑定。
 - 下一轮衔接：进入多合集内容库。
 
-### Round 8：多合集内容库
+### Round 8：多合集内容库（已完成 — agent `round_063`）
 
 - 本轮目标：支持多个微信公众号合集或专栏的本地文章管理。
 - 具体任务：定义 `collection.yaml`、合集默认封面、标题模板、排序规则和旧目录兼容。

@@ -6,11 +6,16 @@ import re
 import sqlite3
 from datetime import datetime, timezone
 
+from typing import TYPE_CHECKING
+
 from wechat_article_scheduler.content_library.models import (
     Collection,
     ContentItem,
     Tag,
 )
+
+if TYPE_CHECKING:
+    from wechat_article_scheduler.content_library.collection_config import CollectionConfig
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
@@ -135,3 +140,102 @@ def list_collections(conn: sqlite3.Connection) -> list[Collection]:
         )
         for r in rows
     ]
+
+
+def upsert_collection(conn: sqlite3.Connection, cfg: "CollectionConfig") -> int:
+    """将 collection.yaml 同步到 collections 表。"""
+    config_json = cfg.to_config_json()
+    row = conn.execute(
+        "SELECT id FROM collections WHERE slug = ?",
+        (cfg.slug,),
+    ).fetchone()
+    if row:
+        conn.execute(
+            """
+            UPDATE collections
+            SET name = ?, description = ?, config_json = ?
+            WHERE slug = ?
+            """,
+            (cfg.name, cfg.description or None, config_json, cfg.slug),
+        )
+        return int(row["id"])
+    cur = conn.execute(
+        """
+        INSERT INTO collections (slug, name, description, config_json)
+        VALUES (?, ?, ?, ?)
+        """,
+        (cfg.slug, cfg.name, cfg.description or None, config_json),
+    )
+    return int(cur.lastrowid)
+
+
+def get_collection_id_by_slug(conn: sqlite3.Connection, slug: str) -> int | None:
+    row = conn.execute(
+        "SELECT id FROM collections WHERE slug = ?",
+        (slug,),
+    ).fetchone()
+    return int(row["id"]) if row else None
+
+
+def apply_collection_defaults(
+    conn: sqlite3.Connection,
+    root: Path,
+    article_id: int,
+    cfg: "CollectionConfig | None",
+) -> None:
+    if cfg is None:
+        return
+    row = conn.execute(
+        "SELECT title, cover_path FROM articles WHERE id = ?",
+        (article_id,),
+    ).fetchone()
+    if row is None:
+        return
+    updates: list[str] = []
+    params: list[object] = []
+    if cfg.title_template and row["title"]:
+        new_title = cfg.title_template.replace("{title}", row["title"])
+        if new_title != row["title"]:
+            updates.append("title = ?")
+            params.append(new_title)
+    cover = (row["cover_path"] or "").strip()
+    if not cover and cfg.default_cover:
+        candidate = Path(cfg.default_cover)
+        if not candidate.is_absolute():
+            candidate = root / candidate
+        if candidate.is_file():
+            updates.append("cover_path = ?")
+            params.append(str(candidate.resolve()))
+    if updates:
+        params.append(article_id)
+        conn.execute(
+            f"UPDATE articles SET {', '.join(updates)}, updated_at = datetime('now') WHERE id = ?",
+            params,
+        )
+
+
+def list_collections_summary(conn: sqlite3.Connection) -> list[dict[str, object]]:
+    rows = conn.execute(
+        """
+        SELECT c.id, c.slug, c.name, c.description, c.config_json,
+               COUNT(a.id) AS article_count
+        FROM collections c
+        LEFT JOIN articles a ON a.collection_id = c.id
+            AND (a.deleted_at IS NULL OR a.deleted_at = '')
+        GROUP BY c.id
+        ORDER BY c.slug
+        """
+    ).fetchall()
+    out: list[dict[str, object]] = []
+    for r in rows:
+        out.append(
+            {
+                "id": int(r["id"]),
+                "slug": r["slug"],
+                "name": r["name"],
+                "description": r["description"],
+                "config_json": r["config_json"],
+                "article_count": int(r["article_count"] or 0),
+            }
+        )
+    return out

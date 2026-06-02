@@ -23,7 +23,13 @@ from wechat_article_scheduler.schedule_assign import (
     parse_scheduled_at,
 )
 from wechat_article_scheduler.scanner import scan_inbox
-from wechat_article_scheduler.content_library import list_collections, list_content_items
+from wechat_article_scheduler.content_library import (
+    discover_collection_configs,
+    list_collections,
+    list_collections_summary,
+    list_content_items,
+    sync_discovered_collections,
+)
 from wechat_article_scheduler.cover_assets import (
     bind_covers_by_stem,
     build_dual_cover_previews,
@@ -337,12 +343,17 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         }
 
     @app.get("/api/articles")
-    def articles(limit: int = 50) -> list[dict[str, Any]]:
+    def articles(
+        limit: int = 50,
+        collection_slug: str | None = None,
+        collection: str | None = None,
+    ) -> list[dict[str, Any]]:
         with db.connect(cfg.database_path) as conn:
-            rows = conn.execute(
-                """
+            sql = """
                 SELECT a.id, a.title, a.summary, a.body, a.status, a.source_path, a.cover_path,
                        a.cover_config_json, a.created_at, a.updated_at,
+                       COALESCE(c.slug, 'default') AS collection_slug,
+                       COALESCE(c.name, '默认集合') AS collection_name,
                        EXISTS(
                            SELECT 1 FROM wechat_drafts d WHERE d.article_id = a.id
                        ) AS has_wechat_draft,
@@ -352,11 +363,17 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                            ORDER BY j.id DESC LIMIT 1
                        ) AS latest_job_status
                 FROM articles a
-                WHERE deleted_at IS NULL OR deleted_at = ''
-                ORDER BY a.id DESC LIMIT ?
-                """,
-                (limit,),
-            ).fetchall()
+                LEFT JOIN collections c ON c.id = a.collection_id
+                WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
+            """
+            params: list[Any] = []
+            slug_filter = (collection_slug or collection or "").strip()
+            if slug_filter:
+                sql += " AND COALESCE(c.slug, 'default') = ?"
+                params.append(slug_filter)
+            sql += " ORDER BY a.id DESC LIMIT ?"
+            params.append(limit)
+            rows = conn.execute(sql, params).fetchall()
         out: list[dict[str, Any]] = []
         for r in rows:
             row = dict(r)
@@ -820,20 +837,36 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             },
         }
 
+    @app.get("/api/collections")
+    def collections_api() -> dict[str, Any]:
+        """合集列表（含作品计数，同步 collection.yaml）。"""
+        with db.connect(cfg.database_path) as conn:
+            sync_discovered_collections(cfg, conn)
+            conn.commit()
+            rows = list_collections_summary(conn)
+        discovered = len(discover_collection_configs(cfg.root))
+        return {
+            "discovered_yaml": discovered,
+            "collections": rows,
+            "human": [f"已注册 {len(rows)} 个合集（YAML 定义 {discovered} 个）"],
+        }
+
     @app.get("/api/content-library")
     def content_library_view(
         collection: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
+            sync_discovered_collections(cfg, conn)
+            conn.commit()
             items = list_content_items(
                 conn,
                 limit=limit,
                 collection_slug=collection,
             )
-            collections = list_collections(conn)
+            collections = list_collections_summary(conn)
         return {
-            "collections": [c.__dict__ for c in collections],
+            "collections": collections,
             "items": [
                 {
                     "article_id": i.article_id,

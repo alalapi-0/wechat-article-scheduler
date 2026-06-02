@@ -116,6 +116,7 @@ ROUND_ORDER = [
     "round_060",
     "round_061",
     "round_062",
+    "round_063",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -721,7 +722,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "无 Pillow 时 CSS 预览降级且测试通过",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 8：多合集内容库",
+            "推进 Round 63：多合集内容库",
+        ],
+    },
+    "round_063": {
+        "name": "Round 63 - 多合集内容库",
+        "acceptance_criteria": [
+            "content/collections/*/collection.yaml 可发现并同步",
+            "scan 兼容 articles/inbox 根目录与各合集 inbox",
+            "Web/API 可按合集筛选作品",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 9：合集排期规则",
         ],
     },
 }
@@ -1141,6 +1153,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest cover crop dual preview",
+            ),
+        ]
+    elif round_id == "round_063":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_multi_collection.py",
+                    "tests/test_content_library.py",
+                    "-q",
+                ],
+                "pytest multi collection library",
             ),
         ]
     else:

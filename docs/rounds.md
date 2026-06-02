@@ -1358,6 +1358,24 @@
   - [x] Pillow 可选 JPEG 渲染
   - [x] agent_gate round_062 冒烟
 
+### Round 63 - 多合集内容库
+
+- 目标：支持多个微信公众号合集/专栏的本地文章管理与扫描导入。
+- 范围：`collection.yaml`、合集扫描、`collections.config_json`、Web 筛选、API、文档与测试。
+- 非目标：跨项目 publish_manifest；复杂卷册编排 UI。
+- 输入：既有 `collections` 表、`articles/inbox`、`scan_inbox`。
+- 输出：`content/collections/`、`docs/multi_collection_library.md`、扫描与 API 增强。
+- 验收标准：不同合集作品可区分；根 inbox 仍进默认合集；plan/scan 兼容旧目录。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_multi_collection.py tests/test_content_library.py -q`。
+- 退出标准：YAML 合集可导入；Web 合集下拉筛选有效。
+- 风险：合集 inbox 与根 inbox 重复扫描同一文件。
+- 回滚点：仅扫描根 `articles/inbox`。
+- 交付项：
+  - [x] collection.yaml 发现与同步
+  - [x] 多路径 inbox 扫描
+  - [x] API/Web 合集筛选
+  - [x] agent_gate round_063 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

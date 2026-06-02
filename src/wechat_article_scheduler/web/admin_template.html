@@ -449,6 +449,12 @@
             </div>
             <div class="works-toolbar" id="worksToolbar">
               <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:13px;">
+                <span>合集</span>
+                <select id="collectionFilter" style="min-width:140px;">
+                  <option value="">全部合集</option>
+                </select>
+              </label>
+              <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:13px;">
                 <input type="checkbox" id="chkSelectAllWorks" /> 全选
               </label>
               <button class="btn-ghost btn-sm" id="btnDeselectAll" type="button">取消全选</button>
@@ -669,6 +675,7 @@
 let COPY = {};
 const pending = { articles: [], covers: [] };
 const selectedWorkIds = new Set();
+let selectedCollectionSlug = '';
 const selectedTrashIds = new Set();
 let workArticlesList = [];
 let lastClickedWorkId = null;
@@ -890,6 +897,11 @@ async function boot(){
   });
   el('btnRun').addEventListener('click', onRun);
   el('btnRefresh').addEventListener('click', refreshAll);
+  const collFilter = el('collectionFilter');
+  if (collFilter) collFilter.addEventListener('change', e => {
+    selectedCollectionSlug = e.target.value || '';
+    refreshAll();
+  });
   el('btnBulkTrash').addEventListener('click', bulkTrashSelected);
   el('btnBulkCover').addEventListener('click', openCoverBatchModal);
   el('btnBulkSchedule').addEventListener('click', () => openScheduleModal('batch'));
@@ -1014,13 +1026,30 @@ function showResult(lines){
 }
 
 /* ---------- 刷新与渲染 ---------- */
+async function loadCollectionFilterOptions(){
+  const sel = el('collectionFilter');
+  if (!sel) return;
+  try {
+    const data = await (await fetch('/api/collections')).json();
+    const cols = data.collections || [];
+    const cur = selectedCollectionSlug;
+    sel.innerHTML = '<option value="">全部合集</option>' +
+      cols.map(c => `<option value="${esc(c.slug)}">${esc(c.name)} (${c.article_count||0})</option>`).join('');
+    sel.value = cur;
+  } catch(e) { /* 非阻塞 */ }
+}
+
 async function refreshAll(){
   try {
+    const artUrl = selectedCollectionSlug
+      ? `/api/articles?collection_slug=${encodeURIComponent(selectedCollectionSlug)}`
+      : '/api/articles';
     const [ov, arts, trash] = await Promise.all([
       (await fetch('/api/overview')).json(),
-      (await fetch('/api/articles')).json(),
+      (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
     ]);
+    await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
     renderStats(ov);
     renderSchedule(ov.schedule_summary);
@@ -1118,7 +1147,7 @@ function renderWorks(arts){
         <div class="body">
           <div class="title"><label><input type="checkbox" data-sel-work="${a.id}" ${checked}/> ${esc(a.title||'（无标题）')}</label></div>
           <div class="summary">${summary}</div>
-          <div class="meta"><span class="pill ${pillCls}">${esc(statusLbl)}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}${(a.content_hints||[]).map(h => `<span class="chip">${esc(h)}</span>`).join('')}</div>
+          <div class="meta"><span class="pill ${pillCls}">${esc(statusLbl)}</span><span class="chip">${esc(a.collection_name||a.collection_slug||'默认')}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}${(a.content_hints||[]).map(h => `<span class="chip">${esc(h)}</span>`).join('')}</div>
           <div class="acts">
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
             <button class="btn-ghost btn-sm" onclick="scheduleArticle(${a.id})">安排时间</button>
