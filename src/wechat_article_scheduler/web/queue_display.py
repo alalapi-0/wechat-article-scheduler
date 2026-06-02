@@ -41,6 +41,8 @@ def failure_reasons_for_jobs(conn: Any, job_ids: list[int]) -> dict[int, str]:
 def _next_hint(*, status: str, is_due: bool, failure_reason: str) -> str:
     if status == "pending":
         return "已到发布时间，可执行到点发布" if is_due else "等待到点或手动执行"
+    if status == "waiting_confirmation":
+        return "可快速提交占位证明，或打开作品详情填写"
     if status == "failed":
         return "可点「重试」重新排队，或去作品详情检查"
     if status == "running":

@@ -1,16 +1,15 @@
 current_round:
-  id: round_112
-  name: Round 112 - 扫描收件箱反馈与链路联动
+  id: round_113
+  name: Round 113 - 待确认快速 proof
   status: in_progress
-  updated_at: '2026-06-02T19:30:00+00:00'
+  updated_at: '2026-06-02T19:40:00+00:00'
 last_completed_round:
-  id: round_111
-  completed_at: '2026-06-02T18:59:19.682746+00:00'
+  id: round_112
+  completed_at: '2026-06-02T19:03:59.803396+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 扫描 toast 与 scan_summary 摘要
-- scan 结果与 chain_summary 联动展示
-- scan 前轻量预检 inbox 路径
-- mock@8080 点击扫描路径验证
+- 待人工确认 Tab 快速提交 dry-run proof
+- AUTO_APPROVE 标识与详情 #proof 跳转
+- mock@8080 点击待确认与快速确认路径
 next_actions:
 - gate 通过后 advance

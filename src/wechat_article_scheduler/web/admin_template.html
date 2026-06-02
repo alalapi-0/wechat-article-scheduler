@@ -261,6 +261,11 @@
   }
   .waiting-confirm-entry ul { margin: 8px 0; padding-left: 18px; color: var(--muted); font-size: 12.5px; }
   .waiting-confirm-entry .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .queue-confirm-banner {
+    margin-bottom: 10px; padding: 10px 12px; border-radius: 10px;
+    background: #fff8e6; border: 1px solid #e8d48a; font-size: 13px;
+  }
+  .queue-confirm-banner .actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .scan-hint { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
   .scan-hint.blocked { color: #b91c1c; background: #fde8e8; padding: 8px 10px; border-radius: 8px; border: 1px solid #f5c2c2; }
   .chain-scan-hint { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
@@ -1383,7 +1388,10 @@ async function refreshAll(){
     const draftsUrl = draftStatus
       ? `/api/drafts?limit=30&status=${encodeURIComponent(draftStatus)}`
       : '/api/drafts?limit=30';
-    const [ov, arts, trash, jobs, qsum, drafts, dsum] = await Promise.all([
+    const wcPromise = queueFilterKey === 'confirm'
+      ? fetch('/api/waiting-confirmation').then(r => r.json())
+      : Promise.resolve(null);
+    const [ov, arts, trash, jobs, qsum, drafts, dsum, wc] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
@@ -1391,8 +1399,12 @@ async function refreshAll(){
       (await fetch('/api/queue-summary')).json(),
       (await fetch(draftsUrl)).json(),
       (await fetch('/api/drafts-summary')).json(),
+      wcPromise,
     ]);
-    queueJobsList = jobs || [];
+    lastWaitingConfirmMeta = wc;
+    queueJobsList = (queueFilterKey === 'confirm' && wc)
+      ? waitingItemsToQueueRows(wc)
+      : (jobs || []);
     renderQueueSummary(qsum);
     renderDraftsSummary(dsum);
     renderDrafts(drafts);
@@ -1472,16 +1484,24 @@ function renderWaitingConfirmationEntry(wc){
   const count = (wc && wc.count) || 0;
   if (!count) { box.hidden = true; box.innerHTML = ''; return; }
   const preview = (wc && (wc.preview || wc.items)) || [];
+  const gp = (wc && wc.generation_policy) || {};
+  const autoBadge = gp.badge === 'AUTO_APPROVE'
+    ? ' <span class="pill-tag">AUTO_APPROVE</span>' : '';
   const rows = preview.slice(0, 5).map(it => {
-    const proof = it.has_proof ? ' · 已有证明草稿' : ' · 待提交证明';
-    return `<li><a href="${esc(it.article_detail_url || '/articles/'+it.article_id)}">${esc(it.article_title||'（无标题）')}</a>${esc(proof)}</li>`;
+    const proof = it.has_proof ? ' · 已有证明' : ' · 待提交证明';
+    const url = esc(it.proof_form_url || '/articles/'+it.article_id+'#proof');
+    return `<li><a href="${url}">${esc(it.article_title||'（无标题）')}</a>${esc(proof)}</li>`;
   }).join('');
+  const quickBtn = wc.quick_proof_allowed
+    ? '<button type="button" class="btn-ghost btn-sm" onclick="bulkQuickProofWaiting()">全部快速确认</button>'
+    : '';
   box.hidden = false;
   box.innerHTML = `<div class="waiting-confirm-entry">
-    <div><b>待人工确认 ${count} 条</b>${wc.summary_label ? ' · '+esc(wc.summary_label) : ''}</div>
+    <div><b>待人工确认 ${count} 条</b>${autoBadge}${wc.summary_label ? ' · '+esc(wc.summary_label) : ''}</div>
     ${rows ? `<ul>${rows}</ul>` : ''}
     <div class="actions">
       <button type="button" class="btn-primary btn-sm" onclick="goWaitingConfirmQueue()">查看待确认队列</button>
+      ${quickBtn}
     </div>
   </div>`;
 }
@@ -1577,6 +1597,47 @@ function renderDrafts(drafts){
 }
 
 let lastQueueSummary = null;
+let lastWaitingConfirmMeta = null;
+
+function waitingItemsToQueueRows(wc){
+  return (wc && wc.items ? wc.items : []).map(it => ({
+    id: it.job_id,
+    article_id: it.article_id,
+    title: it.article_title,
+    status: 'waiting_confirmation',
+    status_label: it.status_label || '待人工确认',
+    scheduled_at_label: it.scheduled_at_label || '—',
+    publish_config_label: '待提交发布证明',
+    detail_url: it.proof_form_url || ('/articles/' + it.article_id + '#proof'),
+    proof_form_url: it.proof_form_url,
+    has_proof: !!it.has_proof,
+    quick_proof_available: !!it.quick_proof_available,
+    next_hint: it.has_proof ? '已有证明，任务可标记完成' : '可快速占位确认或去详情填写',
+  }));
+}
+
+async function quickProofJob(jobId){
+  if (!window.confirm('提交演练占位证明（AUTO_APPROVE dry-run）？不会联网验证公众号后台。')) return;
+  try {
+    const r = await (await fetch(`/api/publish-jobs/${jobId}/proof`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quick_dry_run: true }),
+    })).json();
+    if (!r.ok) { setAlert('err', r.detail || r.error || '提交失败'); return; }
+    setAlert('ok', (r.human || ['已确认']).join('；'));
+    await refreshAll();
+  } catch(e) { setAlert('err', '快速确认失败：' + e); }
+}
+
+async function bulkQuickProofWaiting(){
+  if (!window.confirm('为全部待人工确认任务提交演练占位证明？')) return;
+  try {
+    const r = await (await fetch('/api/waiting-confirmation/quick-proof-all', { method: 'POST' })).json();
+    setAlert(r.completed > 0 ? 'ok' : 'info', (r.human || ['完成']).join('；'));
+    await refreshAll();
+  } catch(e) { setAlert('err', '批量确认失败：' + e); }
+}
 
 function renderQueueSummary(qsum){
   lastQueueSummary = qsum || null;
@@ -1596,6 +1657,19 @@ function renderQueue(jobs){
   const qsum = lastQueueSummary || {};
   const failedCnt = (qsum && (qsum.failed_count ?? (qsum.counts && qsum.counts.failed))) || 0;
   let failBanner = '';
+  if (queueFilterKey === 'confirm' && lastWaitingConfirmMeta && (lastWaitingConfirmMeta.count || 0) > 0) {
+    const wc = lastWaitingConfirmMeta;
+    const gp = wc.generation_policy || {};
+    const badge = gp.badge === 'AUTO_APPROVE'
+      ? '<span class="pill-tag">AUTO_APPROVE</span> ' : '';
+    const bulkBtn = wc.quick_proof_allowed
+      ? '<button type="button" class="btn-primary btn-sm" onclick="bulkQuickProofWaiting()">全部快速确认</button>'
+      : '';
+    failBanner = `<div class="queue-confirm-banner">
+      <div>${badge}<b>待人工确认 ${wc.count} 条</b> · 演练可提交 dry-run 占位证明</div>
+      <div class="actions">${bulkBtn}</div>
+    </div>`;
+  }
   if (queueFilterKey === 'err' && failedCnt > 0) {
     const preview = (qsum.failed_preview || []).map(p =>
       `<li><b>${esc(p.title||'')}</b> — ${esc(p.failure_reason_short||'')}</li>`
@@ -1630,17 +1704,22 @@ function renderQueue(jobs){
     const failCol = showFailCol
       ? `<td class="fail-reason">${esc(j.failure_reason_short || j.failure_reason || '—')}</td>`
       : '';
-    let acts = `<a class="btn-ghost btn-sm" href="${esc(j.detail_url || '/articles/'+j.article_id)}">详情</a> `;
+    const detailHref = esc(j.proof_form_url || j.detail_url || '/articles/'+j.article_id+'#proof');
+    let acts = `<a class="btn-ghost btn-sm" href="${detailHref}">填写证明</a> `;
+    if (j.status === 'waiting_confirmation' && j.quick_proof_available) {
+      acts += `<button class="btn-primary btn-sm" type="button" onclick="quickProofJob(${j.id})">快速确认</button> `;
+    }
     if (j.status === 'pending') {
       acts += `<button class="btn-ghost btn-sm" type="button" onclick="cancelJob(${j.id})">取消</button>`;
     }
     if (j.status === 'failed') {
       acts += `<button class="btn-primary btn-sm" type="button" onclick="retryJob(${j.id})">重试</button>`;
     }
+    const titleHref = j.status === 'waiting_confirmation' ? detailHref : esc(j.detail_url || '/articles/'+j.article_id);
     const hintRow = j.next_hint ? `<div class="hint-cell">${esc(j.next_hint)}</div>` : '';
     return `
     <tr>
-      <td>${esc(j.title||'（无标题）')}<div class="hint-cell">${esc(j.collection_name||'')}</div>${hintRow}</td>
+      <td><a href="${titleHref}">${esc(j.title||'（无标题）')}</a><div class="hint-cell">${esc(j.collection_name||'')}</div>${hintRow}</td>
       <td>${esc(j.scheduled_at_label||'未安排')}</td>
       <td>${esc(j.publish_config_label||'—')}<div class="hint-cell">${esc(j.publish_effective_badge||'')}</div></td>
       <td>${statusCell}</td>

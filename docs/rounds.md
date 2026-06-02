@@ -2186,6 +2186,23 @@
   - [x] inbox 路径预检
   - [x] agent_gate round_112 冒烟
 
+### Round 113 - 待确认快速 proof
+
+- 目标：待人工确认队列 Tab 内快速提交 mock dry-run 占位 proof；列表跳转详情 `#proof`。
+- 范围：`proof_quick`、`/api/waiting-confirmation`、`admin_template` 队列 Tab。
+- 非目标：真实联网 proof 校验。
+- 输入：round_111 待确认入口、proof API。
+- 输出：`quick_dry_run` proof；`quick-proof-all`；AUTO_APPROVE 横幅；填写证明/快速确认按钮。
+- 验收标准：`test_round_113_wechat_p0`；mock@8080 待确认 Tab 点击。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_113_wechat_p0.py -q`。
+- 退出标准：gate round_113。
+- 风险：无。
+- 回滚点：移除 quick proof API 与 Tab 按钮。
+- 交付项：
+  - [x] 快速 proof 与批量确认
+  - [x] 详情 proof 锚点跳转
+  - [x] agent_gate round_113 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

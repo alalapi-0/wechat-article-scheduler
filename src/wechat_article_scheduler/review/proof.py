@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from wechat_article_scheduler import db
+from wechat_article_scheduler.config import AppConfig
 
 WAITING_CONFIRMATION = "waiting_confirmation"
 PROOF_REQUIRED_STATUSES = frozenset({WAITING_CONFIRMATION})
@@ -149,7 +150,32 @@ def submit_publish_proof(conn: Any, job_id: int, proof: ProofInput) -> dict[str,
     return {"ok": True, "job_id": job_id, "article_id": job["article_id"], "status": "done"}
 
 
-def list_waiting_confirmation(conn: Any, *, limit: int = 50) -> list[dict[str, Any]]:
+def enrich_waiting_confirmation_item(
+    item: dict[str, Any],
+    config: AppConfig | None = None,
+) -> dict[str, Any]:
+    from wechat_article_scheduler.review.proof_quick import quick_proof_allowed
+    from wechat_article_scheduler.web.schedule_display import format_scheduled_at
+
+    out = dict(item)
+    aid = int(out["article_id"])
+    out["article_detail_url"] = f"/articles/{aid}"
+    out["proof_form_url"] = f"/articles/{aid}#proof"
+    out["scheduled_at_label"] = format_scheduled_at(out.get("scheduled_at"))
+    has_proof = bool(out.get("has_proof"))
+    allow_quick = quick_proof_allowed(config) if config is not None else True
+    out["quick_proof_available"] = allow_quick and not has_proof
+    out["status"] = WAITING_CONFIRMATION
+    out["status_label"] = "待人工确认"
+    return out
+
+
+def list_waiting_confirmation(
+    conn: Any,
+    *,
+    limit: int = 50,
+    config: AppConfig | None = None,
+) -> list[dict[str, Any]]:
     rows = conn.execute(
         """
         SELECT j.id AS job_id, j.article_id, j.scheduled_at, j.updated_at,
@@ -165,9 +191,8 @@ def list_waiting_confirmation(conn: Any, *, limit: int = 50) -> list[dict[str, A
     out: list[dict[str, Any]] = []
     for row in rows:
         item = dict(row)
-        item["article_detail_url"] = f"/articles/{item['article_id']}"
         item["has_proof"] = get_proof_for_job(conn, int(item["job_id"])) is not None
-        out.append(item)
+        out.append(enrich_waiting_confirmation_item(item, config))
     return out
 
 

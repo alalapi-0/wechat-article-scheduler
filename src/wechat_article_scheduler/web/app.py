@@ -92,6 +92,12 @@ from wechat_article_scheduler.review.proof import (
     mark_job_waiting_confirmation,
     submit_publish_proof,
 )
+from wechat_article_scheduler.review.proof_quick import (
+    build_quick_proof_input,
+    humanize_quick_proof_result,
+    quick_proof_allowed,
+)
+from wechat_article_scheduler.web.generation_policy import build_generation_policy_status
 from wechat_article_scheduler.web.drafts_display import (
     drafts_summary,
     get_wechat_draft,
@@ -697,18 +703,23 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/api/waiting-confirmation")
     def api_waiting_confirmation() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
-            items = list_waiting_confirmation(conn)
+            items = list_waiting_confirmation(conn, config=cfg)
+        gp = build_generation_policy_status()
         preview = items[:5]
         summary = (
             f"待人工确认 {len(items)} 条"
             if items
             else "暂无待人工确认任务"
         )
+        if items and quick_proof_allowed(cfg):
+            summary += f" · {gp.get('badge', 'MOCK')} 可快速占位确认"
         return {
             "count": len(items),
             "items": items,
             "preview": preview,
             "summary_label": summary,
+            "quick_proof_allowed": quick_proof_allowed(cfg),
+            "generation_policy": gp,
         }
 
     @app.get("/api/publish-jobs/{job_id}/proof")
@@ -721,17 +732,71 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.post("/api/publish-jobs/{job_id}/proof")
     def api_submit_publish_proof(job_id: int, body: dict[str, Any] = Body(default={})) -> dict[str, Any]:
-        proof = ProofInput(
-            screenshot_path=body.get("screenshot_path"),
-            public_url=body.get("public_url"),
-            confirmed_by=body.get("confirmed_by"),
-            note=body.get("note"),
-        )
+        use_quick = bool(body.get("quick_dry_run"))
+        if use_quick:
+            if not quick_proof_allowed(cfg):
+                raise HTTPException(
+                    status_code=403,
+                    detail="快速占位证明仅适用于演练模式（mock）",
+                )
+            proof = build_quick_proof_input(cfg, job_id)
+        else:
+            proof = ProofInput(
+                screenshot_path=body.get("screenshot_path"),
+                public_url=body.get("public_url"),
+                confirmed_by=body.get("confirmed_by"),
+                note=body.get("note"),
+            )
         with db.connect(cfg.database_path) as conn:
             result = submit_publish_proof(conn, job_id, proof)
         if not result.get("ok"):
             raise HTTPException(status_code=400, detail=result.get("error", "提交失败"))
+        gp = build_generation_policy_status()
+        if use_quick:
+            result["dry_run_proof"] = True
+            result["human"] = humanize_quick_proof_result(
+                completed=1,
+                skipped=0,
+                badge=str(gp.get("badge") or "MOCK"),
+            )
         return result
+
+    @app.post("/api/waiting-confirmation/quick-proof-all")
+    def api_quick_proof_all_waiting() -> dict[str, Any]:
+        if not quick_proof_allowed(cfg):
+            raise HTTPException(
+                status_code=403,
+                detail="批量快速确认仅适用于演练模式（mock）",
+            )
+        gp = build_generation_policy_status()
+        badge = str(gp.get("badge") or "MOCK")
+        completed = 0
+        skipped = 0
+        with db.connect(cfg.database_path) as conn:
+            items = list_waiting_confirmation(conn, config=cfg)
+            for item in items:
+                jid = int(item["job_id"])
+                if item.get("has_proof"):
+                    skipped += 1
+                    continue
+                proof = build_quick_proof_input(cfg, jid)
+                result = submit_publish_proof(conn, jid, proof)
+                if result.get("ok"):
+                    completed += 1
+                else:
+                    skipped += 1
+        return {
+            "ok": True,
+            "completed": completed,
+            "skipped": skipped,
+            "dry_run_proof": True,
+            "generation_policy": gp,
+            "human": humanize_quick_proof_result(
+                completed=completed,
+                skipped=skipped,
+                badge=badge,
+            ),
+        }
 
     @app.post("/api/publish-jobs/{job_id}/waiting-confirmation")
     def api_mark_waiting_confirmation(job_id: int) -> dict[str, Any]:
@@ -804,7 +869,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             chain_summary=chain_summary,
             publish_preflight=preflight,
         )
-        waiting_items = list_waiting_confirmation(conn, limit=5)
+        waiting_items = list_waiting_confirmation(conn, limit=5, config=cfg)
+        gp_wait = build_generation_policy_status()
         waiting_confirmation = {
             "count": int(job_counts.get("waiting_confirmation", 0)) or len(waiting_items),
             "preview": waiting_items,
@@ -813,6 +879,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 if waiting_items
                 else ""
             ),
+            "quick_proof_allowed": quick_proof_allowed(cfg),
+            "generation_policy": gp_wait,
         }
         st = status()
         return {
