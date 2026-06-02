@@ -177,6 +177,7 @@ ROUND_ORDER = [
     "round_120",
     "round_121",
     "round_122",
+    "round_123",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1463,7 +1464,19 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 /#queue 冒烟",
         ],
         "next_actions": [
-            "在 docs/rounds.md 规划 round_123 后续能力",
+            "推进 round_123 高级面板路线图位置",
+        ],
+    },
+    "round_123": {
+        "name": "Round 123 - 高级面板路线图位置",
+        "summary": "status 暴露 roadmap_hint/last_completed_round；高级区显示位置与 backlog 链接",
+        "acceptance_criteria": [
+            "/api/status 只读 roadmap_hint 与 last_completed_round",
+            "高级面板 advRoadmap 显示位置与 doc 链接",
+            "mock@8080 开启高级信息后可见",
+        ],
+        "next_actions": [
+            "在 docs/rounds.md 规划 round_124 后续能力",
         ],
     },
 }
@@ -2634,6 +2647,13 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_round_102_maintenance_smoke.py", "-q"],
                 "pytest maintenance smoke round_122",
+            ),
+        ]
+    elif round_id == "round_123":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_123_wechat_p0.py", "-q"],
+                "pytest wechat p0 round_123",
             ),
         ]
     else:

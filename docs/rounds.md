@@ -2380,6 +2380,23 @@
   - [x] 维护冒烟与 README 里程碑
   - [x] agent_gate round_122 冒烟
 
+### Round 123 - 高级面板路线图位置
+
+- 目标：`/api/status` 只读暴露 `roadmap_hint` 与 `last_completed_round`（读 `governance/round_state.yaml`）；高级面板展示当前路线图位置与 backlog 链接。
+- 范围：`roadmap_state.py`、`app.py`、`admin_template.html` 高级区。
+- 非目标：修改 round_state 写入逻辑；普通视图展示。
+- 输入：round_122 完成态。
+- 输出：API 字段；`#advRoadmap` 区块（advanced-only）。
+- 验收标准：`test_round_123_wechat_p0`；mock@8080 开启高级信息后可见路线图位置。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_123_wechat_p0.py -q`。
+- 退出标准：gate round_123。
+- 风险：无。
+- 回滚点：移除 API 字段与 advRoadmap 区块。
+- 交付项：
+  - [x] /api/status roadmap 只读字段
+  - [x] 高级面板路线图位置与 doc 链接
+  - [x] agent_gate round_123 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

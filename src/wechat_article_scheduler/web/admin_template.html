@@ -641,6 +641,7 @@ try {
       <section class="panel advanced-only section" id="advanced" style="margin-top:18px;">
         <div class="section-head"><h2>高级信息</h2><span class="hint">仅排错用，普通用户可忽略</span></div>
         <div class="card pad">
+          <div id="advRoadmap" class="adv-roadmap-block" style="margin-bottom:12px;font-size:13px;"></div>
           <div id="advMeta" style="font-size:13px;color:var(--muted);"></div>
           <pre id="advRaw">…</pre>
         </div>
@@ -2811,6 +2812,27 @@ function changeCover(id){
 
 function renderAdvanced(ov){
   const st = ov.status || {};
+  const hint = st.roadmap_hint || {};
+  const lcr = st.last_completed_round;
+  let road = '';
+  if (hint.position_label) {
+    road += `<p style="margin:0 0 8px;"><b>当前路线图位置</b>：${esc(hint.position_label)}</p>`;
+  }
+  if (lcr && lcr.id) {
+    road += `<p style="margin:0 0 8px;color:var(--muted);font-size:12px;">最近完成轮次：${esc(lcr.id)} · ${esc(lcr.completed_at || '—')}</p>`;
+  }
+  const links = hint.doc_links || [];
+  if (links.length) {
+    road += '<p style="margin:0 0 6px;">下一步查阅：' +
+      links.map(l => `<a href="${esc(l.path)}" title="仓库内 ${esc(l.path)}">${esc(l.label)}</a>`).join(' · ') +
+      '</p>';
+  }
+  const actions = hint.next_actions || [];
+  if (actions.length) {
+    road += '<ul style="margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:12px;">' +
+      actions.map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
+  }
+  el('advRoadmap').innerHTML = road || '<span class="hint">路线图状态未加载</span>';
   el('advMeta').innerHTML = `运行模式 mode=${esc(st.wechat_mode)} · DRY_RUN=${esc(st.dry_run)} · 发布开关 wechat_enable_publish=${esc(st.wechat_enable_publish)}<br/>数据库 ${esc(st.database)}`;
   el('advRaw').textContent = JSON.stringify(ov, null, 2);
 }

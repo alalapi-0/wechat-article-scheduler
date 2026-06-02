@@ -816,6 +816,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         from wechat_article_scheduler.web.generation_policy import (
             build_generation_policy_status,
         )
+        from wechat_article_scheduler.web.roadmap_state import (
+            build_roadmap_status_fields,
+        )
 
         return {
             "wechat_mode": cfg.wechat_mode,
@@ -828,6 +831,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "web_auto_runner_active": bool(getattr(app.state, "web_auto_runner_active", False)),
             "web_auto_runner_reason": str(getattr(app.state, "web_auto_runner_reason", "")),
             "database": str(cfg.database_path),
+            **build_roadmap_status_fields(),
         }
 
     @app.get("/api/overview")
