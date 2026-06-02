@@ -1,11 +1,12 @@
 current_round:
   id: round_115
   name: Round 115 - 仓库卫生与维护冒烟
-  status: in_progress
+  status: completed
   updated_at: '2026-06-02T20:00:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_114
-  completed_at: '2026-06-02T19:15:51.862718+00:00'
+  id: round_115
+  completed_at: '2026-06-02T19:19:08.630726+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - .gitignore 忽略 outbox 测试包与 .playwright-mcp
