@@ -29,3 +29,11 @@ def test_title_match_is_case_and_space_insensitive() -> None:
     body = "#  Hello   World \n\n段落"
     out = publish_body_for("hello world", body)
     assert out.strip() == "段落"
+
+
+def test_frontmatter_title_duplicate_heading_removed() -> None:
+    """frontmatter 提取 title 后，正文首行同名标题仍应去重。"""
+    body = "# 文章标题\n\n正文段落。"
+    out = publish_body_for("文章标题", body)
+    assert out.startswith("正文段落")
+    assert "# 文章标题" not in out

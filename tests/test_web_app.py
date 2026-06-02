@@ -81,6 +81,24 @@ def test_render_preview_endpoint(app_config: AppConfig) -> None:
     assert data["render_error"] is None
 
 
+def test_render_preview_strips_duplicate_title(app_config: AppConfig) -> None:
+    """Round 48：预览与草稿同源，正文不重复首标题。"""
+    client = TestClient(create_app(app_config))
+    body = "# 重复标题\n\n正文段。"
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            "INSERT INTO articles (source_path, title, summary, body, content_hash, status) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            ("/tmp/dup.md", "重复标题", "摘要", body, "duphash", "imported"),
+        )
+        conn.commit()
+        article_id = conn.execute("SELECT id FROM articles").fetchone()[0]
+    data = client.get(f"/api/articles/{article_id}/render-preview").json()
+    assert data["raw_body"] == body
+    assert "正文段" in data["html_body"]
+    assert "重复标题" not in data["html_body"]
+
+
 def test_overview_endpoint_empty(app_config: AppConfig) -> None:
     client = TestClient(create_app(app_config))
     r = client.get("/api/overview")

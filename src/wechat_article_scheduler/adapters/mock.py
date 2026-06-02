@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from wechat_article_scheduler.adapters.base import DraftOptions, DraftResult, WechatAdapter
+from wechat_article_scheduler.publish_preview import render_for_publish
 
 
 class MockWechatAdapter(WechatAdapter):
@@ -21,6 +22,7 @@ class MockWechatAdapter(WechatAdapter):
     ) -> DraftResult:
         media_id = f"mock_media_{uuid.uuid4().hex[:16]}"
         opts = options or DraftOptions()
+        content_html = render_for_publish(title, body)
         return DraftResult(
             media_id=media_id,
             raw_response={
@@ -28,6 +30,8 @@ class MockWechatAdapter(WechatAdapter):
                 "errmsg": "ok",
                 "media_id": media_id,
                 "mode": "mock",
+                "title": title,
+                "content": content_html,
                 "cover_path": cover_path or "",
                 "need_open_comment": opts.need_open_comment,
                 "only_fans_can_comment": opts.only_fans_can_comment,
