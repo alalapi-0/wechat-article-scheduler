@@ -68,6 +68,13 @@ from wechat_article_scheduler.wechat_field_matrix import (
 from wechat_article_scheduler.adapters.browser_assist.workflow import (
     build_dry_run_plan,
 )
+from wechat_article_scheduler.review.proof import (
+    ProofInput,
+    get_proof_for_job,
+    list_waiting_confirmation,
+    mark_job_waiting_confirmation,
+    submit_publish_proof,
+)
 from wechat_article_scheduler.web.drafts_display import (
     drafts_summary,
     get_wechat_draft,
@@ -348,6 +355,42 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     ) -> dict[str, Any]:
         """browser_assist 干跑计划（Round 18；人机确认，不自动发布）。"""
         return build_dry_run_plan(article_id=article_id, media_id=media_id)
+
+    @app.get("/api/waiting-confirmation")
+    def api_waiting_confirmation() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            items = list_waiting_confirmation(conn)
+        return {"count": len(items), "items": items}
+
+    @app.get("/api/publish-jobs/{job_id}/proof")
+    def api_get_publish_proof(job_id: int) -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            proof = get_proof_for_job(conn, job_id)
+        if not proof:
+            return {"ok": True, "proof": None}
+        return {"ok": True, "proof": proof}
+
+    @app.post("/api/publish-jobs/{job_id}/proof")
+    def api_submit_publish_proof(job_id: int, body: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+        proof = ProofInput(
+            screenshot_path=body.get("screenshot_path"),
+            public_url=body.get("public_url"),
+            confirmed_by=body.get("confirmed_by"),
+            note=body.get("note"),
+        )
+        with db.connect(cfg.database_path) as conn:
+            result = submit_publish_proof(conn, job_id, proof)
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error", "提交失败"))
+        return result
+
+    @app.post("/api/publish-jobs/{job_id}/waiting-confirmation")
+    def api_mark_waiting_confirmation(job_id: int) -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            result = mark_job_waiting_confirmation(conn, job_id)
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error", "操作失败"))
+        return result
 
     @app.get("/api/user-labels")
     def user_labels() -> dict[str, Any]:
@@ -1079,16 +1122,19 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>概况</h2><pre id="overview">加载中…</pre>
 <h2>微信字段能力矩阵</h2><pre id="fields">加载中…</pre>
 <h2>browser_assist 干跑计划</h2><pre id="browser-assist">加载中…</pre>
+<h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
 <script>
 Promise.all([
   fetch('/api/status'),
   fetch('/api/overview'),
   fetch('/api/wechat-field-matrix'),
   fetch('/api/browser-assist-plan'),
-]).then(async ([a,b,c,d])=>{
+  fetch('/api/waiting-confirmation'),
+]).then(async ([a,b,c,d,e])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
   document.getElementById('browser-assist').textContent = JSON.stringify(await d.json(), null, 2);
+  document.getElementById('waiting').textContent = JSON.stringify(await e.json(), null, 2);
 });
 </script></body></html>"""

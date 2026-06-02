@@ -32,6 +32,7 @@ JOB_STATUS: dict[str, str] = {
     "done": "已完成",
     "failed": "失败",
     "cancelled": "已取消",
+    "waiting_confirmation": "待人工确认",
 }
 
 EVENT_TYPE: dict[str, str] = {
@@ -40,6 +41,8 @@ EVENT_TYPE: dict[str, str] = {
     "plan_created": "创建发布计划",
     "job_started": "开始发布",
     "job_done": "发布完成",
+    "waiting_confirmation": "进入待人工确认",
+    "proof_submitted": "已提交发布证明",
     "draft_created": "微信草稿已创建",
     "job_failed": "发布失败",
     "digest_warning": "摘要提醒",
@@ -106,6 +109,8 @@ def article_workflow_hint(
             return "发布中"
         if job == "failed":
             return "发布失败，可重新安排"
+        if job == "waiting_confirmation":
+            return "待人工确认 · 需回填发布证明"
         if has_wechat_draft:
             return "已收录 · 微信草稿已创建"
         return "待安排发布"

@@ -80,3 +80,6 @@ round_072:
 
 round_073:
   - python3 -m pytest tests/test_browser_assist_workflow.py -q
+
+round_074:
+  - python3 -m pytest tests/test_publish_proof.py -q

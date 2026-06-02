@@ -64,6 +64,18 @@
       <h2>发布状态</h2>
       <div id="statusBlock"></div>
     </section>
+    <section class="card" id="proofCard" hidden>
+      <h2>发布证明（人工确认）</h2>
+      <p style="margin:0 0 10px;font-size:13px;color:var(--muted);" id="proofHint"></p>
+      <form id="proofForm" style="display:flex;flex-direction:column;gap:8px;max-width:480px;">
+        <label style="font-size:13px;">公开链接 <input type="url" name="public_url" placeholder="https://…" style="width:100%;padding:6px 8px;margin-top:4px;"/></label>
+        <label style="font-size:13px;">截图路径 <input type="text" name="screenshot_path" placeholder="/path/to/screenshot.png" style="width:100%;padding:6px 8px;margin-top:4px;"/></label>
+        <label style="font-size:13px;">确认人 <input type="text" name="confirmed_by" placeholder="本地用户" style="width:100%;padding:6px 8px;margin-top:4px;"/></label>
+        <label style="font-size:13px;">备注 <input type="text" name="note" style="width:100%;padding:6px 8px;margin-top:4px;"/></label>
+        <button type="submit" class="btn-primary" style="align-self:flex-start;">提交发布证明</button>
+      </form>
+      <pre id="proofExisting" class="adv" style="margin-top:10px;display:none;font-size:12px;background:#f0f4f8;color:#333;"></pre>
+    </section>
     <section class="card">
       <h2>发布前检查</h2>
       <ul class="checks" id="checksList"></ul>
@@ -152,6 +164,36 @@ async function boot(){
     if (draft.mock_note) st += `<p class="warn" style="margin-top:6px;">${esc(draft.mock_note)}</p>`;
     if (draft.update_hint) st += `<p style="margin-top:6px;font-size:12px;color:var(--muted);">${esc(draft.update_hint)}</p>`;
     document.getElementById('statusBlock').innerHTML = st;
+    const proof = d.publish_proof;
+    const proofCard = document.getElementById('proofCard');
+    if (proof && proof.needs_proof) {
+      proofCard.hidden = false;
+      document.getElementById('proofHint').textContent = proof.hint || '';
+      if (proof.existing) {
+        const pe = document.getElementById('proofExisting');
+        pe.style.display = 'block';
+        pe.textContent = JSON.stringify(proof.existing, null, 2);
+      }
+      document.getElementById('proofForm').onsubmit = async (ev) => {
+        ev.preventDefault();
+        const fd = new FormData(ev.target);
+        const body = {
+          public_url: fd.get('public_url') || null,
+          screenshot_path: fd.get('screenshot_path') || null,
+          confirmed_by: fd.get('confirmed_by') || null,
+          note: fd.get('note') || null,
+        };
+        try {
+          const r = await (await fetch(`/api/publish-jobs/${proof.job_id}/proof`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })).json();
+          if (!r.ok) { alert(r.error || '提交失败'); return; }
+          alert('已记录发布证明');
+          location.reload();
+        } catch(e) { alert('提交失败：'+e); }
+      };
+    }
     const btnUpdDraft = document.getElementById('btnUpdateDraft');
     if (btnUpdDraft) btnUpdDraft.hidden = !draft.can_update;
     document.getElementById('checksList').innerHTML = (d.preflight_checks||[]).map(c =>

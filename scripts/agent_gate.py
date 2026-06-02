@@ -127,6 +127,7 @@ ROUND_ORDER = [
     "round_071",
     "round_072",
     "round_073",
+    "round_074",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -856,6 +857,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "按 docs/roadmap_converged.md 继续 Round 19：人工确认与 proof 记录",
         ],
     },
+    "round_074": {
+        "name": "Round 74 - 人工确认与 proof 记录",
+        "acceptance_criteria": [
+            "publish_proofs 表与 proof 字段文档",
+            "无 proof 时 waiting_confirmation 不得标为已发布",
+            "Web/CLI/API 提交 proof 入口",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 20：可选正式发布",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1425,6 +1437,19 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest browser assist workflow",
+            ),
+        ]
+    elif round_id == "round_074":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_publish_proof.py",
+                    "-q",
+                ],
+                "pytest publish proof",
             ),
         ]
     else:

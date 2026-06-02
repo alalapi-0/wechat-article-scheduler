@@ -11,6 +11,11 @@ from wechat_article_scheduler.publish_body import publish_body_for
 from wechat_article_scheduler.publish_config import human_publish_config_summary, parse_publish_config, defaults_from_rules
 from wechat_article_scheduler.publish_preview import _maybe_unescape_html
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at
+from wechat_article_scheduler.review.proof import (
+    WAITING_CONFIRMATION,
+    cannot_mark_published_without_proof,
+    get_proof_for_job,
+)
 from wechat_article_scheduler.web.user_copy import (
     article_workflow_hint,
     label_article_status,
@@ -167,6 +172,10 @@ def suggest_detail_actions(
         primary = "wait"
         headline = f"已排期：{job.get('scheduled_at_label') or '待发布'}"
         actions.append("到时间后在工作台执行「执行到点发布」")
+    elif job and job.get("status") == WAITING_CONFIRMATION:
+        primary = "proof"
+        headline = "待在公众号后台确认并回填证明"
+        actions.append("保存或发布后，在本页填写公开链接或截图路径")
     elif job and job.get("status") == "failed":
         primary = "retry"
         headline = "上次发布失败"
@@ -196,6 +205,14 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
     if row is None:
         return {}
     job = _latest_job(conn, article_id, config)
+    proof_block: dict[str, Any] | None = None
+    if job and cannot_mark_published_without_proof(job.get("status")):
+        proof_block = {
+            "job_id": job["id"],
+            "needs_proof": True,
+            "existing": get_proof_for_job(conn, int(job["id"])),
+            "hint": "半自动流程需提交公开链接或截图路径后才能标记为已发布",
+        }
     mode = (config.wechat_mode or "mock").strip().lower()
     draft = _draft_info(conn, article_id, mode=mode)
     checks = _article_preflight_checks(row, config)
@@ -220,6 +237,7 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
         "cover_url": f"/media/cover/{article_id}" if (row.get("cover_path") or "").strip() else None,
         "content_hints": article_content_hints(row.get("title") or "", body),
         "latest_job": job,
+        "publish_proof": proof_block,
         "wechat_draft": draft,
         "preflight_checks": checks,
         "workbench": suggest_detail_actions(row=row, job=job, checks=checks, config=config),

@@ -40,6 +40,19 @@ def _build_parser() -> argparse.ArgumentParser:
     ba_plan.add_argument("--article-id", type=str, default=None)
     ba_plan.add_argument("--media-id", type=str, default=None)
 
+    mark_wc = sub.add_parser(
+        "mark-waiting-confirmation",
+        help="将发布任务标为待人工确认（browser_assist/manual_export）",
+    )
+    mark_wc.add_argument("--job-id", type=int, required=True)
+
+    submit_proof = sub.add_parser("submit-proof", help="提交发布证明并完成待确认任务")
+    submit_proof.add_argument("--job-id", type=int, required=True)
+    submit_proof.add_argument("--public-url", type=str, default=None)
+    submit_proof.add_argument("--screenshot-path", type=str, default=None)
+    submit_proof.add_argument("--confirmed-by", type=str, default=None)
+    submit_proof.add_argument("--note", type=str, default=None)
+
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
     reject_p.add_argument("--article-id", type=int, required=True)
 
@@ -149,6 +162,35 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
         return 0
+
+    if args.command == "mark-waiting-confirmation":
+        import json
+
+        from wechat_article_scheduler.review.proof import mark_job_waiting_confirmation
+
+        with db.connect(config.database_path) as conn:
+            result = mark_job_waiting_confirmation(conn, args.job_id)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("ok") else 1
+
+    if args.command == "submit-proof":
+        import json
+
+        from wechat_article_scheduler.review.proof import ProofInput, submit_publish_proof
+
+        with db.connect(config.database_path) as conn:
+            result = submit_publish_proof(
+                conn,
+                args.job_id,
+                ProofInput(
+                    public_url=args.public_url,
+                    screenshot_path=args.screenshot_path,
+                    confirmed_by=args.confirmed_by,
+                    note=args.note,
+                ),
+            )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("ok") else 1
 
     if args.command == "reject":
         ok = reject_article(config, args.article_id)

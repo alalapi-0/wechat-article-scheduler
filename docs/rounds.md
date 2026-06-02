@@ -1547,6 +1547,21 @@
   - [x] browser-assist-plan CLI 与 Web API
   - [x] agent_gate round_073 冒烟
 
+### Round 74 - 人工确认与 proof 记录
+
+- 目标：记录人工确认与最终发布证明；无 proof 不标记正式发布。
+- 范围：`publish_proofs` 迁移、`review/proof.py`、Web/CLI/API、作品详情表单、文档。
+- 非目标：恢复内容审核门禁；无人值守发布。
+- 输入：Round 73 browser_assist 干跑计划。
+- 输出：`proof_of_publish.md`、`waiting_confirmation` 状态与 proof 表。
+- 验收标准：待确认任务需 proof 才 `done`+`published`；API/详情页可提交。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_publish_proof.py -q`。
+- 退出标准：gate round_074 通过；`/debug` 可加载 `/api/waiting-confirmation`。
+- 交付项：
+  - [x] proof 模块与迁移
+  - [x] Web/CLI 入口
+  - [x] agent_gate round_074 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -132,6 +132,6 @@ def build_dry_run_plan(
             "public_url": None,
             "confirmed_by": None,
             "confirmed_at": None,
-            "note": "Round 19 将接入最小 proof 记录",
+            "note": "在作品详情或 POST /api/publish-jobs/{id}/proof 回填",
         },
     }
