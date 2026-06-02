@@ -1,16 +1,15 @@
 current_round:
-  id: round_125
-  name: Round 125 - 作品卡导出下拉
-  status: completed
-  updated_at: '2026-06-02T19:58:16.885563+00:00'
-  completed_at: '2026-06-02'
+  id: round_126
+  name: Round 126 - 详情页导出下拉
+  status: active
+  updated_at: '2026-06-02T20:02:17.038637+00:00'
 last_completed_round:
   id: round_125
-  completed_at: '2026-06-02T20:00:01.649768+00:00'
+  completed_at: '2026-06-02T20:02:17.038637+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- GET /api/manual-export/platforms 驱动导出菜单
+- 详情页 export-drop 联动 manual-export/platforms
 - POST export-outbox 按所选平台导出
-- mock@8080 点击导出一种平台
+- mock@8080 /articles/{id} 点击导出一种平台
 next_actions:
-- 在 docs/rounds.md 规划 round_126 后续能力
+- 在 docs/rounds.md 规划 round_127 后续能力
