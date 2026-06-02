@@ -1095,15 +1095,51 @@ function renderChips(){
   el('doUpload').disabled = items.length === 0;
 }
 
+let lastUploadSummary = null;
+
+function uploadToastKind(data){
+  const skipped = ((data && data.skipped_articles) || []).length + ((data && data.skipped_covers) || []).length;
+  if (skipped > 0) return 'warn';
+  const imported = int(data && data.scan && data.scan.imported) || int(data && data.upload_summary && data.upload_summary.imported);
+  if (imported > 0) return 'ok';
+  const saved = int(data && data.saved_articles);
+  if (saved > 0) return 'info';
+  return 'info';
+}
+
+function showUploadOutcome(data){
+  if (data && data.upload_summary) lastUploadSummary = data.upload_summary;
+  const lines = (data && data.human) || ['上传完成'];
+  const kind = uploadToastKind(data);
+  setAlert(kind, lines.join('；'));
+  const boxKind = kind === 'info' ? 'ok' : kind;
+  showResult(lines, boxKind);
+  flashEventsPanel();
+}
+
+async function exportOutboxArticle(articleId, platform){
+  const plat = platform || 'generic';
+  if (!window.confirm('导出 outbox 包到本地目录？不会联网或自动发布。')) return;
+  try {
+    const d = await (await fetch(
+      `/api/articles/${articleId}/export-outbox?platform=${encodeURIComponent(plat)}`,
+      { method: 'POST' },
+    )).json();
+    if (!d.ok) { setAlert('err', d.error || d.detail || '导出失败'); return; }
+    const msg = (d.human || ['已导出']).join('；') + (d.relative_path ? ' · ' + d.relative_path : '');
+    setAlert('ok', msg);
+  } catch(e) { setAlert('err', '导出失败：' + e); }
+}
+
 async function submitUpload(){
   const fd = new FormData();
   pending.articles.forEach(f => fd.append('articles', f, f.name));
   pending.covers.forEach(f => fd.append('covers', f, f.name));
   el('doUpload').disabled = true;
-  setAlert('info', '正在上传…');
+  setAlert('info', '正在上传并扫描入库…');
   try {
     const data = await (await fetch('/api/upload', { method:'POST', body: fd })).json();
-    setAlert('ok', (data.human||['上传完成']).join('；'));
+    showUploadOutcome(data);
     pending.articles = []; pending.covers = []; renderChips();
   } catch(e){
     setAlert('err', '上传失败：' + e);
@@ -1157,7 +1193,9 @@ function renderChainScanHint(ov){
   }
   const label = CHAIN_ACTION_LABELS[action] || action;
   let text = '微信闭环建议：' + label;
-  if (lastScanSummary && lastScanSummary.summary_label) {
+  if (lastUploadSummary && lastUploadSummary.summary_label) {
+    text = '上次上传 ' + lastUploadSummary.summary_label + ' · ' + text;
+  } else if (lastScanSummary && lastScanSummary.summary_label) {
     text = '上次扫描 ' + lastScanSummary.summary_label + ' · ' + text;
   }
   box.hidden = false;
@@ -1797,6 +1835,7 @@ function renderWorks(arts){
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
             <button class="btn-ghost btn-sm" onclick="scheduleArticle(${a.id})">安排时间</button>
             <button class="btn-ghost btn-sm" onclick="changeCover(${a.id})">换封面</button>
+            <button class="btn-ghost btn-sm" onclick="exportOutboxArticle(${a.id})">导出 outbox</button>
             <button class="btn-ghost btn-sm" onclick="trashArticle(${a.id})">删除</button>
           </div>
         </div>

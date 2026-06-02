@@ -2203,6 +2203,23 @@
   - [x] 详情 proof 锚点跳转
   - [x] agent_gate round_113 冒烟
 
+### Round 114 - 上传反馈与 outbox 快捷导出
+
+- 目标：上传 .md 后 toast/摘要 + scan 联动；作品卡一键导出 outbox。
+- 范围：`upload_summary`、`/api/upload`、`admin_template` 作品卡按钮。
+- 非目标：outbox 格式变更。
+- 输入：round_112 scan 联动、既有 `export-outbox` API。
+- 输出：`upload_summary`/`chain_hint`；`showUploadOutcome`；`导出 outbox` 按钮。
+- 验收标准：`test_round_114_wechat_p0`；mock@8080 上传与导出点击。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_114_wechat_p0.py -q`。
+- 退出标准：gate round_114。
+- 风险：无。
+- 回滚点：恢复简单 upload human。
+- 交付项：
+  - [x] 上传 scan 联动反馈
+  - [x] 作品卡导出 outbox
+  - [x] agent_gate round_114 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

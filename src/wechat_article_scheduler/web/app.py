@@ -28,6 +28,7 @@ from wechat_article_scheduler.web.scan_summary import (
     chain_hint_after_scan,
     format_scan_stats,
 )
+from wechat_article_scheduler.web.upload_summary import enrich_upload_response
 from wechat_article_scheduler.content_library import (
     discover_collection_configs,
     list_collections,
@@ -1166,7 +1167,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         """批量上传作品文件与封面图（multipart）。"""
         article_payloads = [(f.filename or "unnamed", await f.read()) for f in articles]
         cover_payloads = [(f.filename or "unnamed", await f.read()) for f in covers]
-        return handle_upload(cfg, articles=article_payloads, covers=cover_payloads)
+        result = handle_upload(cfg, articles=article_payloads, covers=cover_payloads)
+        with db.connect(cfg.database_path) as conn:
+            return enrich_upload_response(result, cfg, conn)
 
     @app.post("/api/articles/{article_id}/cover")
     async def set_article_cover(
