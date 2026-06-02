@@ -97,7 +97,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不能让旧样稿无法 scan/plan。
 - 下一轮衔接：进入合集排期规则。
 
-### Round 9：合集排期规则
+### Round 9：合集排期规则（已完成 — agent `round_064`）
 
 - 本轮目标：让不同合集有自己的发布时间规则。
 - 具体任务：支持默认发布时间、每日上限、合集间错峰、标题模板应用。

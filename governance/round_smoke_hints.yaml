@@ -50,3 +50,6 @@ round_062:
 
 round_063:
   - python3 -m pytest tests/test_multi_collection.py tests/test_content_library.py -q
+
+round_064:
+  - python3 -m pytest tests/test_collection_schedule.py tests/test_web_schedule.py -q

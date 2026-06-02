@@ -42,6 +42,7 @@ def test_next_slot_not_before_floor() -> None:
         now,
         floor=now,
         day_counts={},
+        collection_slug="default",
         max_per_day=3,
         min_hours_between=1,
         preferred_hours=[9, 14, 20],

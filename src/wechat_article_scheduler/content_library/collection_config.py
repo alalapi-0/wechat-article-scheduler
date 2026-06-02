@@ -22,6 +22,7 @@ class CollectionConfig:
     sort_rule: str
     inbox_dirs: tuple[Path, ...]
     yaml_path: Path
+    schedule_raw: dict[str, Any] | None = None
 
     def to_config_json(self) -> str:
         import json
@@ -33,6 +34,7 @@ class CollectionConfig:
             "sort_rule": self.sort_rule,
             "inbox_dirs": [str(p) for p in self.inbox_dirs],
             "yaml_path": str(self.yaml_path),
+            "schedule": self.schedule_raw,
         }
         return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
@@ -74,6 +76,8 @@ def load_collection_yaml(path: Path, *, root: Path) -> CollectionConfig:
     slug = str(data.get("slug") or slugify(name)).strip()
     if not slug:
         raise ValueError(f"合集 slug 无效: {path}")
+    sched = data.get("schedule")
+    schedule_raw = sched if isinstance(sched, dict) else None
     return CollectionConfig(
         slug=slug,
         name=name,
@@ -84,6 +88,7 @@ def load_collection_yaml(path: Path, *, root: Path) -> CollectionConfig:
         sort_rule=str(data.get("sort_rule") or "source_name").strip(),
         inbox_dirs=_resolve_inbox_dirs(root, slug, data),
         yaml_path=path,
+        schedule_raw=schedule_raw,
     )
 
 

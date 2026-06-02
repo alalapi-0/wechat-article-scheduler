@@ -151,6 +151,12 @@ def humanize_scan_result(payload: dict[str, Any]) -> list[str]:
 
 def humanize_plan_result(payload: dict[str, Any]) -> list[str]:
     planned = int(payload.get("planned") or 0)
+    hints = payload.get("hints") or []
+    if isinstance(hints, list) and hints:
+        lines = [str(h) for h in hints if h]
+        if planned:
+            lines.insert(0, f"已按合集规则为 {planned} 篇文章安排发布时间")
+        return lines
     if planned:
         return [f"已按推荐时段自动为 {planned} 篇文章安排发布时间"]
     return ["没有需要新安排的文章（可能已全部排期）"]

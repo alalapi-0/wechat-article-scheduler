@@ -1376,6 +1376,24 @@
   - [x] API/Web 合集筛选
   - [x] agent_gate round_063 冒烟
 
+### Round 64 - 合集排期规则
+
+- 目标：不同合集拥有可预测的发布时间规则，并与自动 plan 集成。
+- 范围：`collection_schedule.py`、`plan.py`、`collection.yaml` schedule 块、Web 文案、文档与测试。
+- 非目标：复杂日历 UI；跨平台排期。
+- 输入：Round 63 多合集模型、全局 `config/rules.yaml` schedule。
+- 输出：`docs/collection_schedule_rules.md`、按合集 `by_collection`/`hints`、demo 合集 schedule 示例。
+- 验收标准：同合集与跨合集排期可预测；不重复生成 pending；冲突有可读 hints。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_collection_schedule.py tests/test_web_schedule.py -q`。
+- 退出标准：pytest 通过；plan API 返回合集级摘要。
+- 风险：合集规则与全局规则叠加导致窗口内排不下。
+- 回滚点：仅使用全局 schedule，忽略 collection.yaml schedule。
+- 交付项：
+  - [x] 合集 schedule 解析与 plan 分组
+  - [x] stagger / window_days / 每日上限
+  - [x] humanize_plan_result hints
+  - [x] agent_gate round_064 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

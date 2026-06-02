@@ -6,3 +6,9 @@ title_template: "【{title}】"
 sort_rule: source_name
 # 可选：default_cover: assets/covers/default.png
 legacy_inbox_subdir: demo
+schedule:
+  max_per_day: 1
+  min_hours_between: 6
+  preferred_hours: [10, 18]
+  stagger_hours: 2
+  window_days: 14

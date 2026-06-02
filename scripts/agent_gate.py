@@ -117,6 +117,7 @@ ROUND_ORDER = [
     "round_061",
     "round_062",
     "round_063",
+    "round_064",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -733,7 +734,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "Web/API 可按合集筛选作品",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 9：合集排期规则",
+            "推进 Round 64：合集排期规则",
+        ],
+    },
+    "round_064": {
+        "name": "Round 64 - 合集排期规则",
+        "acceptance_criteria": [
+            "collection.yaml schedule 块可解析并参与 plan",
+            "按合集 max_per_day / 偏好时段 / stagger 错峰",
+            "plan 返回 by_collection 与可读 hints",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 10：Web 控制台 MVP",
         ],
     },
 }
@@ -1167,6 +1179,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest multi collection library",
+            ),
+        ]
+    elif round_id == "round_064":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_collection_schedule.py",
+                    "tests/test_web_schedule.py",
+                    "-q",
+                ],
+                "pytest collection schedule rules",
             ),
         ]
     else:

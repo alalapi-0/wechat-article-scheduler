@@ -18,6 +18,10 @@ schedule:
   min_hours_between: 4
   # 首选发布时间（24h，本地时区）
   preferred_hours: [9, 14, 20]
+  # 可选：自动 plan 向前看多少天（合集 collection.yaml 可再覆盖 window_days）
+  # window_days: 14
+
+# 合集级排期见 content/collections/*/collection.yaml 的 schedule 块（docs/collection_schedule_rules.md）
 
 publish:
   # draft = 仅进草稿箱；publish = 到点正式发布（WECHAT_MODE=real 时用于真实 API 测试）
