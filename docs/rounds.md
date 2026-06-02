@@ -2322,6 +2322,23 @@
   - [x] 详情返回动态 hash 链接
   - [x] agent_gate round_120 冒烟
 
+### Round 121 - 详情链接统一捕获
+
+- 目标：队列表格标题/操作、作品卡「详情」跳转前均调用 `captureWorkbenchReturnContext`。
+- 范围：`renderQueue`、`renderWorks`、委托捕获与 `refreshWorkbenchDetailLinkBindings`。
+- 非目标：详情页逻辑变更。
+- 输入：round_120 返回上下文。
+- 输出：inline `onclick` + `wb-detail-link` 类；渲染后兜底绑定。
+- 验收标准：`test_round_121_wechat_p0`；mock@8080 `/#queue` 点详情→返回 `#queue`。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_121_wechat_p0.py -q`。
+- 退出标准：gate round_121。
+- 风险：无。
+- 回滚点：移除 inline onclick。
+- 交付项：
+  - [x] 队列/作品卡详情捕获
+  - [x] 动态渲染兜底绑定
+  - [x] agent_gate round_121 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

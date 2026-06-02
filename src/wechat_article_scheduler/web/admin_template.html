@@ -1156,13 +1156,29 @@ function captureWorkbenchReturnContext(){
   } catch (e) {}
 }
 
+function isWorkbenchArticleDetailHref(href){
+  const path = String(href || '').split('#')[0].split('?')[0];
+  return /^\/articles\/\d+$/.test(path);
+}
+
 function setupWorkbenchReturnCapture(){
   document.addEventListener('click', e => {
-    const a = e.target.closest('a[href]');
+    const a = e.target.closest('a.wb-detail-link, a[href^="/articles/"]');
     if (!a) return;
-    const href = (a.getAttribute('href') || '').split('#')[0];
-    if (/^\/articles\/\d+$/.test(href)) captureWorkbenchReturnContext();
+    if (isWorkbenchArticleDetailHref(a.getAttribute('href'))) captureWorkbenchReturnContext();
   }, true);
+}
+
+function refreshWorkbenchDetailLinkBindings(root){
+  const scope = root || document;
+  const sel = '#worksGrid a[href^="/articles/"], #queueBox a[href^="/articles/"], #waitingConfirmEntry a[href^="/articles/"], #draftsBox a[href^="/articles/"]';
+  scope.querySelectorAll(sel).forEach(a => {
+    if (!isWorkbenchArticleDetailHref(a.getAttribute('href'))) return;
+    a.classList.add('wb-detail-link');
+    if (a.dataset.wbCaptureBound === '1') return;
+    a.dataset.wbCaptureBound = '1';
+    a.addEventListener('click', () => captureWorkbenchReturnContext(), true);
+  });
 }
 const WORKBENCH_SECTION_IDS = new Set([
   'overview', 'works', 'articles', 'actions', 'queue', 'drafts', 'trash', 'events', 'help',
@@ -1710,7 +1726,7 @@ function renderWaitingConfirmationEntry(wc){
   const rows = preview.slice(0, 5).map(it => {
     const proof = it.has_proof ? ' · 已有证明' : ' · 待提交证明';
     const url = esc(it.proof_form_url || '/articles/'+it.article_id+'#proof');
-    return `<li><a href="${url}">${esc(it.article_title||'（无标题）')}</a>${esc(proof)}</li>`;
+    return `<li><a class="wb-detail-link" href="${url}" onclick="captureWorkbenchReturnContext()">${esc(it.article_title||'（无标题）')}</a>${esc(proof)}</li>`;
   }).join('');
   const quickBtn = wc.quick_proof_allowed
     ? '<button type="button" class="btn-ghost btn-sm" onclick="bulkQuickProofWaiting()">全部快速确认</button>'
@@ -1724,6 +1740,7 @@ function renderWaitingConfirmationEntry(wc){
       ${quickBtn}
     </div>
   </div>`;
+  refreshWorkbenchDetailLinkBindings(box);
 }
 
 function renderStats(ov){
@@ -1805,10 +1822,11 @@ function renderDrafts(drafts){
       <td>${esc(d.created_at_label)}</td>
       <td>${esc(d.media_id_label)}</td>
       <td><span class="pill ok">${esc(d.status_label)}</span></td>
-      <td class="acts"><a class="btn-ghost btn-sm" href="${esc(d.article_detail_url)}">作品详情</a></td>
+      <td class="acts"><a class="btn-ghost btn-sm wb-detail-link" href="${esc(d.article_detail_url)}" onclick="captureWorkbenchReturnContext()">作品详情</a></td>
     </tr>`;
   }).join('');
   box.innerHTML = `<table class="queue-table"><thead><tr><th>作品</th><th>创建时间</th><th>草稿 ID</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+  refreshWorkbenchDetailLinkBindings(box);
 }
 
 let lastQueueSummary = null;
@@ -1920,7 +1938,7 @@ function renderQueue(jobs){
       ? `<td class="fail-reason">${esc(j.failure_reason_short || j.failure_reason || '—')}</td>`
       : '';
     const detailHref = esc(j.proof_form_url || j.detail_url || '/articles/'+j.article_id+'#proof');
-    let acts = `<a class="btn-ghost btn-sm" href="${detailHref}">填写证明</a> `;
+    let acts = `<a class="btn-ghost btn-sm wb-detail-link" href="${detailHref}" onclick="captureWorkbenchReturnContext()">填写证明</a> `;
     if (j.status === 'waiting_confirmation' && j.quick_proof_available) {
       acts += `<button class="btn-primary btn-sm" type="button" onclick="quickProofJob(${j.id})">快速确认</button> `;
     }
@@ -1934,7 +1952,7 @@ function renderQueue(jobs){
     const hintRow = j.next_hint ? `<div class="hint-cell">${esc(j.next_hint)}</div>` : '';
     return `
     <tr>
-      <td><a href="${titleHref}">${esc(j.title||'（无标题）')}</a><div class="hint-cell">${esc(j.collection_name||'')}</div>${hintRow}</td>
+      <td><a class="wb-detail-link" href="${titleHref}" onclick="captureWorkbenchReturnContext()">${esc(j.title||'（无标题）')}</a><div class="hint-cell">${esc(j.collection_name||'')}</div>${hintRow}</td>
       <td>${esc(j.scheduled_at_label||'未安排')}</td>
       <td>${esc(j.publish_config_label||'—')}<div class="hint-cell">${esc(j.publish_effective_badge||'')}</div></td>
       <td>${statusCell}</td>
@@ -1944,6 +1962,7 @@ function renderQueue(jobs){
   }).join('');
   const failTh = showFailCol ? '<th>失败原因</th>' : '';
   el('queueBox').innerHTML = failBanner + `<table class="queue-table"><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th>${failTh}<th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+  refreshWorkbenchDetailLinkBindings(el('queueBox'));
 }
 
 async function retryJob(jobId){
@@ -2008,7 +2027,7 @@ function renderWorks(arts){
           <div class="summary">${summary}</div>
           <div class="meta"><span class="pill ${pillCls}">${esc(statusLbl)}</span><span class="chip">${esc(a.collection_name||a.collection_slug||'默认')}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}${(a.content_hints||[]).map(h => `<span class="chip">${esc(h)}</span>`).join('')}</div>
           <div class="acts">
-            <a class="btn-ghost btn-sm" href="/articles/${a.id}">详情</a>
+            <a class="btn-ghost btn-sm wb-detail-link" href="/articles/${a.id}" onclick="captureWorkbenchReturnContext()">详情</a>
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
             <button class="btn-ghost btn-sm" onclick="scheduleArticle(${a.id})">安排时间</button>
             <button class="btn-ghost btn-sm" onclick="changeCover(${a.id})">换封面</button>
@@ -2018,6 +2037,7 @@ function renderWorks(arts){
         </div>
       </div>`;
   }).join('');
+  refreshWorkbenchDetailLinkBindings(grid);
   grid.querySelectorAll('input[data-sel-work]').forEach(inp => {
     inp.addEventListener('click', e => e.stopPropagation());
     inp.addEventListener('change', () => {
