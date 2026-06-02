@@ -43,7 +43,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--platform",
         type=str,
         default="wechat_official",
-        help="wechat_official | zhihu（知乎评估 dry-run）",
+        help="wechat_official | zhihu | douban（评估 dry-run）",
     )
 
     mark_wc = sub.add_parser(

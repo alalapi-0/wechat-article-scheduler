@@ -1178,6 +1178,7 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>微信字段能力矩阵</h2><pre id="fields">加载中…</pre>
 <h2>browser_assist 干跑计划（微信）</h2><pre id="browser-assist">加载中…</pre>
 <h2>知乎 browser_assist 评估</h2><pre id="browser-assist-zhihu">加载中…</pre>
+<h2>豆瓣 browser_assist 评估</h2><pre id="browser-assist-douban">加载中…</pre>
 <h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
 <h2>outbox 导出包</h2><pre id="outbox">加载中…</pre>
 <script>
@@ -1187,15 +1188,17 @@ Promise.all([
   fetch('/api/wechat-field-matrix'),
   fetch('/api/browser-assist-plan'),
   fetch('/api/browser-assist-plan?platform=zhihu'),
+  fetch('/api/browser-assist-plan?platform=douban'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g])=>{
+]).then(async ([a,b,c,d,e,f,g,h])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
   document.getElementById('browser-assist').textContent = JSON.stringify(await d.json(), null, 2);
   document.getElementById('browser-assist-zhihu').textContent = JSON.stringify(await e.json(), null, 2);
-  document.getElementById('waiting').textContent = JSON.stringify(await f.json(), null, 2);
-  document.getElementById('outbox').textContent = JSON.stringify(await g.json(), null, 2);
+  document.getElementById('browser-assist-douban').textContent = JSON.stringify(await f.json(), null, 2);
+  document.getElementById('waiting').textContent = JSON.stringify(await g.json(), null, 2);
+  document.getElementById('outbox').textContent = JSON.stringify(await h.json(), null, 2);
 });
 </script></body></html>"""

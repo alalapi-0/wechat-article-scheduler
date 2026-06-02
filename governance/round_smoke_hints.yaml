@@ -107,3 +107,9 @@ round_081:
 
 round_082:
   - python3 -m pytest tests/test_browser_assist_platforms.py tests/test_browser_assist_workflow.py -q
+
+round_083:
+  - python3 -m pytest tests/test_douban_browser_assist.py -q
+
+round_084:
+  - python3 -m pytest tests/test_phase2_browser_assist_index.py -q

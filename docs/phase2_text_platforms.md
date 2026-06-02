@@ -14,6 +14,8 @@ Status: Active — Phase 1 微信闭环已验收（round_076）
 - 知乎发布包（round_079）：`zhihu_title.txt`、`zhihu_excerpt.txt`、`zhihu_body.md`、`zhihu_publish_checklist.md` 等
 - 豆瓣发布包（round_080）：`douban_title.txt`、`douban_tags_hint.md` 等
 - `GET /api/manual-export/platforms`
+- 知乎/豆瓣 browser_assist 评估（round_081/083）：`browser-assist-plan --platform zhihu|douban`
+- `GET /api/browser-assist/platforms`
 
 ## 后续（backlog）
 

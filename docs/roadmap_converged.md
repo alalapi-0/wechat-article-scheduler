@@ -299,7 +299,7 @@ Phase 2 暂不开发。只有 Phase 1 验收通过后，才允许启动。
 - 风险边界：不得声称 API 已支持。
 - 下一轮衔接：进入豆瓣 browser_assist 评估。
 
-### Round 27：豆瓣 browser_assist
+### Round 27：豆瓣 browser_assist（已完成 — agent `round_083`）
 
 - 本轮目标：评估豆瓣本地辅助填表。
 - 具体任务：定义操作清单、人工确认和 proof。

@@ -136,6 +136,8 @@ ROUND_ORDER = [
     "round_080",
     "round_081",
     "round_082",
+    "round_083",
+    "round_084",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -964,6 +966,28 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "豆瓣 browser_assist 评估或微信闭环修复",
         ],
     },
+    "round_083": {
+        "name": "Round 83 - 豆瓣 browser_assist 评估",
+        "acceptance_criteria": [
+            "douban dry-run 含 checkpoints 与 assessment",
+            "platform=douban API/CLI/debug",
+            "不自动发布、不绕过登录",
+        ],
+        "next_actions": [
+            "Phase 2 文本平台 browser_assist 索引收口",
+        ],
+    },
+    "round_084": {
+        "name": "Round 84 - Phase2 browser_assist 收口",
+        "acceptance_criteria": [
+            "三平台 browser_assist 均在 platforms API",
+            "phase2 文档更新",
+            "zhihu/douban/wechat 计划可生成",
+        ],
+        "next_actions": [
+            "注册 round_085 或微信修复轮",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1653,6 +1677,32 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest browser assist platforms",
+            ),
+        ]
+    elif round_id == "round_083":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_douban_browser_assist.py",
+                    "-q",
+                ],
+                "pytest douban browser assist",
+            ),
+        ]
+    elif round_id == "round_084":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_phase2_browser_assist_index.py",
+                    "-q",
+                ],
+                "pytest phase2 browser assist index",
             ),
         ]
     else:

@@ -1695,6 +1695,39 @@
   - [x] browser-assist/platforms API
   - [x] agent_gate round_082 冒烟
 
+### Round 83 - 豆瓣 browser_assist 评估
+
+- 目标：豆瓣 browser_assist dry-run 评估（不真发）。
+- 范围：`douban_workflow.py`、`douban_browser_assist.md`、debug/API/CLI。
+- 非目标：登录豆瓣、自动发布。
+- 输入：Round 80 豆瓣发布包。
+- 输出：assessment、checkpoints、步骤。
+- 验收标准：platform=douban 计划可生成；不绕过验证码。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_douban_browser_assist.py -q`。
+- 退出标准：gate round_083；`/debug` 可见豆瓣评估 JSON。
+- 风险：误用为自动发帖工具。
+- 回滚点：移除 douban 分支。
+- 交付项：
+  - [x] 豆瓣 dry-run 计划
+  - [x] debug/API 入口
+  - [x] agent_gate round_083 冒烟
+
+### Round 84 - Phase2 browser_assist 收口
+
+- 目标：微信/知乎/豆瓣 browser_assist 评估入口一致可查。
+- 范围：`phase2_text_platforms.md`、`test_phase2_browser_assist_index.py`。
+- 非目标：新平台 adapter。
+- 输入：round_081–083。
+- 输出：三平台 platforms API 测试通过。
+- 验收标准：wechat/zhihu/douban 均可 build_dry_run_plan。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_phase2_browser_assist_index.py -q`。
+- 退出标准：gate round_084 通过。
+- 风险：无。
+- 回滚点：N/A。
+- 交付项：
+  - [x] Phase2 文档与索引测试
+  - [x] agent_gate round_084 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
