@@ -2237,6 +2237,23 @@
   - [x] 维护冒烟扩展
   - [x] agent_gate round_115 冒烟
 
+### Round 116 - 高级信息持久化
+
+- 目标：「显示高级信息」写入 localStorage；默认隐藏 /debug 入口与帮助区开发者链接、内部 JSON 面板。
+- 范围：`admin_template.html` 开关、导航、帮助、`:root.show-advanced` CSS。
+- 非目标：/debug 页面功能变更。
+- 输入：AGENTS.md 普通用户视图原则。
+- 输出：`wechat_workbench_show_advanced`；`advanced-only` 包裹 debug 链接。
+- 验收标准：`test_round_116_wechat_p0`；mock@8080 开关刷新保持。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_116_wechat_p0.py -q`。
+- 退出标准：gate round_116。
+- 风险：无。
+- 回滚点：移除 localStorage 与 advanced-only 导航类。
+- 交付项：
+  - [x] localStorage 持久化
+  - [x] 默认隐藏 debug/JSON
+  - [x] agent_gate round_116 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -4,6 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>微信公众号文章发布工作台</title>
+<script>
+try {
+  if (localStorage.getItem('wechat_workbench_show_advanced') === '1') {
+    document.documentElement.classList.add('show-advanced');
+  }
+} catch (e) {}
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 <style>
   :root {
@@ -282,8 +289,12 @@
   .help-text { font-size: 13px; color: var(--muted); }
   .help-text p { margin: 8px 0; }
 
-  .advanced-only { display: none; }
-  body.show-advanced .advanced-only { display: block; }
+  .advanced-only { display: none !important; }
+  :root.show-advanced .advanced-only { display: block !important; }
+  :root.show-advanced .nav a.advanced-only {
+    display: inline-flex !important;
+    align-items: center;
+  }
   .advanced-toggle {
     display: flex; align-items: center; gap: 8px;
     color: var(--muted); font-size: 12.5px;
@@ -436,7 +447,7 @@
       <a href="#trash"><span class="ico">⌫</span> 回收站</a>
       <a href="#events"><span class="ico">≣</span> 操作记录</a>
       <a href="#help"><span class="ico">?</span> 帮助</a>
-      <a href="/debug"><span class="ico">⚙</span> 高级排错</a>
+      <a href="/debug" class="advanced-only"><span class="ico">⚙</span> 高级排错</a>
     </nav>
   </header>
 
@@ -608,8 +619,10 @@
             <div class="card pad help-text">
               <p style="margin-top:0;"><b>这是什么？</b> 一个把本地文章批量发布到微信公众号的工作台。顶部状态条显示当前模式：演练（不联网）、真实连接仅草稿、或真实发布（需二次确认）。</p>
               <p><b>怎么用？</b> ① 上传文章和封面 → ② 安排发布时间 → ③ 到时间后执行到点发布。</p>
-              <p><b>真实 API（高级）</b> 在 <code>.env</code> 设 <code>WECHAT_MODE=real</code> 与公众号凭证；推荐 <code>WECHAT_ENABLE_PUBLISH=false</code> 仅测草稿。命令行验证：<code>python3 scripts/real_api_check.py --samples 3</code>（报告在 <code>reports/real_api_runs/</code>）。</p>
-              <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
+              <div class="advanced-only">
+                <p><b>真实 API（高级）</b> 在 <code>.env</code> 设 <code>WECHAT_MODE=real</code> 与公众号凭证；推荐 <code>WECHAT_ENABLE_PUBLISH=false</code> 仅测草稿。命令行验证：<code>python3 scripts/real_api_check.py --samples 3</code>（报告在 <code>reports/real_api_runs/</code>）。</p>
+                <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
+              </div>
             </div>
           </section>
         </aside>
@@ -960,11 +973,31 @@ function setAlert(kind, msg){
   el('alertBox').innerHTML = msg ? `<div class="alert ${kind}">${esc(msg)}</div>` : '';
 }
 
+const ADV_STORAGE_KEY = 'wechat_workbench_show_advanced';
+
+function applyShowAdvanced(on){
+  document.documentElement.classList.toggle('show-advanced', !!on);
+  const t = el('advToggle');
+  if (t) t.checked = !!on;
+}
+
+function persistShowAdvanced(on){
+  try { localStorage.setItem(ADV_STORAGE_KEY, on ? '1' : '0'); } catch (e) {}
+}
+
+function initAdvancedToggle(){
+  let on = false;
+  try { on = localStorage.getItem(ADV_STORAGE_KEY) === '1'; } catch (e) {}
+  applyShowAdvanced(on);
+  el('advToggle').addEventListener('change', e => {
+    applyShowAdvanced(e.target.checked);
+    persistShowAdvanced(e.target.checked);
+  });
+}
+
 async function boot(){
   try { COPY = await (await fetch('/api/user-labels')).json(); } catch(e){ COPY = {}; }
-  el('advToggle').addEventListener('change', e => {
-    document.body.classList.toggle('show-advanced', e.target.checked);
-  });
+  initAdvancedToggle();
   setupNav();
   setupUpload();
   setupWorksSelection();
@@ -2596,7 +2629,7 @@ async function preview(id){
       el('modalWarn').hidden = false;
     }
     el('modalBody').innerHTML = d.html_body || '（空）';
-    if (document.body.classList.contains('show-advanced') && d.raw_body) {
+    if (document.documentElement.classList.contains('show-advanced') && d.raw_body) {
       el('modalRaw').hidden = false;
       el('modalRaw').textContent = d.raw_body;
     }
