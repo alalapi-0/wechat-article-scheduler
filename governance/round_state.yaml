@@ -1,11 +1,12 @@
 current_round:
   id: round_108
   name: Round 108 - 微信 P0 主线小步强化
-  status: active
+  status: completed
   updated_at: '2026-06-02T37:00:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_107
-  completed_at: '2026-06-02T18:43:23.187658+00:00'
+  id: round_108
+  completed_at: '2026-06-02T18:47:31.565956+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - overview 联动 publish_preflight
