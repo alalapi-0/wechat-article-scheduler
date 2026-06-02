@@ -109,9 +109,9 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             {
                 "id": "escaped_html",
                 "ok": False,
-                "required": False,
+                "required": will_publish,
                 "label": "疑似 HTML 源码",
-                "detail": f"有 {quality['escaped_html']} 篇作品正文像转义后的 HTML，预览可能异常",
+                "detail": f"有 {quality['escaped_html']} 篇作品正文像转义后的 HTML，正式发布前请先预览/修复",
             }
         )
 
@@ -137,19 +137,6 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
         "human": human,
         "content_quality": quality,
     }
-
-
-def article_content_hints(title: str, body: str) -> list[str]:
-    """作品卡片轻量质量提示（Round 53）。"""
-    hints: list[str] = []
-    raw = body or ""
-    if not raw.strip():
-        hints.append("正文为空")
-    if (title or "").strip() and publish_body_for(title or "", raw) != raw.strip():
-        hints.append("标题或重复首行")
-    if "&lt;" in raw and _maybe_unescape_html(raw) != raw:
-        hints.append("疑似 HTML 源码")
-    return hints
 
 
 def _content_quality_issues(conn: Any) -> dict[str, int]:

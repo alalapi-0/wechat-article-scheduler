@@ -96,7 +96,7 @@
 | Round 50 | 作品回收站与可逆删除 | 已完成 |
 | Round 51 | 清空回收站与彻底删除 | 已完成 |
 | Round 52 | 批量管理与删除一致性 | 已完成 |
-| Round 53 | 发布前内容质量检查 | 进行中 |
+| Round 53 | 发布前内容质量检查 | 已完成 |
 | Round 54 | 真实微信 API 闭环验证 | 已完成 |
 | Round 55 | Auto-Approved Real API Pipeline | 已完成 |
 | Round 56 | 路线收敛治理轮 | 已完成 |
@@ -1174,7 +1174,7 @@
 - 输入：Round 48/49 的规范化渲染、现有 publish preflight。
 - 输出：发布前内容质量检查与可读提示。
 - 验收标准：HTML 源码预览问题能在发布前被检测或被规范化；严重问题不进入真实发布。
-- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_web_round39_plus.py tests/test_publish_preview.py -q`。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_content_quality.py tests/test_web_round39_plus.py tests/test_publish_preview.py -q`。
 - 退出标准：预检提示不打扰 mock 演练，但真实发布路径有明确阻断。
 - 风险：误报过多影响正常发布。
 - 回滚点：仅提示不阻断，保留高级区详情。
@@ -1182,8 +1182,8 @@
   - [x] 内容质量检查器
   - [x] 预检清单接入
   - [x] 作品卡片轻量提示
-  - [ ] 真实发布阻断策略
-  - [ ] 质量检查测试
+  - [x] 真实发布阻断策略
+  - [x] 质量检查测试
 
 ### Round 54 - 真实微信 API 闭环验证
 

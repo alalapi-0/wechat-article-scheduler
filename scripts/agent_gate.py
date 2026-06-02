@@ -971,7 +971,15 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
     elif round_id == "round_053":
         steps = [
             (
-                [py, "-m", "pytest", "tests/test_web_round39_plus.py", "tests/test_publish_preview.py", "-q"],
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_content_quality.py",
+                    "tests/test_web_round39_plus.py",
+                    "tests/test_publish_preview.py",
+                    "-q",
+                ],
                 "pytest content quality",
             ),
         ]

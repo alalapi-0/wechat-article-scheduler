@@ -210,6 +210,11 @@ def humanize_run_once_result(payload: dict[str, Any]) -> list[str]:
         lines.append(f"有 {skipped} 个任务还没到发布时间")
     if failed:
         lines.append(f"有 {failed} 个任务失败，请查看发布队列")
+    skipped_content = int(payload.get("skipped_content") or 0)
+    if skipped_content:
+        lines.append(
+            f"有 {skipped_content} 个任务因内容质量问题未执行（真实正式发布已阻断，请先预览/修复）"
+        )
     if not lines:
         lines.append("当前没有需要执行的任务")
     return lines

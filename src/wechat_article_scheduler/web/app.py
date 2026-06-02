@@ -43,10 +43,8 @@ from wechat_article_scheduler.publish_config import (
     parse_publish_config,
     publish_config_from_payload,
 )
-from wechat_article_scheduler.web.publish_preflight import (
-    article_content_hints,
-    build_publish_preflight,
-)
+from wechat_article_scheduler.content_quality import article_content_hints
+from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
 from wechat_article_scheduler.web.covers import (
     batch_set_cover_from_article,
     batch_set_cover_from_bytes,

@@ -20,15 +20,9 @@ from wechat_article_scheduler.scheduler.policies import (
     should_skip_max_retries,
     write_dry_run_report,
 )
+from wechat_article_scheduler.content_quality import content_block_reason
 
 logger = logging.getLogger(__name__)
-
-
-def _content_block_reason(title: str | None, body: str | None) -> str | None:
-    raw_body = body or ""
-    if not raw_body.strip():
-        return "正文为空"
-    return None
 
 
 def _parse_job_time(raw: str | None) -> datetime | None:
@@ -120,7 +114,7 @@ def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[
                 record_dry_run_job(conn, job, stats=stats)
                 continue
 
-            block_reason = _content_block_reason(job["title"], job["body"])
+            block_reason = content_block_reason(job["title"] or "", job["body"] or "")
             will_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
             if block_reason and config.wechat_mode == "real" and will_publish:
                 stats["skipped_content"] += 1
