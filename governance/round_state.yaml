@@ -1,8 +1,9 @@
 current_round:
   id: round_071
   name: Round 71 - 微信草稿更新能力
-  status: active
+  status: completed
   updated_at: '2026-06-02T07:14:23.971942+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
   id: round_070
   completed_at: '2026-06-02T07:14:23.971942+00:00'
