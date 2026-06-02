@@ -1,15 +1,16 @@
 current_round:
-  id: round_077
-  name: Round 77 - manual_export 通用 outbox
-  status: active
-  updated_at: '2026-06-02T20:00:00+00:00'
+  id: round_078
+  name: Round 78 - Phase 2 平台提示包
+  status: completed
+  updated_at: '2026-06-02T20:15:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_076
+  id: round_078
   completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- export-outbox 生成 md/html/manifest/说明
-- 不联网、不标记已发布
-- Web/CLI/API 与作品详情导出入口
+- zhihu/douban 平台 copy 提示文件
+- phase2_text_platforms.md 启动说明
+- outbox 列表 API 可在 /debug 查看
 next_actions:
-- 按 docs/roadmap_converged.md 继续文本平台模板与 outbox 索引
+- 评估知乎/豆瓣 browser_assist（backlog）或注册 round_079
