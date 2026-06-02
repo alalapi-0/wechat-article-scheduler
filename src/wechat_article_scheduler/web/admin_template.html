@@ -974,6 +974,32 @@ function setAlert(kind, msg){
 }
 
 const ADV_STORAGE_KEY = 'wechat_workbench_show_advanced';
+const COLLECTION_STORAGE_KEY = 'wechat_workbench_collection_slug';
+
+function loadCollectionSlugFromStorage(){
+  try {
+    const v = localStorage.getItem(COLLECTION_STORAGE_KEY);
+    return (typeof v === 'string' && v) ? v : '';
+  } catch (e) { return ''; }
+}
+
+function persistCollectionSlug(slug){
+  try {
+    if (slug) localStorage.setItem(COLLECTION_STORAGE_KEY, slug);
+    else localStorage.removeItem(COLLECTION_STORAGE_KEY);
+  } catch (e) {}
+}
+
+function initCollectionFilter(){
+  selectedCollectionSlug = loadCollectionSlugFromStorage();
+  const collFilter = el('collectionFilter');
+  if (!collFilter) return;
+  collFilter.addEventListener('change', e => {
+    selectedCollectionSlug = e.target.value || '';
+    persistCollectionSlug(selectedCollectionSlug);
+    refreshAll();
+  });
+}
 
 function applyShowAdvanced(on){
   document.documentElement.classList.toggle('show-advanced', !!on);
@@ -998,6 +1024,7 @@ function initAdvancedToggle(){
 async function boot(){
   try { COPY = await (await fetch('/api/user-labels')).json(); } catch(e){ COPY = {}; }
   initAdvancedToggle();
+  initCollectionFilter();
   setupNav();
   setupUpload();
   setupWorksSelection();
@@ -1011,11 +1038,6 @@ async function boot(){
   });
   el('btnRun').addEventListener('click', onRun);
   el('btnRefresh').addEventListener('click', refreshAll);
-  const collFilter = el('collectionFilter');
-  if (collFilter) collFilter.addEventListener('change', e => {
-    selectedCollectionSlug = e.target.value || '';
-    refreshAll();
-  });
   el('btnBulkTrash').addEventListener('click', bulkTrashSelected);
   el('btnBulkCover').addEventListener('click', openCoverBatchModal);
   el('btnBulkSchedule').addEventListener('click', () => openScheduleModal('batch'));
@@ -1439,10 +1461,16 @@ async function loadCollectionFilterOptions(){
   try {
     const data = await (await fetch('/api/collections')).json();
     const cols = data.collections || [];
-    const cur = selectedCollectionSlug;
+    let cur = selectedCollectionSlug;
+    if (cur && !cols.some(c => c.slug === cur)) {
+      cur = '';
+      selectedCollectionSlug = '';
+      persistCollectionSlug('');
+    }
     sel.innerHTML = '<option value="">全部合集</option>' +
       cols.map(c => `<option value="${esc(c.slug)}">${esc(c.name)} (${c.article_count||0})</option>`).join('');
     sel.value = cur;
+    selectedCollectionSlug = cur;
   } catch(e) { /* 非阻塞 */ }
 }
 

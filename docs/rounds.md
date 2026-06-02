@@ -2254,6 +2254,23 @@
   - [x] 默认隐藏 debug/JSON
   - [x] agent_gate round_116 冒烟
 
+### Round 117 - 合集筛选持久化
+
+- 目标：作品库「合集」下拉写入 localStorage，刷新后恢复；Desktop-first 无横向溢出。
+- 范围：`collectionFilter`、`initCollectionFilter`、`loadCollectionFilterOptions`。
+- 非目标：合集数据模型变更。
+- 输入：round_116 Desktop-first、`GET /api/collections`。
+- 输出：`wechat_workbench_collection_slug`；无效 slug 自动清空。
+- 验收标准：`test_round_117_wechat_p0`；`test_ordinary_view_e2e_baseline`；mock@8080。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_117_wechat_p0.py -q`。
+- 退出标准：gate round_117。
+- 风险：无。
+- 回滚点：移除合集 localStorage 逻辑。
+- 交付项：
+  - [x] 合集筛选 localStorage
+  - [x] 刷新恢复与无效 slug 清理
+  - [x] agent_gate round_117 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
