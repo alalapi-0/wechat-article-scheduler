@@ -181,7 +181,7 @@ BUILTIN_CAPABILITIES: tuple[AdapterCapability, ...] = (
         supports_automated_publish=False,
         requires_human_proof=True,
         risk_level="high",
-        notes="视频号人工包预研占位；非公众号 API。",
+        notes="视频号发布包（export-outbox --platform wechat_channels）；非公众号 API。",
     ),
     AdapterCapability(
         platform="xiaohongshu",

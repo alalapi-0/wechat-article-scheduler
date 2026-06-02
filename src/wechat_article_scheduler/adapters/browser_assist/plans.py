@@ -16,6 +16,9 @@ from wechat_article_scheduler.adapters.browser_assist.douban_workflow import (
 from wechat_article_scheduler.adapters.browser_assist.bilibili_workflow import (
     build_bilibili_dry_run_plan,
 )
+from wechat_article_scheduler.adapters.browser_assist.wechat_channels_workflow import (
+    build_wechat_channels_dry_run_plan,
+)
 from wechat_article_scheduler.adapters.browser_assist.xiaohongshu_workflow import (
     build_xiaohongshu_dry_run_plan,
 )
@@ -42,6 +45,10 @@ SUPPORTED_BROWSER_ASSIST: dict[str, dict[str, str]] = {
     "xiaohongshu": {
         "label": "小红书",
         "description": "图文/视频笔记辅助评估（dry-run，高风控）",
+    },
+    "wechat_channels": {
+        "label": "微信视频号",
+        "description": "视频号助手辅助评估（dry-run，非公众号 API）",
     },
 }
 
@@ -89,6 +96,12 @@ def build_dry_run_plan(
     if key in ("xiaohongshu", "xhs"):
         ob = outbox_relative_path or _latest_outbox_path(config, article_id, "xiaohongshu")
         return build_xiaohongshu_dry_run_plan(
+            article_id=article_id,
+            outbox_relative_path=ob,
+        )
+    if key in ("wechat_channels", "channels", "video_account"):
+        ob = outbox_relative_path or _latest_outbox_path(config, article_id, "wechat_channels")
+        return build_wechat_channels_dry_run_plan(
             article_id=article_id,
             outbox_relative_path=ob,
         )

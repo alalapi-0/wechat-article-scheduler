@@ -43,7 +43,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--platform",
         type=str,
         default="wechat_official",
-        help="wechat_official | zhihu | douban | bilibili | xiaohongshu|xhs（评估 dry-run）",
+        help="wechat_official | zhihu | douban | bilibili | xiaohongshu|xhs | wechat_channels|channels",
     )
 
     sub.add_parser("adapter-registry", help="列出 adapter registry 能力声明 JSON")
@@ -110,7 +110,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--platform",
         type=str,
         default="generic",
-        help="generic | zhihu | douban | bilibili | xiaohongshu",
+        help="generic | zhihu | douban | bilibili | xiaohongshu | wechat_channels",
     )
 
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")

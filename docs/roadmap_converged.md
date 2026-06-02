@@ -401,16 +401,22 @@ Phase 3 暂不开发。短视频和图文平台风控更高，当前仅保留 ba
 - 风险边界：高风险则停止。
 - 下一轮衔接：微信视频号发布包或 round_096。
 
-### Round 34：微信视频号发布包
+### Round 34：微信视频号发布包（已完成 — agent `round_096`）
 
 - 本轮目标：评估视频号人工发布包。
-- 具体任务：视频、封面、标题、描述和公众号关系说明。
-- 交付物：视频号 outbox 或评估文档。
+- 具体任务：`build_wechat_channels_publish_pack`、视频占位、公众号关系说明。
+- 交付物：`docs/wechat_channels_manual_export.md`；`export-outbox --platform wechat_channels`。
 - 验收标准：不把视频号当成公众号 API 能力。
 - 不做什么：不自动操作视频号后台。
-- 允许改动范围：docs、manual_export。
+- 允许改动范围：manual_export、docs、tests。
 - 风险边界：与公众号主线分离。
-- 下一轮衔接：进入抖音 / 快手发布包预研。
+- 下一轮衔接：视频号 browser_assist（`round_097`）或抖音预研。
+
+### Round 34b：微信视频号 browser_assist（已完成 — agent `round_097`）
+
+- 本轮目标：视频号助手辅助评估 dry-run。
+- 交付物：`docs/wechat_channels_browser_assist.md`。
+- 下一轮衔接：Round 35 抖音/快手预研或 round_098。
 
 ### Round 35：抖音 / 快手发布包预研
 

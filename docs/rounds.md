@@ -1904,6 +1904,38 @@
   - [x] xhs dry-run
   - [x] agent_gate round_095 冒烟
 
+### Round 96 - 微信视频号 manual_export
+
+- 目标：路线图 Round 34 — 视频号人工发布包（非公众号 API）。
+- 范围：`platforms/wechat_channels.py`、`wechat_channels_manual_export.md`。
+- 非目标：视频上传；draft/add；与公众号状态混用。
+- 输入：round_090 视频预研、manual_export。
+- 输出：channels_* 文件集含公众号关系说明。
+- 验收标准：`test_wechat_channels_publish_pack` 通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_wechat_channels_publish_pack.py -q`。
+- 退出标准：gate round_096。
+- 风险：用户误以为视频号=公众号已发。
+- 回滚点：移除 wechat_channels 平台。
+- 交付项：
+  - [x] 视频号发布包
+  - [x] agent_gate round_096 冒烟
+
+### Round 97 - 微信视频号 browser_assist
+
+- 目标：视频号助手填表辅助评估 dry-run。
+- 范围：`wechat_channels_workflow.py`、`/debug`、CLI/API。
+- 非目标：自动发表；代登录。
+- 输入：round_096 发布包。
+- 输出：manual_export_first；platform 别名 channels。
+- 验收标准：terminal_policy 区分视频号与公众号 published。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_wechat_channels_browser_assist.py -q`。
+- 退出标准：gate round_097。
+- 风险：与 wechat_official 混淆。
+- 回滚点：移除 channels 分支。
+- 交付项：
+  - [x] 视频号 dry-run
+  - [x] agent_gate round_097 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

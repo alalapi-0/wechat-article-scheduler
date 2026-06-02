@@ -1301,6 +1301,7 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>豆瓣 browser_assist 评估</h2><pre id="browser-assist-douban">加载中…</pre>
 <h2>Bilibili browser_assist 评估</h2><pre id="browser-assist-bilibili">加载中…</pre>
 <h2>小红书 browser_assist 评估</h2><pre id="browser-assist-xhs">加载中…</pre>
+<h2>微信视频号 browser_assist 评估</h2><pre id="browser-assist-channels">加载中…</pre>
 <h2>Adapter Registry</h2><pre id="adapter-registry">加载中…</pre>
 <h2>publish_manifest 干跑（示例）</h2><pre id="manifest-dry-run">加载中…</pre>
 <h2>local_blog 评估（静态站）</h2><pre id="local-blog-static">加载中…</pre>
@@ -1320,6 +1321,7 @@ Promise.all([
   fetch('/api/browser-assist-plan?platform=douban'),
   fetch('/api/browser-assist-plan?platform=bilibili'),
   fetch('/api/browser-assist-plan?platform=xiaohongshu'),
+  fetch('/api/browser-assist-plan?platform=wechat_channels'),
   fetch('/api/adapter-registry'),
   fetch('/api/manifest/sample-dry-run'),
   fetch('/api/local-blog-plan?destination=static_site'),
@@ -1329,7 +1331,7 @@ Promise.all([
   fetch('/api/wechat-chain-summary'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1338,14 +1340,15 @@ Promise.all([
   document.getElementById('browser-assist-douban').textContent = JSON.stringify(await f.json(), null, 2);
   document.getElementById('browser-assist-bilibili').textContent = JSON.stringify(await g.json(), null, 2);
   document.getElementById('browser-assist-xhs').textContent = JSON.stringify(await h.json(), null, 2);
-  document.getElementById('adapter-registry').textContent = JSON.stringify(await i.json(), null, 2);
-  document.getElementById('manifest-dry-run').textContent = JSON.stringify(await j.json(), null, 2);
-  document.getElementById('local-blog-static').textContent = JSON.stringify(await k.json(), null, 2);
-  document.getElementById('local-blog-wp').textContent = JSON.stringify(await l.json(), null, 2);
-  document.getElementById('webhook-plan').textContent = JSON.stringify(await m.json(), null, 2);
-  document.getElementById('video-package').textContent = JSON.stringify(await n.json(), null, 2);
-  document.getElementById('wechat-chain').textContent = JSON.stringify(await o.json(), null, 2);
-  document.getElementById('waiting').textContent = JSON.stringify(await p.json(), null, 2);
-  document.getElementById('outbox').textContent = JSON.stringify(await q.json(), null, 2);
+  document.getElementById('browser-assist-channels').textContent = JSON.stringify(await i.json(), null, 2);
+  document.getElementById('adapter-registry').textContent = JSON.stringify(await j.json(), null, 2);
+  document.getElementById('manifest-dry-run').textContent = JSON.stringify(await k.json(), null, 2);
+  document.getElementById('local-blog-static').textContent = JSON.stringify(await l.json(), null, 2);
+  document.getElementById('local-blog-wp').textContent = JSON.stringify(await m.json(), null, 2);
+  document.getElementById('webhook-plan').textContent = JSON.stringify(await n.json(), null, 2);
+  document.getElementById('video-package').textContent = JSON.stringify(await o.json(), null, 2);
+  document.getElementById('wechat-chain').textContent = JSON.stringify(await p.json(), null, 2);
+  document.getElementById('waiting').textContent = JSON.stringify(await q.json(), null, 2);
+  document.getElementById('outbox').textContent = JSON.stringify(await r.json(), null, 2);
 });
 </script></body></html>"""

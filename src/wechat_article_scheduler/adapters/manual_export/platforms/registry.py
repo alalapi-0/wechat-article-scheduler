@@ -11,6 +11,9 @@ from wechat_article_scheduler.adapters.manual_export.platforms.bilibili import (
 from wechat_article_scheduler.adapters.manual_export.platforms.douban import (
     build_douban_publish_pack,
 )
+from wechat_article_scheduler.adapters.manual_export.platforms.wechat_channels import (
+    build_wechat_channels_publish_pack,
+)
 from wechat_article_scheduler.adapters.manual_export.platforms.xiaohongshu import (
     build_xiaohongshu_publish_pack,
 )
@@ -41,6 +44,10 @@ SUPPORTED_PLATFORMS: dict[str, dict[str, str]] = {
         "label": "小红书",
         "description": "图文笔记标题、正文、话题提示与素材占位（高风控，仅人工）",
     },
+    "wechat_channels": {
+        "label": "微信视频号",
+        "description": "视频号标题、描述、封面与视频占位；与公众号 API 分离",
+    },
 }
 
 _BUILDERS: dict[str, PackBuilder] = {
@@ -48,6 +55,7 @@ _BUILDERS: dict[str, PackBuilder] = {
     "douban": build_douban_publish_pack,
     "bilibili": build_bilibili_publish_pack,
     "xiaohongshu": build_xiaohongshu_publish_pack,
+    "wechat_channels": build_wechat_channels_publish_pack,
 }
 
 

@@ -146,3 +146,9 @@ round_094:
 
 round_095:
   - python3 -m pytest tests/test_xiaohongshu_browser_assist.py -q
+
+round_096:
+  - python3 -m pytest tests/test_wechat_channels_publish_pack.py -q
+
+round_097:
+  - python3 -m pytest tests/test_wechat_channels_browser_assist.py -q

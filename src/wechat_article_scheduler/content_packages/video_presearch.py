@@ -35,8 +35,8 @@ PLATFORM_PRESEARCH: dict[str, dict[str, Any]] = {
         "label": "微信视频号",
         "adapter_types": ["manual_export"],
         "risk_level": "high",
-        "recommendation": "deferred",
-        "summary": "与公众号 API 分离；仅预研导出字段，不假装 API 已支持。",
+        "recommendation": "manual_export_available",
+        "summary": "与公众号 API 分离；可用 export-outbox --platform wechat_channels（round_096）。",
     },
     "xiaohongshu": {
         "label": "小红书视频",

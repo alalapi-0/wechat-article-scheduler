@@ -149,6 +149,8 @@ ROUND_ORDER = [
     "round_093",
     "round_094",
     "round_095",
+    "round_096",
+    "round_097",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1117,7 +1119,29 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "/debug 可见小红书 JSON",
         ],
         "next_actions": [
-            "注册 round_096 或微信修复轮",
+            "微信视频号发布包 round_096",
+        ],
+    },
+    "round_096": {
+        "name": "Round 96 - 微信视频号 manual_export",
+        "acceptance_criteria": [
+            "export-outbox --platform wechat_channels 完整文件集",
+            "channels_article_link_note 明示与公众号分离",
+            "不真上传视频",
+        ],
+        "next_actions": [
+            "视频号 browser_assist round_097",
+        ],
+    },
+    "round_097": {
+        "name": "Round 97 - 微信视频号 browser_assist",
+        "acceptance_criteria": [
+            "platform=wechat_channels dry-run",
+            "terminal_policy 区分视频号与公众号",
+            "/debug 可见视频号 JSON",
+        ],
+        "next_actions": [
+            "注册 round_098 或微信修复轮",
         ],
     },
 }
@@ -1919,6 +1943,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_xiaohongshu_browser_assist.py", "-q"],
                 "pytest xiaohongshu browser assist",
+            ),
+        ]
+    elif round_id == "round_096":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_wechat_channels_publish_pack.py", "-q"],
+                "pytest wechat channels publish pack",
+            ),
+        ]
+    elif round_id == "round_097":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_wechat_channels_browser_assist.py", "-q"],
+                "pytest wechat channels browser assist",
             ),
         ]
     else:
