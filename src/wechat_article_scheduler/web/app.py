@@ -410,6 +410,35 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "platforms": [{"id": k, **v} for k, v in SUPPORTED_BROWSER_ASSIST.items()],
         }
 
+    @app.get("/api/adapter-registry")
+    def api_adapter_registry(
+        platform: str | None = None,
+        adapter_type: str | None = None,
+    ) -> dict[str, Any]:
+        from wechat_article_scheduler.adapters.registry import list_adapter_capabilities
+
+        caps = list_adapter_capabilities(platform=platform, adapter_type=adapter_type)
+        return {"count": len(caps), "capabilities": caps}
+
+    @app.get("/api/manifest/sample-dry-run")
+    def api_manifest_sample_dry_run() -> dict[str, Any]:
+        from pathlib import Path
+
+        from wechat_article_scheduler.content_packages.from_manifest import (
+            manifest_dry_run_summary,
+        )
+        from wechat_article_scheduler.core.manifest_loader import load_manifest
+
+        sample = (
+            Path(__file__).resolve().parents[3]
+            / "manifests"
+            / "examples"
+            / "sample_publish_manifest.json"
+        )
+        if not sample.is_file():
+            raise HTTPException(status_code=404, detail="示例 manifest 不存在")
+        return manifest_dry_run_summary(load_manifest(sample))
+
     @app.get("/api/waiting-confirmation")
     def api_waiting_confirmation() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
@@ -1179,6 +1208,8 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>browser_assist 干跑计划（微信）</h2><pre id="browser-assist">加载中…</pre>
 <h2>知乎 browser_assist 评估</h2><pre id="browser-assist-zhihu">加载中…</pre>
 <h2>豆瓣 browser_assist 评估</h2><pre id="browser-assist-douban">加载中…</pre>
+<h2>Adapter Registry</h2><pre id="adapter-registry">加载中…</pre>
+<h2>publish_manifest 干跑（示例）</h2><pre id="manifest-dry-run">加载中…</pre>
 <h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
 <h2>outbox 导出包</h2><pre id="outbox">加载中…</pre>
 <script>
@@ -1189,16 +1220,20 @@ Promise.all([
   fetch('/api/browser-assist-plan'),
   fetch('/api/browser-assist-plan?platform=zhihu'),
   fetch('/api/browser-assist-plan?platform=douban'),
+  fetch('/api/adapter-registry'),
+  fetch('/api/manifest/sample-dry-run'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
   document.getElementById('browser-assist').textContent = JSON.stringify(await d.json(), null, 2);
   document.getElementById('browser-assist-zhihu').textContent = JSON.stringify(await e.json(), null, 2);
   document.getElementById('browser-assist-douban').textContent = JSON.stringify(await f.json(), null, 2);
-  document.getElementById('waiting').textContent = JSON.stringify(await g.json(), null, 2);
-  document.getElementById('outbox').textContent = JSON.stringify(await h.json(), null, 2);
+  document.getElementById('adapter-registry').textContent = JSON.stringify(await g.json(), null, 2);
+  document.getElementById('manifest-dry-run').textContent = JSON.stringify(await h.json(), null, 2);
+  document.getElementById('waiting').textContent = JSON.stringify(await i.json(), null, 2);
+  document.getElementById('outbox').textContent = JSON.stringify(await j.json(), null, 2);
 });
 </script></body></html>"""

@@ -46,6 +46,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="wechat_official | zhihu | douban（评估 dry-run）",
     )
 
+    sub.add_parser("adapter-registry", help="列出 adapter registry 能力声明 JSON")
+
+    mval = sub.add_parser("manifest-validate", help="校验 publish_manifest.json")
+    mval.add_argument(
+        "--manifest",
+        type=str,
+        required=True,
+        help="manifest 文件路径",
+    )
+
+    mdry = sub.add_parser(
+        "manifest-dry-run",
+        help="manifest 干跑预览（content_package，不写库）",
+    )
+    mdry.add_argument("--manifest", type=str, required=True)
+
     mark_wc = sub.add_parser(
         "mark-waiting-confirmation",
         help="将发布任务标为待人工确认（browser_assist/manual_export）",
@@ -170,6 +186,49 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
             return 1
         print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "adapter-registry":
+        import json
+
+        from wechat_article_scheduler.adapters.registry import list_adapter_capabilities
+
+        print(
+            json.dumps(
+                {"capabilities": list_adapter_capabilities()},
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "manifest-validate":
+        import json
+        from pathlib import Path
+
+        from wechat_article_scheduler.core.manifest_loader import validate_manifest_file
+
+        _data, result = validate_manifest_file(Path(args.manifest))
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.ok else 1
+
+    if args.command == "manifest-dry-run":
+        import json
+        from pathlib import Path
+
+        from wechat_article_scheduler.content_packages.from_manifest import (
+            manifest_dry_run_summary,
+        )
+        from wechat_article_scheduler.core.manifest_loader import load_manifest
+
+        path = Path(args.manifest)
+        try:
+            summary = manifest_dry_run_summary(load_manifest(path))
+        except ValueError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
+        summary["manifest_path"] = str(path.resolve())
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "mark-waiting-confirmation":

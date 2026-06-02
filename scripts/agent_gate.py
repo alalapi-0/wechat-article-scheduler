@@ -138,6 +138,9 @@ ROUND_ORDER = [
     "round_082",
     "round_083",
     "round_084",
+    "round_085",
+    "round_086",
+    "round_087",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -985,7 +988,40 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "zhihu/douban/wechat 计划可生成",
         ],
         "next_actions": [
-            "注册 round_085 或微信修复轮",
+            "Adapter registry 能力声明（round_085）",
+        ],
+    },
+    "round_085": {
+        "name": "Round 85 - Adapter Registry 能力声明",
+        "acceptance_criteria": [
+            "BUILTIN_CAPABILITIES 含微信与 Phase2 平台",
+            "/api/adapter-registry 与 CLI adapter-registry",
+            "不替代现有 get_adapter 运行时",
+        ],
+        "next_actions": [
+            "publish_manifest 校验（round_086）",
+        ],
+    },
+    "round_086": {
+        "name": "Round 86 - publish_manifest 校验",
+        "acceptance_criteria": [
+            "validate_manifest 与示例 JSON",
+            "manifest-validate CLI",
+            "不写 SQLite",
+        ],
+        "next_actions": [
+            "manifest 干跑 content_package（round_087）",
+        ],
+    },
+    "round_087": {
+        "name": "Round 87 - manifest 干跑 content_package",
+        "acceptance_criteria": [
+            "manifest_to_drafts 与 registry_checks",
+            "manifest-dry-run CLI 与 sample API",
+            "/debug 可见 registry 与干跑 JSON",
+        ],
+        "next_actions": [
+            "Phase2 Round 28 博客评估或注册 round_088",
         ],
     },
 }
@@ -1703,6 +1739,27 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest phase2 browser assist index",
+            ),
+        ]
+    elif round_id == "round_085":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_adapter_registry.py", "-q"],
+                "pytest adapter registry",
+            ),
+        ]
+    elif round_id == "round_086":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_manifest_validate.py", "-q"],
+                "pytest manifest validate",
+            ),
+        ]
+    elif round_id == "round_087":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_manifest_dry_run.py", "-q"],
+                "pytest manifest dry run",
             ),
         ]
     else:

@@ -113,3 +113,12 @@ round_083:
 
 round_084:
   - python3 -m pytest tests/test_phase2_browser_assist_index.py -q
+
+round_085:
+  - python3 -m pytest tests/test_adapter_registry.py -q
+
+round_086:
+  - python3 -m pytest tests/test_manifest_validate.py -q
+
+round_087:
+  - python3 -m pytest tests/test_manifest_dry_run.py -q

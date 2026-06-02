@@ -1728,6 +1728,54 @@
   - [x] Phase2 文档与索引测试
   - [x] agent_gate round_084 冒烟
 
+### Round 85 - Adapter Registry 能力声明
+
+- 目标：按 backlog adapter_design 落地非侵入式能力声明表。
+- 范围：`adapters/registry.py`、`docs/adapter_registry.md`、CLI/Web API。
+- 非目标：替换 `get_adapter` 运行时；注册真实 adapter 类。
+- 输入：Phase2 文本平台与微信主线能力矩阵。
+- 输出：`BUILTIN_CAPABILITIES`；`GET /api/adapter-registry`。
+- 验收标准：含 wechat_mp/zhihu/douban；不保存 secret。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_adapter_registry.py -q`。
+- 退出标准：gate round_085；`/debug` 可见 registry JSON。
+- 风险：误宣称平台已可自动发布。
+- 回滚点：移除 API 区块。
+- 交付项：
+  - [x] registry 能力与测试
+  - [x] agent_gate round_085 冒烟
+
+### Round 86 - publish_manifest 校验
+
+- 目标：校验 `publish_manifest.json` 最小 schema（不写库）。
+- 范围：`core/manifest_loader.py`、`manifests/examples/`、CLI `manifest-validate`。
+- 非目标：manifest 导入 SQLite；替换 scan/plan。
+- 输入：`docs/backlog/multi_project_manifest_design.md`。
+- 输出：`validate_manifest` 与示例文件。
+- 验收标准：示例 manifest 通过；空 targets 失败。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_manifest_validate.py -q`。
+- 退出标准：gate round_086 通过。
+- 风险：schema 与 backlog 漂移。
+- 回滚点：仅保留 load_manifest。
+- 交付项：
+  - [ ] 校验器与示例
+  - [ ] agent_gate round_086 冒烟
+
+### Round 87 - manifest 干跑 content_package
+
+- 目标：从 manifest 生成 content_package / payload 草稿与 registry 对照。
+- 范围：`content_packages/from_manifest.py`、`manifest-dry-run` CLI、`/api/manifest/sample-dry-run`。
+- 非目标：DB 迁移；跨项目日历。
+- 输入：round_085 registry、round_086 校验。
+- 输出：干跑 summary 含 `registry_checks`。
+- 验收标准：示例 manifest 两 target 均 registered；dry-run note 明示不写库。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_manifest_dry_run.py -q`。
+- 退出标准：gate round_087；`/debug` 可见 manifest 干跑 JSON。
+- 风险：用户误以为已导入文章。
+- 回滚点：移除 from_manifest。
+- 交付项：
+  - [ ] 干跑与 API
+  - [ ] agent_gate round_087 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

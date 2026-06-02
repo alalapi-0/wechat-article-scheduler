@@ -310,6 +310,15 @@ Phase 2 暂不开发。只有 Phase 1 验收通过后，才允许启动。
 - 风险边界：高风险则停止。
 - 下一轮衔接：进入个人博客 / WordPress 适配评估。
 
+### Backlog 基础设施（agent round_085–087，小步落地）
+
+- 本轮目标：为后续多项目 manifest 与多平台扩展准备非侵入骨架。
+- 具体任务：Adapter Registry 能力声明；`publish_manifest` 校验；manifest → content_package 干跑（不写库）。
+- 交付物：`docs/adapter_registry.md`、`docs/publish_manifest_dry_run.md`、`manifests/examples/sample_publish_manifest.json`。
+- 验收标准：不替代微信 scan/plan；registry 与 manifest 干跑可测可查。
+- 不做什么：不实现 Round 28 博客 adapter；不导入 SQLite。
+- 下一轮衔接：Phase 2 Round 28 博客评估，或继续 Phase 5 manifest 导入。
+
 ### Round 28：个人博客 / WordPress 适配评估
 
 - 本轮目标：评估低风险文本发布目的地。

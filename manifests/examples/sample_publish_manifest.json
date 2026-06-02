@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "project_id": "demo-novel",
+  "package_id": "chapter-001",
+  "content_type": "article",
+  "title": "示例章节：publish_manifest 干跑",
+  "summary": "仅供 manifest 校验与 content_package 干跑测试。",
+  "body_md": "content/example.md",
+  "media_refs": [
+    {
+      "path": "content/covers/main.png",
+      "role": "cover"
+    }
+  ],
+  "targets": [
+    {
+      "platform_account_id": "wechat_mp_main",
+      "adapter_type": "official_api",
+      "scheduled_at": "2026-06-02T20:00:00+08:00",
+      "review_required": false,
+      "extra": {
+        "need_open_comment": 0
+      }
+    },
+    {
+      "platform_account_id": "zhihu_main",
+      "adapter_type": "manual_export",
+      "scheduled_at": "2026-06-03T20:00:00+08:00",
+      "review_required": true
+    }
+  ]
+}
