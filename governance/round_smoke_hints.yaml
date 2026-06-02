@@ -188,3 +188,7 @@ round_106:
 round_107:
   - python3 -m pytest tests/test_phase5_closure.py -q
   - python3 -m pytest tests/test_multi_project_dry_run.py tests/test_unified_outbox_presearch.py -q
+
+round_108:
+  - python3 -m pytest tests/test_round_108_wechat_p0.py -q
+  - python3 -m pytest tests/test_web_console_mvp.py tests/test_workbench_chain_hints.py -q

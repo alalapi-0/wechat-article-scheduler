@@ -242,7 +242,9 @@
   .queue-table .fail-reason { max-width: 220px; color: var(--muted); font-size: 12px; }
   .queue-table .hint-cell { font-size: 12px; color: var(--muted); }
   .next-steps { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--line); font-size: 13px; color: var(--text); }
+  .next-steps.preflight-warn { border-color: #e8a87c; background: #fff8f0; }
   .next-steps ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+  .pill-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; opacity: 0.95; }
   .events ul { margin: 0; padding: 0; list-style: none; }
   .events li { list-style: none; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; display: grid; gap: 2px; }
   .events li:last-child { border-bottom: 0; }
@@ -1087,17 +1089,23 @@ async function runAction(name, url){
 async function onRun(){
   let st = {};
   try { st = await (await fetch('/api/status')).json(); } catch(e){}
+  let pf = null;
+  try { pf = await (await fetch('/api/publish-preflight')).json(); } catch(e){}
+  if (pf && pf.ready === false) {
+    const blocking = (pf.checks || []).some(c => c.required && !c.ok);
+    const msg = (pf.human || []).join(' ') || '发布前检查未通过，请先处理内容质量问题';
+    if (blocking) {
+      setAlert('err', msg);
+      return;
+    }
+    if (st.wechat_mode === 'mock') {
+      setAlert('warn', msg);
+    }
+  }
   if (st.wechat_mode === 'real' && st.wechat_enable_publish) {
-    let pf = '';
-    try {
-      const p = await (await fetch('/api/publish-preflight')).json();
-      if (p.ready === false) {
-        setAlert('err', (p.human||[]).join(' ') || '发布前检查未通过，请先处理内容质量问题');
-        return;
-      }
-      pf = '\n\n' + (p.human||[]).join('\n');
-    } catch(e){}
-    if (!window.confirm('当前是「真实 API 测试」模式；任务选择「正式发布」时会真的发到公众号。确定继续吗？' + pf)) return;
+    let extra = '';
+    if (pf && (pf.human || []).length) extra = '\n\n' + pf.human.join('\n');
+    if (!window.confirm('当前是「真实 API 测试」模式；任务选择「正式发布」时会真的发到公众号。确定继续吗？' + extra)) return;
   }
   await runAction('run-once', '/api/run-once');
 }
@@ -1161,23 +1169,30 @@ async function refreshAll(){
   }
 }
 
+function generationPolicyBadge(status){
+  const gp = status && status.generation_policy;
+  if (!gp || !gp.auto_approve_generations) return '';
+  return ' · <span class="pill-tag" title="' + esc(gp.detail || '') + '">AUTO_APPROVE</span>';
+}
+
 function renderSafety(status, preflight){
   const pill = el('safetyTop');
   const mode = status ? status.wechat_mode : 'mock';
   const auto = status && status.web_auto_runner_active ? ' · 自动到点执行' : '';
+  const genBadge = generationPolicyBadge(status);
   const pol = status && status.publish_policy ? status.publish_policy : null;
   if (pol && pol.headline) {
     if (pol.badge === 'real_publish_enabled') {
       const blocked = preflight && preflight.ready === false;
       pill.className = blocked ? 'pill err' : 'pill err';
       const hint = blocked ? ' · 内容质量未通过' : '';
-      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + hint + auto;
+      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + hint + auto + genBadge;
     } else if (pol.badge === 'real_draft_only') {
       pill.className = 'pill warn';
-      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + auto;
+      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + auto + genBadge;
     } else {
       pill.className = 'pill ok';
-      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + auto;
+      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + auto + genBadge;
     }
     return;
   }
@@ -1185,11 +1200,11 @@ function renderSafety(status, preflight){
     const blocked = preflight && preflight.ready === false;
     pill.className = blocked ? 'pill err' : 'pill err';
     const hint = blocked ? ' · 内容质量未通过' : '';
-    pill.innerHTML = '<span class="dot"></span> 真实 API 测试 · 正式发布任务会真的发' + hint;
+    pill.innerHTML = '<span class="dot"></span> 真实 API 测试 · 正式发布任务会真的发' + hint + genBadge;
   } else if (mode === 'real') {
-    pill.className = 'pill warn'; pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿，不会发布' + auto;
+    pill.className = 'pill warn'; pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿，不会发布' + auto + genBadge;
   } else {
-    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 不会真的发到公众号' + auto;
+    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 不会真的发到公众号' + auto + genBadge;
   }
 }
 
@@ -1214,6 +1229,7 @@ function renderNextSteps(wb){
   const box = el('nextSteps');
   if (!wb || !wb.headline) { box.hidden = true; return; }
   box.hidden = false;
+  box.classList.toggle('preflight-warn', wb.preflight_ready === false);
   el('nextStepsHeadline').innerHTML = `<b>下一步</b> · ${esc(wb.headline)}`;
   const hints = wb.hints || [];
   const cli = wb.recommended_cli ? `<li class="muted"><code>${esc(wb.recommended_cli)}</code></li>` : '';

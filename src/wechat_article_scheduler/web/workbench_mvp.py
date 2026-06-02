@@ -11,6 +11,7 @@ def build_workbench_hints(
     job_counts: dict[str, int],
     schedule_summary: dict[str, Any] | None,
     chain_summary: dict[str, Any] | None = None,
+    publish_preflight: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """根据当前库内状态生成普通用户可读的「下一步」摘要。"""
     imported = int(article_counts.get("imported") or 0)
@@ -54,6 +55,27 @@ def build_workbench_hints(
         headline = "作品库还是空的"
         hints.append("拖拽上传作品与封面，或点「扫描本地收件箱」导入本地文件夹")
 
+    preflight = publish_preflight or {}
+    preflight_ready = bool(preflight.get("ready", True))
+    blocking_checks = [
+        c
+        for c in (preflight.get("checks") or [])
+        if not c.get("ok") and c.get("required")
+    ]
+    warn_checks = [
+        c
+        for c in (preflight.get("checks") or [])
+        if not c.get("ok") and not c.get("required")
+    ]
+    if blocking_checks and (pending > 0 or due_now > 0):
+        primary = "preflight"
+        headline = "发布前检查未通过，请先处理"
+        for check in blocking_checks[:2]:
+            hints.insert(0, check.get("detail") or check.get("label", "检查项"))
+    elif warn_checks and pending > 0 and primary not in ("scan", "upload"):
+        for check in warn_checks[:1]:
+            hints.append(f"预检提示：{check.get('detail') or check.get('label')}")
+
     if failed > 0:
         hints.append(f"发布队列中有 {failed} 个失败任务，请查看原因并重新安排")
     if chain_action == "retry-failed" and failed > 0:
@@ -66,7 +88,9 @@ def build_workbench_hints(
     return {
         "primary_action": primary,
         "headline": headline,
-        "hints": hints[:4],
+        "hints": hints[:5],
         "chain_recommended_action": chain_action or None,
         "recommended_cli": chain_cli,
+        "preflight_ready": preflight_ready,
+        "preflight_blocking_count": len(blocking_checks),
     }

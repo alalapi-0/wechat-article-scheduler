@@ -2101,6 +2101,23 @@
   - [x] Phase5 收口 API 与文档
   - [x] agent_gate round_107 冒烟
 
+### Round 108 - 微信 P0 主线小步强化
+
+- 目标：Phase5 收口后回到微信公众号主线；overview/预检/队列/status 真实体验改进。
+- 范围：`generation_policy`、`workbench_mvp` 预检联动、`queue-summary`、首页 UI。
+- 非目标：Phase5 新平台；改 cron；真实联网发布。
+- 输入：round_101 链路提示、round_041 预检。
+- 输出：顶部 `AUTO_APPROVE` 标识；下一步联动预检失败；队列摘要含 `preflight_ready`。
+- 验收标准：`test_round_108_wechat_p0`；mock@8080 浏览器走首页→主操作→队列。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_108_wechat_p0.py -q`。
+- 退出标准：gate round_108。
+- 风险：无。
+- 回滚点：恢复 workbench 无 preflight 参数。
+- 交付项：
+  - [x] status/overview 预检与 AUTO_APPROVE
+  - [x] 队列摘要强化
+  - [x] agent_gate round_108 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

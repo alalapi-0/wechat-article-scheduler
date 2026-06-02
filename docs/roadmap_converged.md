@@ -507,6 +507,12 @@ Phase 4 暂不开发。音频、版权和审核复杂度高，仅保留长期 ba
 - 交付物：`/api/phase5/closure-summary`。
 - 验收标准：微信 scan/plan 仍为 P0。
 
+### Round 43c：微信 P0 主线小步强化（已完成 — agent `round_108`）
+
+- 本轮目标：overview 联动 publish_preflight；status 显示 AUTO_APPROVE；队列摘要 preflight_ready。
+- 交付物：首页下一步与执行到点预检拦截（blocking）。
+- 验收标准：mock@8080 浏览器核心路径。
+
 ### Round 37：网易云音乐发布包预研
 
 - 本轮目标：评估网易云音乐是否适合进入后续路线。

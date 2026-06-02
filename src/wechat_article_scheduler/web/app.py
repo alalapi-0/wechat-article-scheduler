@@ -725,11 +725,16 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.get("/api/status")
     def status() -> dict[str, Any]:
+        from wechat_article_scheduler.web.generation_policy import (
+            build_generation_policy_status,
+        )
+
         return {
             "wechat_mode": cfg.wechat_mode,
             "dry_run": cfg.dry_run,
             "wechat_enable_publish": cfg.wechat_enable_publish,
             "publish_policy": global_publish_policy(cfg),
+            "generation_policy": build_generation_policy_status(),
             "web_auto_run_due": cfg.web_auto_run_due,
             "web_auto_publish": cfg.web_auto_publish,
             "web_auto_runner_active": bool(getattr(app.state, "web_auto_runner_active", False)),
@@ -775,9 +780,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             job_counts=job_counts,
             schedule_summary=schedule,
             chain_summary=chain_summary,
+            publish_preflight=preflight,
         )
+        st = status()
         return {
-            "status": status(),
+            "status": st,
             "article_counts": article_counts,
             "job_counts": job_counts,
             "recent_jobs": recent_jobs_out,
@@ -785,6 +792,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "schedule_summary": schedule,
             "workbench": workbench,
             "publish_preflight": preflight,
+            "preflight_ready": preflight.get("ready", True),
+            "generation_policy": st.get("generation_policy"),
             "wechat_chain_summary": chain_summary,
             "docs": [
                 {"label": "README", "path": "README.md"},
@@ -966,7 +975,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/api/queue-summary")
     def api_queue_summary() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
-            return queue_summary(conn)
+            summary = queue_summary(conn)
+            summary["preflight_ready"] = build_publish_preflight(cfg, conn).get("ready", True)
+            return summary
 
     @app.get("/drafts", response_class=HTMLResponse)
     def drafts_page() -> str:

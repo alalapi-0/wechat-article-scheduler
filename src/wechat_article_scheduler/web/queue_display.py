@@ -136,8 +136,21 @@ def queue_summary(conn: Any) -> dict[str, Any]:
     parts = [f"待发布 {pending}", f"失败 {failed}", f"已完成 {counts.get('done', 0)}"]
     if int(due) > 0:
         parts.insert(0, f"已到点 {due}")
+    next_row = conn.execute(
+        """
+        SELECT j.scheduled_at FROM publish_jobs j
+        JOIN articles a ON a.id = j.article_id
+        WHERE j.status = 'pending'
+          AND (a.deleted_at IS NULL OR a.deleted_at = '')
+        ORDER BY j.scheduled_at ASC LIMIT 1
+        """
+    ).fetchone()
+    next_at = str(next_row["scheduled_at"]) if next_row else None
+    if next_at and int(due) == 0 and pending > 0:
+        parts.append(f"最近排期 {next_at[:16].replace('T', ' ')}")
     return {
         "counts": counts,
         "due_now": int(due),
+        "next_pending_at": next_at,
         "summary_label": " · ".join(parts),
     }
