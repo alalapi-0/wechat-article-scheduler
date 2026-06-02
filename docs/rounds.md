@@ -2339,6 +2339,47 @@
   - [x] 动态渲染兜底绑定
   - [x] agent_gate round_121 冒烟
 
+## 微信 P0 抛光摘要（Round 108–121）
+
+阶段一微信公众号工作台在 Phase5 收口（round_107）后，用 14 个小步轮次完成「预检门控 → 反馈增强 → Desktop-first 持久化 → 深链与返回上下文」抛光。下表为 agent_gate / 文档单一索引（细节见各轮正文）。
+
+| 轮次 | 主题（一句话） |
+|------|----------------|
+| 108 | 主线回归：overview/status 联动 `publish_preflight`，队列摘要与 AUTO_APPROVE 标识 |
+| 109 | 作品/详情预检条；失败队列 Tab、重试与 `failed_preview` 摘要 |
+| 110 | 「执行到点」与预检 blocking 联动；run-once toast 与事件区刷新 |
+| 111 | 「生成排期」与 `plan_gate`；首页与队列「待人工确认」入口 |
+| 112 | 扫描收件箱 toast/`scan_summary` 与 `chain_summary` 联动 |
+| 113 | 待确认 Tab 快速 dry-run proof；详情 `#proof` 锚点 |
+| 114 | 上传 .md 反馈 + scan 联动；作品卡「导出 outbox」 |
+| 115 | 仓库卫生：gitignore outbox/MCP；维护冒烟扩展 upload/export |
+| 116 | 「高级信息」localStorage；默认隐藏 /debug 与 JSON 面板 |
+| 117 | 作品库「合集」筛选 localStorage |
+| 118 | 发布队列状态 Tab localStorage |
+| 119 | URL hash 深链 `#queue`/`#works`/`#drafts` 与区块刷新恢复 |
+| 120 | 详情页返回工作台保留来源 hash（session + localStorage 协同） |
+| 121 | 队列/作品卡所有「详情」链接触发 `captureWorkbenchReturnContext` |
+
+持久化键（工作台）：`wechat_workbench_show_advanced`、`wechat_workbench_collection_slug`、`wechat_workbench_queue_filter`、`wechat_workbench_section_hash`；返回会话：`wechat_workbench_return_hash`。
+
+### Round 122 - 文档同步与维护冒烟
+
+- 目标：登记 round_108–121 抛光摘要；维护冒烟覆盖 hash/返回上下文；README 里程碑一句。
+- 范围：`docs/rounds.md`、`agent_gate` ROUND_META、`test_round_102`、README。
+- 非目标：新功能开发。
+- 输入：round_121 完成态。
+- 输出：上表摘要；102 轻量断言；mock@8080 `/#queue` 冒烟。
+- 验收标准：`test_round_122` + `test_round_102`；gate round_122。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_122_wechat_p0.py tests/test_round_102_maintenance_smoke.py -q`。
+- 退出标准：gate round_122。
+- 风险：无。
+- 回滚点：移除摘要表与 102 新断言。
+- 交付项：
+  - [x] rounds.md 108–121 摘要表
+  - [x] ROUND_META summary 简述
+  - [x] 维护冒烟与 README 里程碑
+  - [x] agent_gate round_122 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

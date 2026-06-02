@@ -176,6 +176,7 @@ ROUND_ORDER = [
     "round_119",
     "round_120",
     "round_121",
+    "round_122",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1284,6 +1285,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_108": {
         "name": "Round 108 - 微信 P0 主线小步强化",
+        "summary": "overview/status 联动 publish_preflight；队列摘要与 AUTO_APPROVE",
         "acceptance_criteria": [
             "overview 联动 publish_preflight",
             "status 暴露 AUTO_APPROVE 标识",
@@ -1296,6 +1298,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_109": {
         "name": "Round 109 - 微信 P0 续（预检条与失败队列）",
+        "summary": "作品/详情预检条；失败队列 Tab 重试与 failed_preview",
         "acceptance_criteria": [
             "作品详情/卡片预检条与 blocking 联动",
             "队列失败 Tab 重试入口与错误摘要增强",
@@ -1307,6 +1310,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_110": {
         "name": "Round 110 - 执行到点与预检 blocking 联动",
+        "summary": "执行到点预检 blocking 禁用；run-once toast 与事件刷新",
         "acceptance_criteria": [
             "执行到点按钮预检 blocking 禁用与原因文案",
             "run-once 结果 toast 与事件区刷新",
@@ -1318,6 +1322,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_111": {
         "name": "Round 111 - 生成排期与待人工确认入口",
+        "summary": "生成排期 plan_gate；首页与队列待人工确认入口",
         "acceptance_criteria": [
             "生成排期与 publish_preflight plan_gate 联动",
             "首页待人工确认队列入口与队列筛选",
@@ -1329,6 +1334,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_112": {
         "name": "Round 112 - 扫描收件箱反馈与链路联动",
+        "summary": "扫描 toast/scan_summary；与 chain_summary 联动",
         "acceptance_criteria": [
             "扫描 toast 与 scan_summary 摘要",
             "scan 结果与 chain_summary 联动展示",
@@ -1341,6 +1347,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_113": {
         "name": "Round 113 - 待确认快速 proof",
+        "summary": "待确认 Tab 快速 dry-run proof；详情 #proof 锚点",
         "acceptance_criteria": [
             "待人工确认 Tab 快速提交 dry-run proof",
             "AUTO_APPROVE 标识与详情 #proof 跳转",
@@ -1352,6 +1359,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_114": {
         "name": "Round 114 - 上传反馈与 outbox 快捷导出",
+        "summary": "上传 .md 与 scan 联动；作品卡导出 outbox",
         "acceptance_criteria": [
             "上传 .md toast 与 scan 联动提示",
             "作品卡导出 outbox 按钮",
@@ -1363,6 +1371,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_115": {
         "name": "Round 115 - 仓库卫生与维护冒烟",
+        "summary": "gitignore outbox/MCP；test_round_102 扩展 upload/export",
         "acceptance_criteria": [
             ".gitignore 忽略 outbox 测试包与 .playwright-mcp",
             "test_round_102 覆盖上传/export-outbox API",
@@ -1374,6 +1383,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_116": {
         "name": "Round 116 - 高级信息持久化",
+        "summary": "高级信息 localStorage；默认隐藏 /debug 与 JSON",
         "acceptance_criteria": [
             "高级信息开关 localStorage 持久化",
             "默认隐藏 /debug 与内部 JSON 区块",
@@ -1385,6 +1395,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_117": {
         "name": "Round 117 - 合集筛选持久化",
+        "summary": "作品库合集下拉 localStorage 持久化",
         "acceptance_criteria": [
             "合集下拉 localStorage 持久化",
             "刷新后恢复筛选",
@@ -1396,6 +1407,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_118": {
         "name": "Round 118 - 队列 Tab 筛选持久化",
+        "summary": "发布队列状态 Tab localStorage 持久化",
         "acceptance_criteria": [
             "发布队列 Tab localStorage 持久化",
             "刷新后恢复 Tab 状态",
@@ -1407,6 +1419,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_119": {
         "name": "Round 119 - Hash 深链与区块恢复",
+        "summary": "#queue/#works/#drafts 深链；刷新恢复区块",
         "acceptance_criteria": [
             "#queue/#works/#drafts 深链与 #articles 别名",
             "刷新后恢复区块并与 queue/collection localStorage 协同",
@@ -1418,6 +1431,7 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_120": {
         "name": "Round 120 - 详情返回保留工作台上下文",
+        "summary": "详情返回链接保留来源 hash；与 localStorage 协同",
         "acceptance_criteria": [
             "返回工作台链接保留 #queue/#works",
             "与 queue/collection localStorage 协同",
@@ -1429,13 +1443,27 @@ ROUND_META: dict[str, dict[str, Any]] = {
     },
     "round_121": {
         "name": "Round 121 - 详情链接统一捕获",
+        "summary": "队列/作品卡详情链接触发 captureWorkbenchReturnContext",
         "acceptance_criteria": [
             "队列表格与作品卡详情链接触发 capture",
             "refreshWorkbenchDetailLinkBindings 兜底",
             "mock@8080 /#queue 点详情→返回",
         ],
         "next_actions": [
-            "在 docs/rounds.md 规划后续轮次并扩展 ROUND_ORDER",
+            "推进 round_122 文档同步与维护冒烟",
+        ],
+    },
+    "round_122": {
+        "name": "Round 122 - 文档同步与维护冒烟",
+        "summary": "登记 108–121 抛光摘要；102 hash/返回断言；README 里程碑",
+        "acceptance_criteria": [
+            "docs/rounds.md 108–121 摘要表",
+            "ROUND_META summary 简述",
+            "test_round_102 hash/返回上下文断言",
+            "mock@8080 /#queue 冒烟",
+        ],
+        "next_actions": [
+            "在 docs/rounds.md 规划 round_123 后续能力",
         ],
     },
 }
@@ -2595,6 +2623,17 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_round_120_wechat_p0.py", "-q"],
                 "pytest return context regression",
+            ),
+        ]
+    elif round_id == "round_122":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_122_wechat_p0.py", "-q"],
+                "pytest wechat p0 round_122",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_round_102_maintenance_smoke.py", "-q"],
+                "pytest maintenance smoke round_122",
             ),
         ]
     else:

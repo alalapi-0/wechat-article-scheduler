@@ -1,6 +1,6 @@
 """Round 102 维护收口：微信主链路 API 冒烟（首页→scan→plan→预览→队列→草稿→/debug）。
 
-Round 115 起纳入上传与 export-outbox 轻量回归（覆盖 round_114 API）。
+Round 115 起纳入 upload/export-outbox；Round 122 起纳入 hash 导航与返回上下文轻量断言。
 """
 
 from __future__ import annotations
@@ -152,3 +152,29 @@ def test_upload_and_export_outbox_api_smoke(smoke_env: tuple[TestClient, Path]) 
     assert exp.get("relative_path")
     rel = exp["relative_path"]
     assert (tmp_path / rel).exists() or Path(rel).name.startswith("outbox_")
+
+
+def test_workbench_hash_and_return_context_markup(
+    smoke_env: tuple[TestClient, Path],
+    tmp_path: Path,
+) -> None:
+    """Round 119–121：hash 深链、返回捕获与详情动态返回链接（静态 HTML 断言）。"""
+    c, db_path = smoke_env
+    home = c.get("/").text
+    assert "initWorkbenchHash" in home
+    assert "wechat_workbench_section_hash" in home
+    assert "captureWorkbenchReturnContext" in home
+    assert "workbenchReturnUrl" not in home
+    assert 'href="#queue"' in home
+
+    with db.connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO articles (source_path, title, summary, body, content_hash, status) "
+            "VALUES ('inbox/ret.md', '返回测', 'S', 'B', 'hr', 'imported')",
+        )
+        aid = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+        conn.commit()
+    detail = c.get(f"/articles/{aid}").text
+    assert "workbenchReturnUrl" in detail
+    assert "wechat_workbench_return_hash" in detail
+    assert 'id="backWorkbench"' in detail

@@ -218,3 +218,6 @@ round_120:
   - python3 -m pytest tests/test_round_120_wechat_p0.py -q
 round_121:
   - python3 -m pytest tests/test_round_121_wechat_p0.py -q
+round_122:
+  - python3 -m pytest tests/test_round_122_wechat_p0.py -q
+  - python3 -m pytest tests/test_round_102_maintenance_smoke.py -q
