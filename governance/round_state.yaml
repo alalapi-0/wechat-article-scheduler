@@ -1,11 +1,12 @@
 current_round:
   id: round_122
   name: Round 122 - 文档同步与维护冒烟
-  status: active
+  status: completed
   updated_at: '2026-06-02T19:45:05.737028+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_121
-  completed_at: '2026-06-02T19:45:05.737028+00:00'
+  id: round_122
+  completed_at: '2026-06-02T19:46:16.064607+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - docs/rounds.md 108–121 摘要表
