@@ -73,6 +73,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="projects.yaml 路径（默认 config/projects.yaml 或 projects.example.yaml）",
     )
 
+    pcal = sub.add_parser(
+        "publish-calendar-dry-run",
+        help="跨项目 manifest 发布日历 dry-run（冲突检测，不写库）",
+    )
+    pcal.add_argument("--projects", type=str, default=None)
+    pcal.add_argument(
+        "--min-gap-minutes",
+        type=int,
+        default=60,
+        help="同账号相邻排期最小间隔（分钟）",
+    )
+
     lb = sub.add_parser(
         "local-blog-plan",
         help="local_blog 评估干跑 JSON（静态站/WordPress/本地目录，不真发）",
@@ -303,6 +315,24 @@ def main(argv: list[str] | None = None) -> int:
 
         projects_path = Path(args.projects) if args.projects else None
         summary = build_multi_project_dry_run(ROOT, projects_path=projects_path)
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0 if summary.get("ok") else 1
+
+    if args.command == "publish-calendar-dry-run":
+        import json
+        from pathlib import Path
+
+        from wechat_article_scheduler.config import ROOT
+        from wechat_article_scheduler.core.cross_project_calendar import (
+            build_publish_calendar_dry_run,
+        )
+
+        projects_path = Path(args.projects) if args.projects else None
+        summary = build_publish_calendar_dry_run(
+            ROOT,
+            projects_path=projects_path,
+            min_gap_minutes=args.min_gap_minutes,
+        )
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 0 if summary.get("ok") else 1
 

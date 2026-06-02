@@ -39,9 +39,9 @@ def test_round_order_contains_governance_round(ag):
 
 
 def test_round_order_covers_round_0_through_67(ag):
-    assert len(ag.ROUND_ORDER) == 104
+    assert len(ag.ROUND_ORDER) == 105
     assert ag.ROUND_ORDER[0] == "round_000"
-    assert ag.ROUND_ORDER[-1] == "round_103"
+    assert ag.ROUND_ORDER[-1] == "round_104"
     for round_id in ag.ROUND_ORDER:
         assert round_id in ag.ROUND_META
         assert ag.ROUND_META[round_id]["name"]

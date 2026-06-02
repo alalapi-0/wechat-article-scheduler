@@ -19,6 +19,8 @@ DEBUG_APIS = (
     "/api/manifest/sample-dry-run",
     "/api/projects/registry",
     "/api/projects/dry-run",
+    "/api/publish-calendar/dry-run",
+    "/api/publish-calendar/conflicts",
     "/api/audio-package-plan",
     "/api/browser-assist-plan",
 )

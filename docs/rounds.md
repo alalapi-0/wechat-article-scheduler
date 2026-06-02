@@ -2034,6 +2034,23 @@
   - [x] CLI/API 与 /debug
   - [x] agent_gate round_103 冒烟
 
+### Round 104 - Phase5 跨项目发布日历预研
+
+- 目标：路线图 Round 40 — 多项目 manifest 排期聚合、日历视图与冲突检测（不写库）。
+- 范围：`cross_project_calendar.py`、CLI/API、`/debug`。
+- 非目标：SaaS 日历；读取 SQLite `publish_jobs`；替代 `plan`。
+- 输入：round_103 `projects.example.yaml` 与 manifest `scheduled_at`。
+- 输出：`publish-calendar-dry-run`；`/api/publish-calendar/dry-run` 与 `/conflicts`。
+- 验收标准：`test_cross_project_calendar` 通过；示例项目无 hard 冲突。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_cross_project_calendar.py -q`。
+- 退出标准：gate round_104。
+- 风险：与微信 DB 排期混淆。
+- 回滚点：移除 publish-calendar API。
+- 交付项：
+  - [x] 日历 dry-run 与冲突检测
+  - [x] CLI/API 与 /debug
+  - [x] agent_gate round_104 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

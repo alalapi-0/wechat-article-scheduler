@@ -470,7 +470,18 @@ Phase 4 暂不开发。音频、版权和审核复杂度高，仅保留长期 ba
 - 不做什么：不写库；不 SaaS 多租户。
 - 允许改动范围：core、config 示例、web debug、tests。
 - 风险边界：微信收件箱仍为 P0。
-- 下一轮衔接：Round 40 跨项目发布日历预研。
+- 下一轮衔接：Round 40 跨项目发布日历预研（`round_104`）。
+
+### Round 40：跨项目发布日历（已完成 — agent `round_104`）
+
+- 本轮目标：多项目 manifest `scheduled_at` 聚合日历视图与冲突检测。
+- 具体任务：`cross_project_calendar`；同账号同时刻与最小间隔冲突；CLI/API；`/debug`。
+- 交付物：`docs/phase5_cross_project_calendar.md`。
+- 验收标准：不写库；不影响微信 `plan`。
+- 不做什么：不做 SaaS 日历。
+- 允许改动范围：core、web debug、tests。
+- 风险边界：个人本地 dry-run。
+- 下一轮衔接：Round 41 统一 outbox 预研。
 
 ### Round 37：网易云音乐发布包预研
 
@@ -502,16 +513,9 @@ Phase 5 是长期 backlog。当前不开发。
 
 - 已落地为 agent `round_103`（见上）。后续导入 SQLite 仍属 backlog。
 
-### Round 40：跨项目发布日历
+### Round 40（原 backlog）：跨项目发布日历
 
-- 本轮目标：评估多个项目共用发布日历。
-- 具体任务：定义视图、冲突、时区、筛选和权限边界。
-- 交付物：评估文档。
-- 验收标准：不影响单项目微信调度。
-- 不做什么：不做 SaaS 日历。
-- 允许改动范围：docs only。
-- 风险边界：个人本地优先。
-- 下一轮衔接：进入统一 outbox 评估。
+- 已落地为 agent `round_104`（见上）。DB 级统一日历仍属 backlog。
 
 ### Round 41：统一 outbox
 

@@ -158,6 +158,7 @@ ROUND_ORDER = [
     "round_101",
     "round_102",
     "round_103",
+    "round_104",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1215,8 +1216,20 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "不替代 scan/plan",
         ],
         "next_actions": [
-            "round_104 跨项目日历预研或维护",
-            "见 docs/roadmap_converged.md Round 40",
+            "round_104 跨项目发布日历预研",
+        ],
+    },
+    "round_104": {
+        "name": "Round 104 - Phase5 跨项目发布日历预研",
+        "acceptance_criteria": [
+            "manifest scheduled_at 日历 dry-run 视图",
+            "同账号冲突检测",
+            "publish-calendar API 与 /debug",
+            "不写 SQLite publish_jobs",
+        ],
+        "next_actions": [
+            "round_105 统一 outbox 预研",
+            "见 docs/roadmap_converged.md Round 41",
         ],
     },
 }
@@ -2096,6 +2109,17 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest manifest round_086/087 regression",
+            ),
+        ]
+    elif round_id == "round_104":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_cross_project_calendar.py", "-q"],
+                "pytest cross-project calendar",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_multi_project_dry_run.py", "-q"],
+                "pytest multi-project regression",
             ),
         ]
     else:

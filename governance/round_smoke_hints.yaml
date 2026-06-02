@@ -172,3 +172,7 @@ round_102:
 round_103:
   - python3 -m pytest tests/test_multi_project_dry_run.py -q
   - python3 -m pytest tests/test_manifest_validate.py tests/test_manifest_dry_run.py -q
+
+round_104:
+  - python3 -m pytest tests/test_cross_project_calendar.py -q
+  - python3 -m pytest tests/test_multi_project_dry_run.py -q

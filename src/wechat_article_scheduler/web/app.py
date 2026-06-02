@@ -598,6 +598,40 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
         return build_multi_project_dry_run(cfg.root)
 
+    @app.get("/api/publish-calendar/dry-run")
+    def api_publish_calendar_dry_run(
+        min_gap_minutes: int = 60,
+    ) -> dict[str, Any]:
+        from wechat_article_scheduler.core.cross_project_calendar import (
+            build_publish_calendar_dry_run,
+        )
+
+        return build_publish_calendar_dry_run(
+            cfg.root,
+            min_gap_minutes=min_gap_minutes,
+        )
+
+    @app.get("/api/publish-calendar/conflicts")
+    def api_publish_calendar_conflicts(
+        min_gap_minutes: int = 60,
+    ) -> dict[str, Any]:
+        from wechat_article_scheduler.core.cross_project_calendar import (
+            build_publish_calendar_dry_run,
+        )
+
+        summary = build_publish_calendar_dry_run(
+            cfg.root,
+            min_gap_minutes=min_gap_minutes,
+        )
+        return {
+            "ok": summary.get("ok"),
+            "conflict_count": summary.get("conflict_count"),
+            "hard_conflict_count": summary.get("hard_conflict_count"),
+            "conflicts": summary.get("conflicts") or [],
+            "event_count": summary.get("event_count"),
+            "mode": "dry_run",
+        }
+
     @app.get("/api/waiting-confirmation")
     def api_waiting_confirmation() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
@@ -1379,6 +1413,8 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>publish_manifest 干跑（示例）</h2><pre id="manifest-dry-run">加载中…</pre>
 <h2>Phase5 多项目 registry</h2><pre id="projects-registry">加载中…</pre>
 <h2>Phase5 多项目 manifest 干跑</h2><pre id="projects-dry-run">加载中…</pre>
+<h2>Phase5 跨项目发布日历</h2><pre id="publish-calendar">加载中…</pre>
+<h2>Phase5 日历冲突检测</h2><pre id="publish-calendar-conflicts">加载中…</pre>
 <h2>local_blog 评估（静态站）</h2><pre id="local-blog-static">加载中…</pre>
 <h2>local_blog 评估（WordPress）</h2><pre id="local-blog-wp">加载中…</pre>
 <h2>Webhook 评估（generic）</h2><pre id="webhook-plan">加载中…</pre>
@@ -1405,6 +1441,8 @@ Promise.all([
   fetch('/api/manifest/sample-dry-run'),
   fetch('/api/projects/registry'),
   fetch('/api/projects/dry-run'),
+  fetch('/api/publish-calendar/dry-run'),
+  fetch('/api/publish-calendar/conflicts'),
   fetch('/api/local-blog-plan?destination=static_site'),
   fetch('/api/local-blog-plan?destination=wordpress'),
   fetch('/api/webhook-plan?channel=generic'),
@@ -1416,7 +1454,7 @@ Promise.all([
   fetch('/api/audio-package-plan?platform=netease_music'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,pr,pd,l,m,n,o,p,q,r,s,t,u,v])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,pr,pd,pc,pcc,l,m,n,o,p,q,r,s,t,u,v])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1430,6 +1468,8 @@ Promise.all([
   document.getElementById('manifest-dry-run').textContent = JSON.stringify(await k.json(), null, 2);
   document.getElementById('projects-registry').textContent = JSON.stringify(await pr.json(), null, 2);
   document.getElementById('projects-dry-run').textContent = JSON.stringify(await pd.json(), null, 2);
+  document.getElementById('publish-calendar').textContent = JSON.stringify(await pc.json(), null, 2);
+  document.getElementById('publish-calendar-conflicts').textContent = JSON.stringify(await pcc.json(), null, 2);
   document.getElementById('local-blog-static').textContent = JSON.stringify(await l.json(), null, 2);
   document.getElementById('local-blog-wp').textContent = JSON.stringify(await m.json(), null, 2);
   document.getElementById('webhook-plan').textContent = JSON.stringify(await n.json(), null, 2);
