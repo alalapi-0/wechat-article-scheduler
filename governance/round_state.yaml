@@ -1,15 +1,15 @@
 current_round:
-  id: round_083
-  name: Round 83 - 豆瓣 browser_assist 评估
+  id: round_084
+  name: Round 84 - Phase2 browser_assist 收口
   status: active
-  updated_at: '2026-06-02T23:00:00+00:00'
+  updated_at: '2026-06-02T17:59:36.845080+00:00'
 last_completed_round:
-  id: round_082
-  completed_at: '2026-06-02'
+  id: round_083
+  completed_at: '2026-06-02T17:59:36.845080+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- douban dry-run 含 checkpoints 与 assessment
-- platform=douban API/CLI/debug
-- 不自动发布、不绕过登录
+- 三平台 browser_assist 均在 platforms API
+- phase2 文档更新
+- zhihu/douban/wechat 计划可生成
 next_actions:
-- Phase 2 browser_assist 索引收口（round_084）
+- 注册 round_085 或微信修复轮

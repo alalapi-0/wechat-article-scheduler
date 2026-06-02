@@ -6,7 +6,7 @@ project:
   primary_language: zh-CN
   output_language: zh-CN
   current_stage: converged_phase1_round4
-  current_round: round_083
+  current_round: round_084
   summary: 个人本地微信公众号发布工作台；当前 P0 只服务微信公众号闭环，其他平台全部进入后期 backlog。
   long_term_goal: 阶段一先稳定微信公众号文章导入、预览、封面、草稿、排期、scheduler、人工确认和可选正式发布；阶段二以后才评估文本、图文/视频、音频/音乐平台扩展。
 repository:
