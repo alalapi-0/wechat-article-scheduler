@@ -1,15 +1,16 @@
 current_round:
-  id: round_079
-  name: Round 79 - 知乎发布包模板
-  status: active
-  updated_at: '2026-06-02T21:00:00+00:00'
+  id: round_080
+  name: Round 80 - 豆瓣发布包模板
+  status: completed
+  updated_at: '2026-06-02T21:15:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_078
+  id: round_080
   completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- zhihu 专用字段文件与发布清单
-- CLI/Web --platform zhihu 与详情页导出入口
-- 不联网、不自动发布、需 proof
+- douban 专用字段与标签提示文件
+- platform=douban 导出与 API 平台列表
+- 不声称 API 已支持
 next_actions:
-- 按 docs/roadmap_converged.md 继续豆瓣发布包或知乎 browser_assist 评估
+- 评估知乎/豆瓣 browser_assist（backlog）或注册 round_081
