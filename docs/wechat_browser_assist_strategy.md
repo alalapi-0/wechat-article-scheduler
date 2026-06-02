@@ -69,7 +69,24 @@ browser_assist 任务应记录：
 
 在没有用户确认前，browser_assist 不能把任务标记为已正式发布。
 
-## 6. 与其他平台的关系
+## 6. 操作清单与 dry-run（Round 18）
+
+详细步骤见 [`docs/browser_assist_runbook.md`](browser_assist_runbook.md)。
+
+代码入口：`wechat_article_scheduler.adapters.browser_assist.workflow.build_dry_run_plan()`。
+
+| 阶段 | 执行方 | 说明 |
+|------|--------|------|
+| 本地预检 | scheduler | API 草稿已创建/更新 |
+| 打开后台 | browser_assist + 用户 | 仅导航，用户扫码登录 |
+| 核对缺口字段 | browser_assist | 封面裁剪、后台定时、正文封面显示等 |
+| 截图 | 用户 | 本地路径，不含凭据 |
+| 人工确认 | 用户 | 默认仅保存，不自动发布 |
+| proof 回填 | 用户 + 本地 | Round 19 接入最小记录 |
+
+人工确认点（checkpoint）：`login` → `draft_located` → `fields_reviewed` → `save_only` → `proof_backfill`。
+
+## 7. 与其他平台的关系
 
 本文件只讨论微信公众号路线里的 browser_assist。
 

@@ -1,15 +1,15 @@
 current_round:
-  id: round_072
-  name: Round 72 - 微信字段能力矩阵核验
+  id: round_073
+  name: Round 73 - browser_assist 后备流程
   status: active
-  updated_at: '2026-06-02T12:00:00+00:00'
+  updated_at: '2026-06-02T17:35:00+00:00'
 last_completed_round:
-  id: round_071
+  id: round_072
   completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 字段级矩阵：API 支持/实现/缺口/处理方式
-- wechat_field_matrix.py 与文档同步
-- CLI field-matrix 与 /api/wechat-field-matrix
+- 操作清单、人工确认点、guardrails 文档与代码一致
+- build_dry_run_plan 止于 awaiting_human_confirmation
+- CLI browser-assist-plan 与 /api/browser-assist-plan
 next_actions:
-- 按 docs/roadmap_converged.md 继续 Round 18：browser_assist 方案
+- 按 docs/roadmap_converged.md 继续 Round 19：人工确认与 proof 记录

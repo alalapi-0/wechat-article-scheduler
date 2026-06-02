@@ -196,7 +196,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不凭猜测声称 API 支持；未确认字段标记为待核验。
 - 下一轮衔接：进入 API 不支持字段的 browser_assist 方案。
 
-### Round 18：API 不支持字段的 browser_assist 方案
+### Round 18：API 不支持字段的 browser_assist 方案（已完成 — agent `round_073`）
 
 - 本轮目标：为微信 API 缺口设计本地 browser_assist 后备流程。
 - 具体任务：定义操作清单、人工确认点、截图、proof、状态回填和安全边界。

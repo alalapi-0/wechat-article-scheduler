@@ -65,6 +65,9 @@ from wechat_article_scheduler.wechat_field_matrix import (
     list_field_matrix,
     matrix_summary,
 )
+from wechat_article_scheduler.adapters.browser_assist.workflow import (
+    build_dry_run_plan,
+)
 from wechat_article_scheduler.web.drafts_display import (
     drafts_summary,
     get_wechat_draft,
@@ -337,6 +340,14 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "fields": list_field_matrix(),
             "gaps": field_gaps(),
         }
+
+    @app.get("/api/browser-assist-plan")
+    def api_browser_assist_plan(
+        article_id: str | None = None,
+        media_id: str | None = None,
+    ) -> dict[str, Any]:
+        """browser_assist 干跑计划（Round 18；人机确认，不自动发布）。"""
+        return build_dry_run_plan(article_id=article_id, media_id=media_id)
 
     @app.get("/api/user-labels")
     def user_labels() -> dict[str, Any]:
@@ -1067,14 +1078,17 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>状态</h2><pre id="status">加载中…</pre>
 <h2>概况</h2><pre id="overview">加载中…</pre>
 <h2>微信字段能力矩阵</h2><pre id="fields">加载中…</pre>
+<h2>browser_assist 干跑计划</h2><pre id="browser-assist">加载中…</pre>
 <script>
 Promise.all([
   fetch('/api/status'),
   fetch('/api/overview'),
   fetch('/api/wechat-field-matrix'),
-]).then(async ([a,b,c])=>{
+  fetch('/api/browser-assist-plan'),
+]).then(async ([a,b,c,d])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
+  document.getElementById('browser-assist').textContent = JSON.stringify(await d.json(), null, 2);
 });
 </script></body></html>"""

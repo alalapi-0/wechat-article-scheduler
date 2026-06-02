@@ -1530,6 +1530,23 @@
   - [x] field-matrix CLI 与 Web API
   - [x] agent_gate round_072 冒烟
 
+### Round 73 - browser_assist 后备流程
+
+- 目标：为微信 API 缺口定义本地 browser_assist 干跑流程（人机确认）。
+- 范围：`adapters/browser_assist/workflow.py`、`browser_assist_runbook.md`、CLI/Web API、测试。
+- 非目标：完整 Playwright 自动发文；保存 cookie/密码。
+- 输入：Round 72 字段矩阵缺口。
+- 输出：操作清单、checkpoint、guardrails、dry-run JSON。
+- 验收标准：计划状态为 `awaiting_human_confirmation`；禁止项在 guardrails 中可查。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_browser_assist_workflow.py -q`。
+- 退出标准：gate round_073 通过；`/debug` 可加载 `/api/browser-assist-plan`。
+- 风险：误用为自动发布工具。
+- 回滚点：仅保留策略文档，移除 API。
+- 交付项：
+  - [x] workflow 干跑骨架与 runbook
+  - [x] browser-assist-plan CLI 与 Web API
+  - [x] agent_gate round_073 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -77,3 +77,6 @@ round_071:
 
 round_072:
   - python3 -m pytest tests/test_wechat_field_matrix.py -q
+
+round_073:
+  - python3 -m pytest tests/test_browser_assist_workflow.py -q

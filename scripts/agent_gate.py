@@ -126,6 +126,7 @@ ROUND_ORDER = [
     "round_070",
     "round_071",
     "round_072",
+    "round_073",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -844,6 +845,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "按 docs/roadmap_converged.md 继续 Round 18：browser_assist 方案",
         ],
     },
+    "round_073": {
+        "name": "Round 73 - browser_assist 后备流程",
+        "acceptance_criteria": [
+            "操作清单、人工确认点、guardrails 文档与代码一致",
+            "build_dry_run_plan 止于 awaiting_human_confirmation",
+            "CLI browser-assist-plan 与 /api/browser-assist-plan",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 19：人工确认与 proof 记录",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1400,6 +1412,19 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest wechat field matrix",
+            ),
+        ]
+    elif round_id == "round_073":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_browser_assist_workflow.py",
+                    "-q",
+                ],
+                "pytest browser assist workflow",
             ),
         ]
     else:

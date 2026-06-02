@@ -33,6 +33,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub.add_parser("scheduler-health", help="调度器健康检查（队列/锁/卡住任务）")
     sub.add_parser("field-matrix", help="输出微信公众号字段能力矩阵 JSON")
+    ba_plan = sub.add_parser(
+        "browser-assist-plan",
+        help="输出 browser_assist 干跑计划 JSON（人机确认，不自动发布）",
+    )
+    ba_plan.add_argument("--article-id", type=str, default=None)
+    ba_plan.add_argument("--media-id", type=str, default=None)
 
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
     reject_p.add_argument("--article-id", type=int, required=True)
@@ -119,6 +125,25 @@ def main(argv: list[str] | None = None) -> int:
                     "fields": list_field_matrix(),
                     "gaps": field_gaps(),
                 },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "browser-assist-plan":
+        import json
+
+        from wechat_article_scheduler.adapters.browser_assist.workflow import (
+            build_dry_run_plan,
+        )
+
+        print(
+            json.dumps(
+                build_dry_run_plan(
+                    article_id=args.article_id,
+                    media_id=args.media_id,
+                ),
                 ensure_ascii=False,
                 indent=2,
             )
