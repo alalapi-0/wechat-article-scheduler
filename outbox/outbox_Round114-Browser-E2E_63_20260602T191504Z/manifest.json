@@ -1,0 +1,18 @@
+{
+  "outbox_version": 2,
+  "platform": "generic",
+  "platform_label": "通用",
+  "article_id": 63,
+  "title": "Round114 Browser E2E",
+  "digest_preview": "Round114 Browser E2E Playwright 上传验证正文。",
+  "exported_at": "20260602T191504Z",
+  "source_path": "/Users/alalapi/PycharmProjects/wechat-article-scheduler/articles/imported/r114_browser_1.md",
+  "status_at_export": "imported",
+  "files": [
+    "article.md",
+    "article.html",
+    "INSTRUCTIONS.md"
+  ],
+  "proof_required": true,
+  "note": "导出成功不等于发布成功"
+}

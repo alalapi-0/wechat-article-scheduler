@@ -1,0 +1,153 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 发布工作台
+      - generic [ref=e8]: 本地 · 安全发布
+    - navigation [ref=e9]:
+      - link "作品库" [ref=e10] [cursor=pointer]:
+        - /url: "#works"
+      - link "主操作" [ref=e11] [cursor=pointer]:
+        - /url: "#actions"
+      - link "发布队列" [ref=e12] [cursor=pointer]:
+        - /url: "#queue"
+      - link "微信草稿" [ref=e13] [cursor=pointer]:
+        - /url: "#drafts"
+      - link "草稿页" [ref=e14] [cursor=pointer]:
+        - /url: /drafts
+      - link "回收站" [ref=e15] [cursor=pointer]:
+        - /url: "#trash"
+      - link "操作记录" [ref=e16] [cursor=pointer]:
+        - /url: "#events"
+      - link "帮助" [ref=e17] [cursor=pointer]:
+        - /url: "#help"
+      - link "高级排错" [ref=e18] [cursor=pointer]:
+        - /url: /debug
+  - main [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - heading "微信公众号文章发布工作台" [level=1] [ref=e23]
+        - paragraph [ref=e24]: 像整理文档一样管理作品：上传、排期、预览、到点发布。顶部状态条会标明演练 / 真实草稿 / 真实发布，请先看再操作。
+      - generic [ref=e25]:
+        - generic [ref=e26]: 正在读取运行状态…
+        - generic [ref=e28]:
+          - checkbox "显示高级信息" [ref=e29]
+          - text: 显示高级信息
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - heading "概览" [level=2] [ref=e34]
+          - generic [ref=e35]: 作品与任务
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - heading "作品库" [level=2] [ref=e39]
+            - generic [ref=e40]: 上传即待发布
+          - generic [ref=e42] [cursor=pointer]:
+            - generic [ref=e43]: 拖拽作品和封面到这里
+            - generic [ref=e44]: 支持 md / txt / html 与 jpg / png / gif / webp；同名封面会自动绑定
+            - generic [ref=e45]:
+              - button "选择作品" [ref=e46]
+              - button "选择封面" [ref=e47]
+              - button "上传" [disabled] [ref=e48]
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: 合集
+              - combobox "合集" [ref=e52]:
+                - option "全部合集" [selected]
+            - generic [ref=e53]:
+              - checkbox "全选" [ref=e54]
+              - text: 全选
+            - button "取消全选" [ref=e55] [cursor=pointer]
+            - generic [ref=e56]: 已选 0 篇
+            - button "批量设置封面" [disabled] [ref=e57]
+            - button "批量发布设置" [disabled] [ref=e58]
+            - button "删除选中" [disabled] [ref=e59]
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - heading "回收站" [level=2] [ref=e62]
+            - generic [ref=e63]: 可恢复或彻底删除
+          - generic [ref=e64]:
+            - button "恢复选中" [ref=e65] [cursor=pointer]
+            - button "清空回收站" [ref=e66] [cursor=pointer]
+      - complementary [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - heading "发布计划" [level=2] [ref=e70]
+            - generic [ref=e71]: 下一步
+          - generic [ref=e72]:
+            - generic [ref=e73]: 读取计划中…
+            - generic [ref=e74]:
+              - button "扫描本地收件箱" [ref=e75] [cursor=pointer]
+              - button "生成排期" [ref=e76] [cursor=pointer]
+              - button "自定义安排…" [ref=e77] [cursor=pointer]
+              - button "执行到点发布" [ref=e78] [cursor=pointer]
+              - button "刷新" [ref=e79] [cursor=pointer]
+            - paragraph [ref=e80]: 在作品库可单篇或批量指定发布时间；「自动推荐」按配置偏好时段排期。
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - heading "主操作" [level=2] [ref=e83]
+            - generic [ref=e84]: 三步完成
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - generic [ref=e87]: "1"
+              - generic [ref=e88]:
+                - text: 收录作品
+                - paragraph [ref=e89]: 拖拽上传，或扫描本地收件箱（articles/inbox）
+            - generic [ref=e90]:
+              - generic [ref=e91]: "2"
+              - generic [ref=e92]:
+                - text: 安排时间
+                - paragraph [ref=e93]: 自动推荐或自定义设定发布时间
+            - generic [ref=e94]:
+              - generic [ref=e95]: "3"
+              - generic [ref=e96]:
+                - text: 执行到点
+                - paragraph [ref=e97]: 到时间后执行发布或演练
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - heading "发布队列" [level=2] [ref=e100]
+            - generic [ref=e101]: 任务状态
+          - generic [ref=e102]:
+            - button "刷新队列" [ref=e104] [cursor=pointer]
+            - tablist "队列筛选" [ref=e105]:
+              - button "待发布" [ref=e106] [cursor=pointer]
+              - button "发布中" [ref=e107] [cursor=pointer]
+              - button "已完成" [ref=e108] [cursor=pointer]
+              - button "失败" [ref=e109] [cursor=pointer]
+              - button "待人工确认" [ref=e110] [cursor=pointer]
+              - button "全部" [ref=e111] [cursor=pointer]
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - heading "微信草稿" [level=2] [ref=e114]
+            - generic [ref=e115]: 本地记录
+          - generic [ref=e116]:
+            - paragraph [ref=e117]: 仅显示本工具创建并写入数据库的草稿，不代表公众号后台全部草稿。
+            - tablist "草稿筛选" [ref=e118]:
+              - button "全部" [ref=e119] [cursor=pointer]
+              - button "已创建" [ref=e120] [cursor=pointer]
+        - generic [ref=e122]:
+          - heading "操作记录" [level=2] [ref=e123]
+          - generic [ref=e124]: 最近
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - heading "帮助" [level=2] [ref=e128]
+            - generic [ref=e129]: 快速理解
+          - generic [ref=e130]:
+            - paragraph [ref=e131]: 这是什么？ 一个把本地文章批量发布到微信公众号的工作台。顶部状态条显示当前模式：演练（不联网）、真实连接仅草稿、或真实发布（需二次确认）。
+            - paragraph [ref=e132]: 怎么用？ ① 上传文章和封面 → ② 安排发布时间 → ③ 到时间后执行到点发布。
+            - paragraph [ref=e133]:
+              - text: 真实 API（高级） 在
+              - code [ref=e134]: .env
+              - text: 设
+              - code [ref=e135]: WECHAT_MODE=real
+              - text: 与公众号凭证；推荐
+              - code [ref=e136]: WECHAT_ENABLE_PUBLISH=false
+              - text: 仅测草稿。命令行验证：
+              - code [ref=e137]: python3 scripts/real_api_check.py --samples 3
+              - text: （报告在
+              - code [ref=e138]: reports/real_api_runs/
+              - text: ）。
+            - paragraph [ref=e139]:
+              - text: 更多见
+              - link "高级排错" [ref=e140] [cursor=pointer]:
+                - /url: /debug
+              - text: （开发者/排错用）。
