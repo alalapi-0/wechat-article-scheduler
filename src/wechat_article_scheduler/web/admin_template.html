@@ -1035,6 +1035,7 @@ async function boot(){
   initAdvancedToggle();
   initCollectionFilter();
   initWorkbenchHash();
+  setupWorkbenchReturnCapture();
   setupUpload();
   setupWorksSelection();
   setupCoverBatchModal();
@@ -1140,6 +1141,29 @@ function setupDraftFilters(){
 }
 
 const HASH_SECTION_STORAGE_KEY = 'wechat_workbench_section_hash';
+const RETURN_HASH_SESSION_KEY = 'wechat_workbench_return_hash';
+
+function captureWorkbenchReturnContext(){
+  try {
+    let hash = location.hash;
+    if (!hash) {
+      const sec = localStorage.getItem(HASH_SECTION_STORAGE_KEY);
+      if (sec) hash = workbenchHashForSection(sec);
+    }
+    if (!hash) hash = '#works';
+    sessionStorage.setItem(RETURN_HASH_SESSION_KEY, hash);
+    persistWorkbenchSection(normalizeWorkbenchSection(hash));
+  } catch (e) {}
+}
+
+function setupWorkbenchReturnCapture(){
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const href = (a.getAttribute('href') || '').split('#')[0];
+    if (/^\/articles\/\d+$/.test(href)) captureWorkbenchReturnContext();
+  }, true);
+}
 const WORKBENCH_SECTION_IDS = new Set([
   'overview', 'works', 'articles', 'actions', 'queue', 'drafts', 'trash', 'events', 'help',
 ]);

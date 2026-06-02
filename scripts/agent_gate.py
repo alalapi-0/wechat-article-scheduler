@@ -174,6 +174,7 @@ ROUND_ORDER = [
     "round_117",
     "round_118",
     "round_119",
+    "round_120",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1411,6 +1412,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 /#queue 直达",
         ],
         "next_actions": [
+            "推进 round_120 详情返回保留 hash",
+        ],
+    },
+    "round_120": {
+        "name": "Round 120 - 详情返回保留工作台上下文",
+        "acceptance_criteria": [
+            "返回工作台链接保留 #queue/#works",
+            "与 queue/collection localStorage 协同",
+            "mock@8080 队列→详情→返回",
+        ],
+        "next_actions": [
             "在 docs/rounds.md 规划后续轮次并扩展 ROUND_ORDER",
         ],
     },
@@ -2549,6 +2561,17 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest persistence regression",
+            ),
+        ]
+    elif round_id == "round_120":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_120_wechat_p0.py", "-q"],
+                "pytest wechat p0 round_120",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_round_119_wechat_p0.py", "-q"],
+                "pytest hash deep link regression",
             ),
         ]
     else:

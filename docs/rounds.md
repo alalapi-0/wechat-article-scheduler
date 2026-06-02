@@ -2305,6 +2305,23 @@
   - [x] 刷新恢复区块
   - [x] agent_gate round_119 冒烟
 
+### Round 120 - 详情返回保留工作台上下文
+
+- 目标：详情页「返回工作台」带回来源 hash；queue/collection localStorage 仍生效。
+- 范围：`captureWorkbenchReturnContext`、`article_detail` 返回链接。
+- 非目标：详情页路由改造。
+- 输入：round_119 hash、round_117/118 localStorage。
+- 输出：`wechat_workbench_return_hash` session；`workbenchReturnUrl()`。
+- 验收标准：`test_round_120_wechat_p0`；mock@8080 队列→详情→返回。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_120_wechat_p0.py -q`。
+- 退出标准：gate round_120。
+- 风险：无。
+- 回滚点：恢复 `href="/"` 静态返回。
+- 交付项：
+  - [x] 进入详情捕获返回上下文
+  - [x] 详情返回动态 hash 链接
+  - [x] agent_gate round_120 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

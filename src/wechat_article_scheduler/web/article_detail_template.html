@@ -46,7 +46,7 @@
 </head>
 <body>
 <header class="top">
-  <a href="/">← 返回工作台</a>
+  <a href="/#works" id="backWorkbench">← 返回工作台</a>
   <label class="adv"><input type="checkbox" id="advToggle"/> 显示高级信息</label>
 </header>
 <main class="wrap">
@@ -113,6 +113,30 @@
 </main>
 <script>
 const ARTICLE_ID = {{ARTICLE_ID}};
+const HASH_SECTION_STORAGE_KEY = 'wechat_workbench_section_hash';
+const RETURN_HASH_SESSION_KEY = 'wechat_workbench_return_hash';
+
+function workbenchReturnUrl(){
+  try {
+    let h = sessionStorage.getItem(RETURN_HASH_SESSION_KEY);
+    if (!h) {
+      const sec = localStorage.getItem(HASH_SECTION_STORAGE_KEY);
+      if (sec) h = '#' + (sec === 'articles' ? 'works' : sec);
+    }
+    if (!h || h === '#') h = '#works';
+    if (!h.startsWith('#')) h = '#' + h.replace(/^#/, '');
+    return '/' + h;
+  } catch (e) { return '/#works'; }
+}
+
+function applyWorkbenchReturnLinks(){
+  const url = workbenchReturnUrl();
+  const back = document.getElementById('backWorkbench');
+  if (back) back.setAttribute('href', url);
+  const wb = document.getElementById('btnWorkbench');
+  if (wb) wb.setAttribute('href', url);
+}
+
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 async function loadPreview(){
@@ -137,6 +161,7 @@ async function loadPreview(){
 }
 
 async function boot(){
+  applyWorkbenchReturnLinks();
   document.getElementById('advToggle').addEventListener('change', e => {
     document.body.classList.toggle('show-advanced', e.target.checked);
   });
