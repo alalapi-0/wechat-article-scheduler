@@ -1,15 +1,15 @@
 current_round:
-  id: round_055
-  name: Round 55 - Auto-Approved Real API Pipeline
+  id: round_056
+  name: Round 56 - 路线收敛治理轮
   status: active
-  updated_at: '2026-06-02T05:49:21.692981+00:00'
+  updated_at: '2026-06-02T05:51:40.511891+00:00'
 last_completed_round:
-  id: round_054
-  completed_at: '2026-06-02T05:49:21.692981+00:00'
+  id: round_055
+  completed_at: '2026-06-02T05:51:40.511891+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- auto_approve_pipeline 在 real 模式下完成真实草稿并自动标记 auto_approved
-- 报告写入 reports/auto_approve_pipeline/ 与 reports/real_api_runs/
-- 下游 scan/run-once 可继续执行且不等待人工审核
+- 路线发散审计、产品愿景、架构、收敛路线图与平台优先级已更新
+- 不破坏微信公众号 scan/plan/run-once/草稿创建链路
+- 默认 mock 不联网；real 模式用于真实 API 测试；browser_assist 只作为个人本地自用后备方案
 next_actions:
-- 推进 Round 56：路线收敛治理轮
+- 下一轮优先执行 Round 2：当前微信公众号链路稳定化
