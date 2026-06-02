@@ -1411,6 +1411,23 @@
   - [x] /api/jobs 状态筛选与队列 Tab
   - [x] agent_gate round_065 冒烟
 
+### Round 66 - 文章详情与预览页面
+
+- 目标：单篇发布前状态可检查，下一步动作明确。
+- 范围：`/articles/{id}`、`/api/articles/{id}`、详情模板、预检与预览集成。
+- 非目标：多平台 payload 页。
+- 输入：render-preview、publish_preflight 逻辑、作品库卡片。
+- 输出：`docs/article_detail_preview.md`、详情页与 API、工作台「详情」入口。
+- 验收标准：长摘要/缺封面/渲染问题可见；mock 草稿不误认为真实创建。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_article_detail_page.py tests/test_web_app.py -q`。
+- 退出标准：8080 详情与预览 API 无失败；pytest 通过。
+- 风险：详情与弹窗预览数据不一致。
+- 回滚点：仅保留弹窗预览。
+- 交付项：
+  - [x] 详情路由与 API
+  - [x] 预检与下一步提示
+  - [x] agent_gate round_066 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

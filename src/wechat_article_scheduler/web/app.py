@@ -56,6 +56,7 @@ from wechat_article_scheduler.web.user_copy import (
 )
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
 from wechat_article_scheduler.web.workbench_mvp import build_workbench_hints
+from wechat_article_scheduler.web.article_detail import build_article_detail
 from wechat_article_scheduler.publish_config import (
     defaults_from_rules,
     human_publish_config_summary,
@@ -90,6 +91,7 @@ from wechat_article_scheduler.web.trash import (
 
 _TEMPLATE_PATH = Path(__file__).parent / "admin_template.html"
 _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exists() else "<html><body>模板缺失</body></html>"
+_DETAIL_TEMPLATE_PATH = Path(__file__).parent / "article_detail_template.html"
 logger = logging.getLogger(__name__)
 
 
@@ -282,6 +284,26 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     def debug_page() -> str:
         """高级排错页：展示原始 JSON 与内部字段。"""
         return _DEBUG_HTML
+
+    @app.get("/articles/{article_id}", response_class=HTMLResponse)
+    def article_detail_page(article_id: int) -> str:
+        """单篇作品详情与预览（收敛 Round 11）。"""
+        if not _DETAIL_TEMPLATE_PATH.is_file():
+            raise HTTPException(status_code=500, detail="详情页模板缺失")
+        with db.connect(cfg.database_path) as conn:
+            if build_article_detail(cfg, conn, article_id) == {}:
+                raise HTTPException(status_code=404, detail="作品不存在")
+        html = _DETAIL_TEMPLATE_PATH.read_text(encoding="utf-8")
+        return html.replace("{{ARTICLE_ID}}", str(int(article_id)))
+
+    @app.get("/api/articles/{article_id}")
+    def article_detail_api(article_id: int) -> dict[str, Any]:
+        """单篇作品详情 JSON（排期、草稿、预检、下一步）。"""
+        with db.connect(cfg.database_path) as conn:
+            detail = build_article_detail(cfg, conn, article_id)
+        if not detail:
+            raise HTTPException(status_code=404, detail="作品不存在")
+        return detail
 
     @app.get("/api/user-labels")
     def user_labels() -> dict[str, Any]:

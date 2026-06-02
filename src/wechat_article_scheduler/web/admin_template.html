@@ -1210,6 +1210,7 @@ function renderWorks(arts){
           <div class="summary">${summary}</div>
           <div class="meta"><span class="pill ${pillCls}">${esc(statusLbl)}</span><span class="chip">${esc(a.collection_name||a.collection_slug||'默认')}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}${(a.content_hints||[]).map(h => `<span class="chip">${esc(h)}</span>`).join('')}</div>
           <div class="acts">
+            <a class="btn-ghost btn-sm" href="/articles/${a.id}">详情</a>
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
             <button class="btn-ghost btn-sm" onclick="scheduleArticle(${a.id})">安排时间</button>
             <button class="btn-ghost btn-sm" onclick="changeCover(${a.id})">换封面</button>

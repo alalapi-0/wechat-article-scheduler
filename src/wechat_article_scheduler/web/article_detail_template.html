@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>作品详情 · 发布工作台</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --surface: #fff; --text: #1a1a1a; --muted: #6b7280;
+    --line: #e5e7eb; --accent: #07c160; --accent-soft: #e8f8ef;
+    --warn: #fff8e6; --err: #fde8e8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "PingFang SC", sans-serif; background: var(--bg); color: var(--text); }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .top a { color: var(--accent); text-decoration: none; font-size: 14px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 22px 24px 48px; }
+  h1 { margin: 0 0 6px; font-size: 24px; }
+  .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: #0a7a3e; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 10px; font-size: 15px; }
+  .next { background: var(--accent-soft); border-color: #c8ead4; }
+  .next ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .checks li { margin: 4px 0; font-size: 13px; }
+  .checks .bad { color: #b45309; }
+  .cover { max-width: 320px; max-height: 140px; border-radius: 8px; object-fit: cover; margin-top: 8px; }
+  .preview-body { font-size: 16px; line-height: 1.75; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--line); }
+  .preview-body p { margin: 0 0 1em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chips span { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #eef2f7; color: var(--muted); }
+  .warn { padding: 8px 10px; border-radius: 8px; background: var(--warn); color: #8a6d00; font-size: 13px; margin-top: 8px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button, .btn { font-size: 13px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .advanced-only { display: none; }
+  body.show-advanced .advanced-only { display: block; }
+  label.adv { font-size: 13px; color: var(--muted); }
+  pre.adv { font-size: 11px; overflow: auto; background: #111; color: #eee; padding: 10px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a href="/">← 返回工作台</a>
+  <label class="adv"><input type="checkbox" id="advToggle"/> 显示高级信息</label>
+</header>
+<main class="wrap">
+  <div id="loadErr" hidden class="warn"></div>
+  <div id="mainPanel" hidden>
+    <span class="pill" id="modePill"></span>
+    <h1 id="titleEl"></h1>
+    <p class="meta" id="metaEl"></p>
+    <section class="card next" id="nextCard">
+      <h2>下一步</h2>
+      <div id="nextHeadline"></div>
+      <ul id="nextList"></ul>
+      <div class="actions">
+        <button type="button" class="btn-primary" id="btnPreview">刷新正文预览</button>
+        <a class="btn" id="btnWorkbench" href="/#works">去工作台安排发布</a>
+      </div>
+    </section>
+    <section class="card">
+      <h2>发布状态</h2>
+      <div id="statusBlock"></div>
+    </section>
+    <section class="card">
+      <h2>发布前检查</h2>
+      <ul class="checks" id="checksList"></ul>
+    </section>
+    <section class="card">
+      <h2>摘要</h2>
+      <p id="summaryEl" style="margin:0;font-size:14px;color:var(--muted);"></p>
+    </section>
+    <section class="card">
+      <h2>封面</h2>
+      <div id="coverBlock"></div>
+    </section>
+    <section class="card">
+      <h2>公众号正文预览</h2>
+      <p style="margin:0 0 8px;font-size:12px;color:var(--muted);" id="approxNote"></p>
+      <div id="previewWarn" class="warn" hidden></div>
+      <div class="chips" id="hintChips" hidden></div>
+      <div class="preview-body" id="previewBody">加载预览中…</div>
+      <pre class="adv advanced-only" id="previewRaw" hidden></pre>
+    </section>
+    <section class="card advanced-only">
+      <h2>高级信息</h2>
+      <pre class="adv" id="detailRaw"></pre>
+    </section>
+  </div>
+</main>
+<script>
+const ARTICLE_ID = {{ARTICLE_ID}};
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+async function loadPreview(){
+  const body = document.getElementById('previewBody');
+  try {
+    const d = await (await fetch(`/api/articles/${ARTICLE_ID}/render-preview`)).json();
+    document.getElementById('approxNote').textContent = d.approximation_note || '';
+    body.innerHTML = d.html_body || '（空）';
+    const chips = document.getElementById('hintChips');
+    if ((d.content_hints||[]).length) {
+      chips.innerHTML = d.content_hints.map(h=>`<span>${esc(h)}</span>`).join('');
+      chips.hidden = false;
+    }
+    const w = document.getElementById('previewWarn');
+    if (d.render_error) { w.textContent = '渲染异常：'+d.render_error; w.hidden = false; }
+    else if ((d.blocking_hints||[]).length) { w.textContent = '注意：'+d.blocking_hints.join('；'); w.hidden = false; }
+    if (document.body.classList.contains('show-advanced') && d.raw_body) {
+      const raw = document.getElementById('previewRaw');
+      raw.hidden = false; raw.textContent = d.raw_body;
+    }
+  } catch(e) { body.textContent = '预览加载失败：'+e; }
+}
+
+async function boot(){
+  document.getElementById('advToggle').addEventListener('change', e => {
+    document.body.classList.toggle('show-advanced', e.target.checked);
+  });
+  document.getElementById('btnPreview').addEventListener('click', loadPreview);
+  try {
+    const d = await (await fetch(`/api/articles/${ARTICLE_ID}`)).json();
+    if (!d.id) throw new Error('作品不存在');
+    document.getElementById('mainPanel').hidden = false;
+    document.getElementById('modePill').textContent = d.mode_label || '';
+    document.getElementById('titleEl').textContent = d.title || '（无标题）';
+    document.getElementById('metaEl').textContent =
+      `${d.collection_name||''} · ${d.status_label||''} · ${d.workflow_hint||''}`;
+    const wb = d.workbench || {};
+    document.getElementById('nextHeadline').innerHTML = `<b>${esc(wb.headline||'')}</b>`;
+    document.getElementById('nextList').innerHTML = (wb.hints||[]).map(h=>`<li>${esc(h)}</li>`).join('') || '<li>预览正文后返回工作台继续</li>';
+    let st = `<p style="margin:0 0 6px;font-size:14px;"><b>${esc(d.workflow_hint)}</b></p>`;
+    const job = d.latest_job;
+    if (job) {
+      st += `<p style="margin:0;font-size:13px;color:var(--muted);">计划时间：${esc(job.scheduled_at_label)} · ${esc(job.status_label)} · ${esc(job.publish_config_label||'')}</p>`;
+    } else {
+      st += `<p style="margin:0;font-size:13px;color:var(--muted);">尚未创建发布任务</p>`;
+    }
+    const draft = d.wechat_draft || {};
+    st += `<p style="margin:8px 0 0;font-size:13px;">${esc(draft.label||'')}</p>`;
+    if (draft.mock_note) st += `<p class="warn" style="margin-top:6px;">${esc(draft.mock_note)}</p>`;
+    document.getElementById('statusBlock').innerHTML = st;
+    document.getElementById('checksList').innerHTML = (d.preflight_checks||[]).map(c =>
+      `<li class="${c.ok?'':'bad'}">${esc(c.label)}：${esc(c.detail)}</li>`).join('');
+    document.getElementById('summaryEl').textContent = d.summary_preview || '（无摘要）';
+    const cov = document.getElementById('coverBlock');
+    if (d.cover_url) cov.innerHTML = `<img class="cover" src="${esc(d.cover_url)}" alt="封面"/>`;
+    else cov.innerHTML = '<span style="color:var(--muted);font-size:13px;">未设置封面</span>';
+    if (document.body.classList.contains('show-advanced')) {
+      document.getElementById('detailRaw').textContent = JSON.stringify(d, null, 2);
+    }
+    document.getElementById('advToggle').addEventListener('change', () => {
+      if (document.body.classList.contains('show-advanced'))
+        document.getElementById('detailRaw').textContent = JSON.stringify(d, null, 2);
+    });
+    await loadPreview();
+  } catch(e) {
+    const err = document.getElementById('loadErr');
+    err.hidden = false;
+    err.textContent = '无法加载作品详情：' + e;
+  }
+}
+boot();
+</script>
+</body>
+</html>

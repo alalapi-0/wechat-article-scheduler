@@ -119,6 +119,7 @@ ROUND_ORDER = [
     "round_063",
     "round_064",
     "round_065",
+    "round_066",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -757,7 +758,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "普通视图默认隐藏高级信息；8080 核心 API 无失败",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 11：文章详情与预览页面",
+            "推进 Round 66：文章详情与预览页面",
+        ],
+    },
+    "round_066": {
+        "name": "Round 66 - 文章详情与预览页面",
+        "acceptance_criteria": [
+            "GET /articles/{id} 详情页与 /api/articles/{id} API",
+            "展示封面、摘要、排期、草稿状态与发布前检查",
+            "正文 render-preview 集成；mock 草稿有演练说明",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 12：发布队列页面",
         ],
     },
 }
@@ -1219,6 +1231,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest web console mvp",
+            ),
+        ]
+    elif round_id == "round_066":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_article_detail_page.py",
+                    "tests/test_web_app.py",
+                    "-q",
+                ],
+                "pytest article detail preview",
             ),
         ]
     else:
