@@ -66,6 +66,7 @@
   body.show-advanced .advanced-only { display: block; }
   label.adv { font-size: 13px; color: var(--muted); }
   pre.adv { font-size: 11px; overflow: auto; background: #111; color: #eee; padding: 10px; border-radius: 8px; }
+  .dry-run-json { margin-top: 10px; max-height: 280px; }
 </style>
 </head>
 <body>
@@ -128,6 +129,12 @@
       <div class="preview-body" id="previewBody">加载预览中…</div>
       <pre class="adv advanced-only" id="previewRaw" hidden></pre>
     </section>
+    <section class="card advanced-only" id="dryRunCard">
+      <h2>发布 dry-run</h2>
+      <p style="margin:0 0 8px;font-size:12px;color:var(--muted);">只读摘要，复用 <code>/api/articles/{id}/publish-dry-run</code>（mock 安全）。</p>
+      <div id="dryRunSummary"></div>
+      <pre class="adv dry-run-json advanced-only" id="dryRunJson" hidden></pre>
+    </section>
     <section class="card advanced-only">
       <h2>高级信息</h2>
       <pre class="adv" id="detailRaw"></pre>
@@ -137,6 +144,7 @@
 <script src="/assets/export-outbox-ui.js"></script>
 <script>
 const ARTICLE_ID = {{ARTICLE_ID}};
+const ADV_STORAGE_KEY = 'wechat_workbench_show_advanced';
 const HASH_SECTION_STORAGE_KEY = 'wechat_workbench_section_hash';
 const RETURN_HASH_SESSION_KEY = 'wechat_workbench_return_hash';
 
@@ -216,6 +224,70 @@ async function doExportOutbox(platform, label){
   } catch(e) { alert('导出失败：'+e); }
 }
 
+function renderDetailDryRun(dr){
+  const sum = document.getElementById('dryRunSummary');
+  const pre = document.getElementById('dryRunJson');
+  if (!sum) return;
+  if (!dr || !dr.ok) {
+    sum.innerHTML = '<p style="margin:0;font-size:13px;color:var(--muted);">请在上方勾选「显示高级信息」后加载 dry-run</p>';
+    if (pre) { pre.hidden = true; pre.textContent = ''; }
+    return;
+  }
+  let html = `<p style="margin:0 0 8px;font-size:14px;"><b>${esc(dr.gate_summary || dr.summary || '')}</b></p>`;
+  if (dr.mock_safe) {
+    html += '<p class="warn" style="margin:0 0 8px;"><b>mock 安全</b>：只读模拟，不联网、不写库。</p>';
+  }
+  const steps = (dr.report && dr.report.simulated_steps) || [];
+  if (steps.length) {
+    html += '<ul style="margin:0;padding-left:18px;font-size:12px;color:var(--muted);">' +
+      steps.map(s => `<li>${esc(s.label)} → ${esc(s.outcome)}</li>`).join('') + '</ul>';
+  }
+  const hum = dr.human || [];
+  if (hum.length > 1) {
+    html += '<p style="margin:8px 0 0;font-size:12px;color:var(--muted);">' +
+      hum.slice(1).map(h => esc(h)).join('<br/>') + '</p>';
+  }
+  sum.innerHTML = html;
+  if (pre) {
+    const slim = {
+      ok: dr.ok, article_id: dr.article_id, mode: dr.mode, mock_safe: dr.mock_safe,
+      network: dr.network, wechat_mode: dr.wechat_mode, gate_summary: dr.gate_summary,
+      preflight_ready: dr.preflight_ready, human: dr.human, report: dr.report,
+    };
+    pre.textContent = JSON.stringify(slim, null, 2);
+    pre.hidden = false;
+  }
+}
+
+async function loadPublishDryRun(){
+  if (!document.body.classList.contains('show-advanced')) {
+    renderDetailDryRun(null);
+    return null;
+  }
+  try {
+    const dr = await (await fetch(`/api/articles/${ARTICLE_ID}/publish-dry-run`)).json();
+    renderDetailDryRun(dr);
+    return dr;
+  } catch (e) {
+    renderDetailDryRun(null);
+    return null;
+  }
+}
+
+function initAdvancedToggle(onChange){
+  let on = false;
+  try { on = localStorage.getItem(ADV_STORAGE_KEY) === '1'; } catch (e) {}
+  document.body.classList.toggle('show-advanced', on);
+  const t = document.getElementById('advToggle');
+  if (t) t.checked = on;
+  document.getElementById('advToggle').addEventListener('change', e => {
+    const checked = !!e.target.checked;
+    document.body.classList.toggle('show-advanced', checked);
+    try { localStorage.setItem(ADV_STORAGE_KEY, checked ? '1' : '0'); } catch (err) {}
+    if (typeof onChange === 'function') onChange();
+  });
+}
+
 async function loadPreview(){
   const body = document.getElementById('previewBody');
   try {
@@ -238,12 +310,19 @@ async function loadPreview(){
 }
 
 async function boot(){
+  let detailCache = null;
   applyWorkbenchReturnLinks();
   await loadManualExportPlatforms();
   const exportSlot = document.getElementById('exportOutboxSlot');
   if (exportSlot) exportSlot.innerHTML = detailExportMenuHtml();
-  document.getElementById('advToggle').addEventListener('change', e => {
-    document.body.classList.toggle('show-advanced', e.target.checked);
+  initAdvancedToggle(async () => {
+    if (detailCache) {
+      if (document.body.classList.contains('show-advanced'))
+        document.getElementById('detailRaw').textContent = JSON.stringify(detailCache, null, 2);
+      else document.getElementById('detailRaw').textContent = '';
+    }
+    await loadPublishDryRun();
+    await loadPreview();
   });
   document.getElementById('btnPreview').addEventListener('click', loadPreview);
   const btnUpd = document.getElementById('btnUpdateDraft');
@@ -257,6 +336,7 @@ async function boot(){
   });
   try {
     const d = await (await fetch(`/api/articles/${ARTICLE_ID}`)).json();
+    detailCache = d;
     if (!d.id) throw new Error('作品不存在');
     document.getElementById('mainPanel').hidden = false;
     document.getElementById('modePill').textContent = d.mode_label || '';
@@ -332,10 +412,7 @@ async function boot(){
     if (document.body.classList.contains('show-advanced')) {
       document.getElementById('detailRaw').textContent = JSON.stringify(d, null, 2);
     }
-    document.getElementById('advToggle').addEventListener('change', () => {
-      if (document.body.classList.contains('show-advanced'))
-        document.getElementById('detailRaw').textContent = JSON.stringify(d, null, 2);
-    });
+    await loadPublishDryRun();
     await loadPreview();
   } catch(e) {
     const err = document.getElementById('loadErr');

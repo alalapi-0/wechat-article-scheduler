@@ -184,6 +184,7 @@ ROUND_ORDER = [
     "round_127",
     "round_128",
     "round_129",
+    "round_130",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1554,7 +1555,19 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 高级开 dry-run 面板（可选）",
         ],
         "next_actions": [
-            "在 docs/rounds.md 规划 round_130 后续能力",
+            "推进 round_130 详情页 dry-run 摘要块",
+        ],
+    },
+    "round_130": {
+        "name": "Round 130 - 详情页 publish-dry-run 摘要",
+        "summary": "文章详情页高级开时展示 dry-run 摘要与 JSON，复用 round_129 API",
+        "acceptance_criteria": [
+            "test_round_130 详情页 dryRunCard 与 publish-dry-run",
+            "test_round_129 回归",
+            "mock@8080 /articles/61 高级开（可选）",
+        ],
+        "next_actions": [
+            "在 docs/rounds.md 规划 round_131 后续能力",
         ],
     },
 }
@@ -2800,6 +2813,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest wechat p0 round_129",
+            ),
+        ]
+    elif round_id == "round_130":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_round_130_wechat_p0.py",
+                    "tests/test_round_129_wechat_p0.py",
+                    "-q",
+                ],
+                "pytest wechat p0 round_130",
             ),
         ]
     else:

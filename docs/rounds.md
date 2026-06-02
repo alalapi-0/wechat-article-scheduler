@@ -2499,6 +2499,23 @@
   - [x] advDryRun 高级面板
   - [x] agent_gate round_129 冒烟
 
+### Round 130 - 详情页 publish-dry-run 摘要
+
+- 目标：文章详情页在「显示高级信息」时展示 `publish-dry-run` 摘要块（人类可读 + 精简 JSON），复用 round_129 API。
+- 范围：`article_detail_template.html`。
+- 非目标：工作台 advDryRun 改版、真实发布。
+- 输入：`GET /api/articles/{id}/publish-dry-run`。
+- 输出：`#dryRunCard` / `#dryRunSummary` / `#dryRunJson`。
+- 验收标准：`test_round_130` + round_129 回归；gate round_130。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_130_wechat_p0.py tests/test_round_129_wechat_p0.py -q`。
+- 退出标准：gate round_130。
+- 风险：未开高级时不请求 API。
+- 回滚点：移除详情页 dry-run 区块。
+- 交付项：
+  - [x] 详情页 dry-run 摘要块
+  - [x] 高级开关与 localStorage 同步
+  - [x] agent_gate round_130 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
