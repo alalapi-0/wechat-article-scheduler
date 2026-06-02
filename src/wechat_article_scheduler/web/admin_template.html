@@ -453,7 +453,7 @@
             </div>
             <div class="upload-actions">
               <button class="btn-ghost btn-sm" id="btnBulkRestore" type="button">恢复选中</button>
-              <button class="btn-ghost btn-sm" id="btnPurgeTrash" type="button">清空回收站</button>
+              <button class="btn-ghost btn-sm" id="btnPurgeTrash" type="button" title="彻底删除回收站内全部作品（需二次确认）">清空回收站</button>
             </div>
             <div class="works" id="trashGrid" style="margin-top:8px;"></div>
           </section>
@@ -1683,7 +1683,22 @@ async function bulkRestoreSelected(){
 }
 
 async function purgeTrashBin(){
-  if (!window.confirm('彻底清空回收站？本地文件与数据库记录将不可恢复。')) return;
+  let trash = [];
+  try {
+    trash = await (await fetch('/api/trash')).json();
+  } catch (e) {
+    setAlert('err', '无法读取回收站：' + e);
+    return;
+  }
+  if (!trash.length) {
+    setAlert('warn', '回收站已是空的，无需清空');
+    return;
+  }
+  const msg =
+    `确定彻底清空回收站中的 ${trash.length} 篇作品？\n\n` +
+    '将删除项目内的文章/封面文件、发布任务与草稿记录，且不可恢复。\n' +
+    '不会撤回已发到公众号的内容。';
+  if (!window.confirm(msg)) return;
   try {
     const d = await (await fetch('/api/trash/purge', { method:'POST' })).json();
     selectedTrashIds.clear();
