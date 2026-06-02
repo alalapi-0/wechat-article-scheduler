@@ -2152,6 +2152,23 @@
   - [x] run-once toast 与事件刷新
   - [x] agent_gate round_110 冒烟
 
+### Round 111 - 生成排期与待人工确认入口
+
+- 目标：「生成排期」与 `plan_gate` 预检联动；首页展示 `waiting_confirmation` 入口。
+- 范围：`publish_preflight.plan_gate`、`/api/plan`、`overview`、`admin_template` 队列筛选。
+- 非目标：真实联网；新 proof 流程。
+- 输入：round_110 run_once_gate、既有 `/api/waiting-confirmation`。
+- 输出：生成排期按钮禁用+原因；概览待确认卡片；队列「待人工确认」Tab。
+- 验收标准：`test_round_111_wechat_p0`；mock@8080 点击生成排期/待确认入口。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_111_wechat_p0.py -q`。
+- 退出标准：gate round_111。
+- 风险：无。
+- 回滚点：移除 plan_gate 与 waitingConfirmEntry。
+- 交付项：
+  - [x] 生成排期预检联动
+  - [x] 待人工确认首页入口
+  - [x] agent_gate round_111 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

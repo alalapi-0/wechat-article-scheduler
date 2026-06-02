@@ -18,6 +18,16 @@ from wechat_article_scheduler.publish_policy import (
 from wechat_article_scheduler.publish_preview import _maybe_unescape_html
 
 
+def _preflight_action_gate(checks: list[dict[str, Any]]) -> dict[str, Any]:
+    blocking = [c for c in checks if c.get("required") and not c["ok"]]
+    block_reasons = [str(c.get("detail") or c.get("label") or "") for c in blocking]
+    return {
+        "blocked": len(blocking) > 0,
+        "reason": block_reasons[0] if block_reasons else "",
+        "reasons": block_reasons,
+    }
+
+
 def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
     """汇总真实发布前的可读检查项（不触发网络请求）。"""
     checks: list[dict[str, Any]] = []
@@ -139,13 +149,9 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             }
         )
 
-    blocking = [c for c in checks if c.get("required") and not c["ok"]]
-    block_reasons = [str(c.get("detail") or c.get("label") or "") for c in blocking]
-    run_once_gate = {
-        "blocked": len(blocking) > 0,
-        "reason": block_reasons[0] if block_reasons else "",
-        "reasons": block_reasons,
-    }
+    action_gate = _preflight_action_gate(checks)
+    run_once_gate = action_gate
+    plan_gate = action_gate
     human: list[str] = []
     if mode == "mock":
         human.append("当前为演练模式，执行到点任务不会真的发到公众号。")
@@ -160,8 +166,9 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             human.append(f"提示：{c['detail']}")
 
     return {
-        "ready": len(blocking) == 0,
+        "ready": len(action_gate["reasons"]) == 0,
         "run_once_gate": run_once_gate,
+        "plan_gate": plan_gate,
         "mode": mode,
         "publish_enabled": publish_on,
         "publish_policy": global_publish_policy(config),

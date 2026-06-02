@@ -251,6 +251,14 @@
   .queue-fail-banner .actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
   .run-once-hint { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
   .run-once-hint.blocked { color: #b91c1c; background: #fde8e8; padding: 8px 10px; border-radius: 8px; border: 1px solid #f5c2c2; }
+  .plan-hint { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+  .plan-hint.blocked { color: #b91c1c; background: #fde8e8; padding: 8px 10px; border-radius: 8px; border: 1px solid #f5c2c2; }
+  .waiting-confirm-entry {
+    margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+    background: #fff8e6; border: 1px solid #e8d48a; font-size: 13px;
+  }
+  .waiting-confirm-entry ul { margin: 8px 0; padding-left: 18px; color: var(--muted); font-size: 12.5px; }
+  .waiting-confirm-entry .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   #events.flash-highlight .card { box-shadow: 0 0 0 2px var(--accent-soft); transition: box-shadow .3s; }
   .stat.clickable { cursor: pointer; }
   .stat.clickable:hover { border-color: var(--accent); }
@@ -454,6 +462,7 @@
               <div id="nextStepsHeadline"></div>
               <ul id="nextStepsList"></ul>
             </div>
+            <div id="waitingConfirmEntry" hidden></div>
           </section>
 
           <!-- 作品库 + 上传 -->
@@ -523,11 +532,12 @@
               <div class="banner" id="scheduleBanner">读取计划中…</div>
               <div class="upload-actions">
                 <button class="btn-ghost" id="btnScan" type="button">扫描本地收件箱</button>
-                <button class="btn-primary" id="btnPlan">自动推荐时间</button>
+                <button class="btn-primary" id="btnPlan" type="button" title="按合集规则自动推荐发布时间">生成排期</button>
                 <button class="btn-ghost" id="btnOpenSchedule" type="button">自定义安排…</button>
                 <button class="btn-primary" id="btnRun" type="button">执行到点发布</button>
                 <button class="btn-ghost" id="btnRefresh">刷新</button>
               </div>
+              <p class="plan-hint" id="planBlockReason" hidden></p>
               <p class="run-once-hint" id="runOnceBlockReason" hidden></p>
               <p class="preview-hint" style="margin-top:8px;">在作品库可单篇或批量指定发布时间；「自动推荐」按配置偏好时段排期。</p>
               <div id="resultBox" style="margin-top:10px;"></div>
@@ -555,6 +565,7 @@
                 <button type="button" data-qf="active">发布中</button>
                 <button type="button" data-qf="ok">已完成</button>
                 <button type="button" data-qf="err">失败</button>
+                <button type="button" data-qf="confirm">待人工确认</button>
                 <button type="button" data-qf="all">全部</button>
               </div>
               <div id="queueBox"></div>
@@ -948,7 +959,7 @@ async function boot(){
   setupCoverBatchModal();
   setupScheduleModal();
   el('btnScan').addEventListener('click', () => runAction('scan', '/api/scan'));
-  el('btnPlan').addEventListener('click', () => runAction('plan', '/api/plan'));
+  el('btnPlan').addEventListener('click', onPlan);
   el('btnOpenSchedule').addEventListener('click', () => {
     if (selectedWorkIds.size > 0) openScheduleModal('batch');
     else setAlert('info', '请先在作品库勾选作品，或点单篇「安排时间」');
@@ -991,7 +1002,9 @@ async function boot(){
 
 let queueJobsList = [];
 let queueFilterKey = 'wait';
-const QUEUE_FILTER_API = { wait: 'pending', active: 'running', ok: 'done', err: 'failed', all: '' };
+const QUEUE_FILTER_API = {
+  wait: 'pending', active: 'running', ok: 'done', err: 'failed', confirm: 'waiting_confirmation', all: '',
+};
 
 function setupQueueFilters(){
   const box = el('queueFilters');
@@ -1091,30 +1104,38 @@ async function submitUpload(){
 /* ---------- 主操作 ---------- */
 let lastPublishPreflight = null;
 
-function applyRunOncePreflightGate(preflight){
-  lastPublishPreflight = preflight || null;
-  const btn = el('btnRun');
-  const hint = el('runOnceBlockReason');
+function applyActionPreflightGate(preflight, btnId, hintId, gateKey, prefix){
+  const btn = el(btnId);
+  const hint = el(hintId);
   if (!btn) return;
-  const gate = (preflight && preflight.run_once_gate) || {};
+  const gate = (preflight && preflight[gateKey]) || (preflight && preflight.run_once_gate) || {};
   const blocked = !!(gate.blocked || (preflight && preflight.ready === false &&
     (preflight.checks || []).some(c => c.required && !c.ok)));
   const reason = gate.reason || ((preflight && preflight.human) || []).find(h => String(h).startsWith('需处理：')) ||
     '发布前检查未通过，请先处理待发布作品的内容问题';
   btn.disabled = blocked;
-  btn.title = blocked ? reason : '';
+  btn.title = blocked ? reason : (btnId === 'btnPlan' ? '按合集规则自动推荐发布时间' : '');
   btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
-  if (hint) {
-    if (blocked) {
-      hint.hidden = false;
-      hint.className = 'run-once-hint blocked';
-      hint.textContent = '无法执行到点：' + reason;
-    } else {
-      hint.hidden = true;
-      hint.className = 'run-once-hint';
-      hint.textContent = '';
-    }
+  if (!hint) return;
+  if (blocked) {
+    hint.hidden = false;
+    hint.className = (btnId === 'btnPlan' ? 'plan-hint' : 'run-once-hint') + ' blocked';
+    hint.textContent = prefix + reason;
+  } else {
+    hint.hidden = true;
+    hint.className = btnId === 'btnPlan' ? 'plan-hint' : 'run-once-hint';
+    hint.textContent = '';
   }
+}
+
+function applyPreflightGates(preflight){
+  lastPublishPreflight = preflight || null;
+  applyActionPreflightGate(preflight, 'btnPlan', 'planBlockReason', 'plan_gate', '无法生成排期：');
+  applyActionPreflightGate(preflight, 'btnRun', 'runOnceBlockReason', 'run_once_gate', '无法执行到点：');
+}
+
+function applyRunOncePreflightGate(preflight){
+  applyPreflightGates(preflight);
 }
 
 function runOnceToastKind(data){
@@ -1146,13 +1167,50 @@ function flashEventsPanel(){
   sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function planToastKind(data){
+  if (data && data.blocked_by_preflight) return 'err';
+  const planned = int(data && data.planned);
+  if (planned > 0) return 'ok';
+  return 'info';
+}
+
+function showPlanOutcome(data){
+  const lines = (data && data.human) || ['完成'];
+  const kind = planToastKind(data);
+  setAlert(kind, lines.join('；'));
+  const boxKind = kind === 'info' ? 'ok' : kind;
+  showResult(lines, boxKind);
+}
+
+async function onPlan(){
+  const btn = el('btnPlan');
+  if (btn && btn.disabled) {
+    const gate = (lastPublishPreflight && lastPublishPreflight.plan_gate) || {};
+    setAlert('err', gate.reason || '发布前检查未通过，无法生成排期');
+    return;
+  }
+  let pf = lastPublishPreflight;
+  if (!pf) {
+    try { pf = await (await fetch('/api/publish-preflight')).json(); } catch(e){}
+  }
+  if (pf && pf.plan_gate && pf.plan_gate.blocked) {
+    setAlert('err', pf.plan_gate.reason || '发布前检查未通过');
+    applyPreflightGates(pf);
+    return;
+  }
+  await runAction('plan', '/api/plan');
+}
+
 async function runAction(name, url){
   setAlert('info', '正在' + L(COPY.actions, name, '处理') + '…');
   try {
     const data = await (await fetch(url, { method:'POST' })).json();
     if (name === 'run-once') {
       showRunOnceOutcome(data);
-      if (data && data.publish_preflight) applyRunOncePreflightGate(data.publish_preflight);
+      if (data && data.publish_preflight) applyPreflightGates(data.publish_preflight);
+    } else if (name === 'plan') {
+      showPlanOutcome(data);
+      if (data && data.publish_preflight) applyPreflightGates(data.publish_preflight);
     } else {
       showResult(data.human || ['完成']);
     }
@@ -1175,7 +1233,7 @@ async function onRun(){
   }
   if (pf && pf.run_once_gate && pf.run_once_gate.blocked) {
     setAlert('err', pf.run_once_gate.reason || '发布前检查未通过');
-    applyRunOncePreflightGate(pf);
+    applyPreflightGates(pf);
     return;
   }
   if (pf && pf.ready === false) {
@@ -1183,7 +1241,7 @@ async function onRun(){
     const msg = (pf.human || []).join(' ') || '发布前检查未通过，请先处理内容质量问题';
     if (blocking) {
       setAlert('err', msg);
-      applyRunOncePreflightGate(pf);
+      applyPreflightGates(pf);
       return;
     }
     if (st.wechat_mode === 'mock') {
@@ -1245,7 +1303,8 @@ async function refreshAll(){
     renderDrafts(drafts);
     await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
-    applyRunOncePreflightGate(ov.publish_preflight);
+    applyPreflightGates(ov.publish_preflight);
+    renderWaitingConfirmationEntry(ov.waiting_confirmation);
     renderStats(ov);
     renderNextSteps(ov.workbench);
     renderSchedule(ov.schedule_summary);
@@ -1298,8 +1357,39 @@ function renderSafety(status, preflight){
   }
 }
 
+function goWaitingConfirmQueue(){
+  queueFilterKey = 'confirm';
+  const box = el('queueFilters');
+  if (box) box.querySelectorAll('button[data-qf]').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-qf') === 'confirm');
+  });
+  document.getElementById('queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  refreshAll();
+}
+
+function renderWaitingConfirmationEntry(wc){
+  const box = el('waitingConfirmEntry');
+  if (!box) return;
+  const count = (wc && wc.count) || 0;
+  if (!count) { box.hidden = true; box.innerHTML = ''; return; }
+  const preview = (wc && (wc.preview || wc.items)) || [];
+  const rows = preview.slice(0, 5).map(it => {
+    const proof = it.has_proof ? ' · 已有证明草稿' : ' · 待提交证明';
+    return `<li><a href="${esc(it.article_detail_url || '/articles/'+it.article_id)}">${esc(it.article_title||'（无标题）')}</a>${esc(proof)}</li>`;
+  }).join('');
+  box.hidden = false;
+  box.innerHTML = `<div class="waiting-confirm-entry">
+    <div><b>待人工确认 ${count} 条</b>${wc.summary_label ? ' · '+esc(wc.summary_label) : ''}</div>
+    ${rows ? `<ul>${rows}</ul>` : ''}
+    <div class="actions">
+      <button type="button" class="btn-primary btn-sm" onclick="goWaitingConfirmQueue()">查看待确认队列</button>
+    </div>
+  </div>`;
+}
+
 function renderStats(ov){
   const ac = ov.article_counts || {}, jc = ov.job_counts || {};
+  const wc = int(jc.waiting_confirmation);
   const cards = [
     { num: (ac.imported||0), lbl: '已收录作品' },
     { num: (ac.published||0), lbl: '已发布' },
@@ -1307,6 +1397,7 @@ function renderStats(ov){
     { num: (jc.done||0), lbl: '已完成' },
     { num: (jc.failed||0), lbl: '失败', goto: 'err' },
   ];
+  if (wc > 0) cards.push({ num: wc, lbl: '待人工确认', goto: 'confirm' });
   el('statCards').innerHTML = cards.map(c => {
     const cls = c.goto ? 'stat clickable' : 'stat';
     const attr = c.goto ? ` data-goto-queue="${esc(c.goto)}" title="查看失败队列"` : '';
@@ -1415,7 +1506,9 @@ function renderQueue(jobs){
       ? L(COPY.empty,'jobs','还没有待发布作品')
       : (queueFilterKey === 'err'
         ? '当前筛选下没有失败任务（可点上方「重试全部失败」处理其他失败记录）'
-        : '当前筛选下没有任务');
+        : (queueFilterKey === 'confirm'
+          ? '当前没有待人工确认任务。半自动流程完成后会出现在这里。'
+          : '当前筛选下没有任务'));
     const errCta = (queueFilterKey === 'err' && failedCnt > 0)
       ? '<p style="margin-top:10px;"><button type="button" class="btn-primary btn-sm" onclick="bulkRetryFailed()">重试全部失败</button></p>'
       : '';

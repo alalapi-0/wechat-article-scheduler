@@ -693,7 +693,18 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     def api_waiting_confirmation() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
             items = list_waiting_confirmation(conn)
-        return {"count": len(items), "items": items}
+        preview = items[:5]
+        summary = (
+            f"待人工确认 {len(items)} 条"
+            if items
+            else "暂无待人工确认任务"
+        )
+        return {
+            "count": len(items),
+            "items": items,
+            "preview": preview,
+            "summary_label": summary,
+        }
 
     @app.get("/api/publish-jobs/{job_id}/proof")
     def api_get_publish_proof(job_id: int) -> dict[str, Any]:
@@ -788,6 +799,16 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             chain_summary=chain_summary,
             publish_preflight=preflight,
         )
+        waiting_items = list_waiting_confirmation(conn, limit=5)
+        waiting_confirmation = {
+            "count": int(job_counts.get("waiting_confirmation", 0)) or len(waiting_items),
+            "preview": waiting_items,
+            "summary_label": (
+                f"待人工确认 {len(waiting_items)} 条，需提交发布证明"
+                if waiting_items
+                else ""
+            ),
+        }
         st = status()
         return {
             "status": st,
@@ -801,6 +822,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "preflight_ready": preflight.get("ready", True),
             "generation_policy": st.get("generation_policy"),
             "wechat_chain_summary": chain_summary,
+            "waiting_confirmation": waiting_confirmation,
             "docs": [
                 {"label": "README", "path": "README.md"},
                 {"label": "开发路线图", "path": "docs/rounds.md"},
@@ -1254,7 +1276,22 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.post("/api/plan")
     async def trigger_plan() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            pf = build_publish_preflight(cfg, conn)
+        gate = pf.get("plan_gate") or pf.get("run_once_gate") or {}
+        if gate.get("blocked"):
+            reasons = list(gate.get("reasons") or [])
+            human = ["发布前检查未通过，无法生成排期"]
+            human.extend(reasons[:3])
+            return {
+                "ok": False,
+                "blocked_by_preflight": True,
+                "planned": 0,
+                "human": human,
+                "publish_preflight": pf,
+            }
         result = build_plan(cfg)
+        result["ok"] = True
         result["human"] = humanize_plan_result(result)
         await _sync_web_auto_runner(app, cfg)
         return result
