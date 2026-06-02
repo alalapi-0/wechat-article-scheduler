@@ -1,11 +1,12 @@
 current_round:
   id: round_102
   name: Round 102 - 脚本轮维护收口
-  status: active
+  status: completed
   updated_at: '2026-06-02T32:00:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_101
-  completed_at: '2026-06-02T18:27:22.803228+00:00'
+  id: round_102
+  completed_at: '2026-06-02T18:31:06.785143+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - docs/rounds.md 与 ROUND_ORDER 同步
