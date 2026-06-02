@@ -163,6 +163,7 @@ ROUND_ORDER = [
     "round_106",
     "round_107",
     "round_108",
+    "round_109",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1278,7 +1279,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 核心路径浏览器验证",
         ],
         "next_actions": [
-            "继续微信闭环或 round_109",
+            "推进 round_109 作品预检与队列失败重试",
+        ],
+    },
+    "round_109": {
+        "name": "Round 109 - 微信 P0 续（预检条与失败队列）",
+        "acceptance_criteria": [
+            "作品详情/卡片预检条与 blocking 联动",
+            "队列失败 Tab 重试入口与错误摘要增强",
+            "mock@8080 核心路径浏览器验证",
+        ],
+        "next_actions": [
+            "继续微信闭环或 round_110",
         ],
     },
 }
@@ -2227,6 +2239,24 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest web mvp regression",
+            ),
+        ]
+    elif round_id == "round_109":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_109_wechat_p0.py", "-q"],
+                "pytest wechat p0 round_109",
+            ),
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_round_108_wechat_p0.py",
+                    "tests/test_web_console_mvp.py",
+                    "-q",
+                ],
+                "pytest wechat regression",
             ),
         ]
     else:

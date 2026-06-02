@@ -58,7 +58,13 @@ from wechat_article_scheduler.web.user_copy import (
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
 from wechat_article_scheduler.web.workbench_mvp import build_workbench_hints
 from wechat_article_scheduler.web.article_detail import build_article_detail
-from wechat_article_scheduler.web.queue_display import list_queue_jobs, queue_summary
+from wechat_article_scheduler.web.article_preflight import build_article_preflight_summary
+from wechat_article_scheduler.web.queue_display import (
+    failed_jobs_preview,
+    failure_digest_label,
+    list_queue_jobs,
+    queue_summary,
+)
 from wechat_article_scheduler.draft_update import humanize_update_result, update_article_wechat_draft
 from wechat_article_scheduler.wechat_field_matrix import (
     field_gaps,
@@ -834,25 +840,26 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             sql += " ORDER BY a.id DESC LIMIT ?"
             params.append(limit)
             rows = conn.execute(sql, params).fetchall()
-        out: list[dict[str, Any]] = []
-        for r in rows:
-            row = dict(r)
-            row["has_cover"] = bool((row.get("cover_path") or "").strip())
-            row["has_summary"] = bool((row.get("summary") or "").strip())
-            row["has_cover_config"] = bool((row.get("cover_config_json") or "").strip())
-            row["cover_url"] = f"/media/cover/{row['id']}" if row["has_cover"] else None
-            row["has_wechat_draft"] = bool(row.get("has_wechat_draft"))
-            row["workflow_hint"] = article_workflow_hint(
-                status=row.get("status"),
-                latest_job_status=row.get("latest_job_status"),
-                has_wechat_draft=row["has_wechat_draft"],
-            )
-            row["content_hints"] = article_content_hints(
-                row.get("title") or "",
-                row.get("body") or "",
-            )
-            out.append(row)
-        return out
+            out: list[dict[str, Any]] = []
+            for r in rows:
+                row = dict(r)
+                row["has_cover"] = bool((row.get("cover_path") or "").strip())
+                row["has_summary"] = bool((row.get("summary") or "").strip())
+                row["has_cover_config"] = bool((row.get("cover_config_json") or "").strip())
+                row["cover_url"] = f"/media/cover/{row['id']}" if row["has_cover"] else None
+                row["has_wechat_draft"] = bool(row.get("has_wechat_draft"))
+                row["workflow_hint"] = article_workflow_hint(
+                    status=row.get("status"),
+                    latest_job_status=row.get("latest_job_status"),
+                    has_wechat_draft=row["has_wechat_draft"],
+                )
+                row["content_hints"] = article_content_hints(
+                    row.get("title") or "",
+                    row.get("body") or "",
+                )
+                row["preflight_bar"] = build_article_preflight_summary(row, cfg)
+                out.append(row)
+            return out
 
     @app.get("/api/trash")
     def trash_list(limit: int = 50) -> list[dict[str, Any]]:
@@ -977,6 +984,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         with db.connect(cfg.database_path) as conn:
             summary = queue_summary(conn)
             summary["preflight_ready"] = build_publish_preflight(cfg, conn).get("ready", True)
+            preview = failed_jobs_preview(conn, cfg, limit=3)
+            summary["failed_preview"] = preview
+            summary["failure_digest"] = failure_digest_label(preview)
+            if preview and summary.get("failed_count", 0) > 0:
+                digest = summary["failure_digest"]
+                if digest:
+                    summary["summary_label"] = (
+                        f"{summary['summary_label']} · 最近失败：{digest}"
+                    )
             return summary
 
     @app.get("/drafts", response_class=HTMLResponse)

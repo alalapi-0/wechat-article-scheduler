@@ -56,6 +56,12 @@ def _latest_job(conn: Any, article_id: int, config: AppConfig) -> dict[str, Any]
     if not row:
         return None
     out = dict(row)
+    if str(out.get("status") or "") == "failed":
+        from wechat_article_scheduler.web.queue_display import failure_reasons_for_jobs
+
+        fr = failure_reasons_for_jobs(conn, [int(out["id"])]).get(int(out["id"]), "")
+        out["failure_reason"] = fr
+        out["failure_reason_short"] = (fr[:160] + "…") if len(fr) > 160 else fr
     pub = parse_publish_config(out.get("publish_config_json"), defaults=defaults_from_rules(config))
     out["publish_config_label"] = " · ".join(human_publish_config_summary(pub))
     eff = resolve_effective_submit(app_config=config, job_config=pub)
@@ -104,61 +110,9 @@ def _draft_info(conn: Any, article_id: int, *, mode: str) -> dict[str, Any]:
 
 
 def _article_preflight_checks(row: dict[str, Any], config: AppConfig) -> list[dict[str, Any]]:
-    checks: list[dict[str, Any]] = []
-    mode = (config.wechat_mode or "mock").strip().lower()
-    publish_on = bool(config.wechat_enable_publish)
-    will_publish = mode == "real" and publish_on
+    from wechat_article_scheduler.web.article_preflight import article_preflight_checks
 
-    checks.append(
-        {
-            "id": "mode",
-            "ok": True,
-            "label": "运行模式",
-            "detail": label_mode(mode),
-        }
-    )
-
-    has_cover = bool((row.get("cover_path") or "").strip()) or bool(config.wechat_default_thumb_path)
-    checks.append(
-        {
-            "id": "cover",
-            "ok": has_cover,
-            "label": "封面",
-            "detail": "已设置封面" if (row.get("cover_path") or "").strip() else (
-                "将使用默认封面" if config.wechat_default_thumb_path else "缺少封面，建议上传"
-            ),
-        }
-    )
-
-    summary = (row.get("summary") or "").strip()
-    digest_truncated = bool(summary) and len(summary) > 120
-    checks.append(
-        {
-            "id": "digest",
-            "ok": not digest_truncated,
-            "label": "摘要",
-            "detail": "摘要长度正常"
-            if not digest_truncated
-            else f"摘要超过 120 字，发布时将截断为：{clamp_summary(summary, 120)[:40]}…",
-        }
-    )
-
-    title = (row.get("title") or "").strip()
-    body = row.get("body") or ""
-    if not body.strip():
-        checks.append({"id": "body", "ok": False, "label": "正文", "detail": "正文为空"})
-    elif title and publish_body_for(title, body) != body.strip():
-        checks.append({"id": "title_dup", "ok": False, "label": "标题重复", "detail": "正文首行与标题重复，发布时会自动处理"})
-    if "&lt;" in body and _maybe_unescape_html(body) != body:
-        checks.append({"id": "html", "ok": False, "label": "正文格式", "detail": "正文疑似转义 HTML，请先预览确认"})
-
-    if will_publish:
-        blocking = [c for c in checks if not c.get("ok") and c["id"] in ("cover", "body", "html")]
-    else:
-        blocking = []
-    for c in checks:
-        c["required"] = c["id"] in ("cover", "body", "html") and will_publish and not c["ok"]
-    return checks
+    return article_preflight_checks(row, config)
 
 
 def suggest_detail_actions(
@@ -182,8 +136,10 @@ def suggest_detail_actions(
         actions.append("保存或发布后，在本页填写公开链接或截图路径")
     elif job and job.get("status") == "failed":
         primary = "retry"
-        headline = "上次发布失败"
-        actions.append("请重新安排发布时间或检查正文/封面")
+        headline = "上次发布失败，可重试排队"
+        actions.append("在发布队列「失败」筛选中点「重试」，或返回工作台批量重试")
+        if job.get("failure_reason_short") or job.get("failure_reason"):
+            actions.append(job.get("failure_reason_short") or job.get("failure_reason"))
     elif (row.get("status") or "") == "imported" and (
         job is None or job.get("status") not in ("pending", "running")
     ):
@@ -220,6 +176,9 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
     mode = (config.wechat_mode or "mock").strip().lower()
     draft = _draft_info(conn, article_id, mode=mode)
     checks = _article_preflight_checks(row, config)
+    from wechat_article_scheduler.web.article_preflight import build_article_preflight_summary
+
+    preflight_bar = build_article_preflight_summary(row, config)
     workflow = article_workflow_hint(
         status=row.get("status"),
         latest_job_status=job.get("status") if job else None,
@@ -244,6 +203,7 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
         "publish_proof": proof_block,
         "wechat_draft": draft,
         "preflight_checks": checks,
+        "preflight_bar": preflight_bar,
         "workbench": suggest_detail_actions(row=row, job=job, checks=checks, config=config),
         "mode_label": label_mode(mode),
         "preview_url": f"/api/articles/{article_id}/render-preview",

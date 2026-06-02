@@ -30,6 +30,11 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .chips span { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #eef2f7; color: var(--muted); }
   .warn { padding: 8px 10px; border-radius: 8px; background: var(--warn); color: #8a6d00; font-size: 13px; margin-top: 8px; }
+  .preflight-bar { padding: 10px 12px; border-radius: 10px; font-size: 13px; margin: 0 0 14px; }
+  .preflight-bar.ok { background: var(--accent-soft); color: #0a7a3e; border: 1px solid #c8ead4; }
+  .preflight-bar.warn { background: var(--warn); color: #8a6d00; border: 1px solid #e8d48a; }
+  .preflight-bar.err { background: var(--err); color: #b91c1c; border: 1px solid #f5c2c2; }
+  .next.preflight-blocked { border-color: #f5c2c2; background: #fff5f5; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   button, .btn { font-size: 13px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
   .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -48,6 +53,7 @@
   <div id="loadErr" hidden class="warn"></div>
   <div id="mainPanel" hidden>
     <span class="pill" id="modePill"></span>
+    <div id="preflightBar" class="preflight-bar ok" hidden></div>
     <h1 id="titleEl"></h1>
     <p class="meta" id="metaEl"></p>
     <section class="card next" id="nextCard">
@@ -161,6 +167,15 @@ async function boot(){
     if (!d.id) throw new Error('作品不存在');
     document.getElementById('mainPanel').hidden = false;
     document.getElementById('modePill').textContent = d.mode_label || '';
+    const pfb = d.preflight_bar || {};
+    const barEl = document.getElementById('preflightBar');
+    if (pfb.bar_text) {
+      barEl.hidden = false;
+      barEl.className = 'preflight-bar ' + (pfb.bar_level || 'ok');
+      barEl.textContent = (pfb.blocking_count > 0 ? '阻塞：' : '') + pfb.bar_text;
+    }
+    const nextCard = document.getElementById('nextCard');
+    if (nextCard) nextCard.classList.toggle('preflight-blocked', (pfb.blocking_count||0) > 0);
     document.getElementById('titleEl').textContent = d.title || '（无标题）';
     document.getElementById('metaEl').textContent =
       `${d.collection_name||''} · ${d.status_label||''} · ${d.workflow_hint||''}`;

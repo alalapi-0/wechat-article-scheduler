@@ -66,7 +66,7 @@ def enrich_queue_job(
     out["scheduled_at_label"] = format_scheduled_at(scheduled)
     out["status_label"] = label_job_status(status)
     out["failure_reason"] = failure_reason
-    out["failure_reason_short"] = (failure_reason[:160] + "…") if len(failure_reason) > 160 else failure_reason
+    out["failure_reason_short"] = (failure_reason[:220] + "…") if len(failure_reason) > 220 else failure_reason
     out["is_due_now"] = is_due
     out["next_hint"] = _next_hint(status=status, is_due=is_due, failure_reason=failure_reason)
     out["detail_url"] = f"/articles/{row.get('article_id')}"
@@ -104,6 +104,60 @@ def list_queue_jobs(
         enrich_queue_job(r, config, failure_reason=reasons.get(int(r["id"]), ""))
         for r in rows
     ]
+
+
+def failed_jobs_preview(
+    conn: Any,
+    config: AppConfig,
+    *,
+    limit: int = 3,
+) -> list[dict[str, Any]]:
+    """最近失败任务摘要（队列 Tab 与 summary 展示）。"""
+    rows = conn.execute(
+        """
+        SELECT j.id, j.article_id, a.title
+        FROM publish_jobs j
+        JOIN articles a ON a.id = j.article_id
+        WHERE j.status = 'failed'
+          AND (a.deleted_at IS NULL OR a.deleted_at = '')
+        ORDER BY j.updated_at DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    if not rows:
+        return []
+    job_ids = [int(r["id"]) for r in rows]
+    reasons = failure_reasons_for_jobs(conn, job_ids)
+    preview: list[dict[str, Any]] = []
+    for r in rows:
+        jid = int(r["id"])
+        fr = reasons.get(jid, "")
+        short = (fr[:120] + "…") if len(fr) > 120 else fr
+        title = str(r["title"] or "（无标题）")
+        preview.append(
+            {
+                "job_id": jid,
+                "article_id": int(r["article_id"]),
+                "title": title,
+                "failure_reason": fr,
+                "failure_reason_short": short or "（无记录原因）",
+                "detail_url": f"/articles/{int(r['article_id'])}",
+            }
+        )
+    return preview
+
+
+def failure_digest_label(preview: list[dict[str, Any]], *, max_items: int = 2) -> str:
+    if not preview:
+        return ""
+    parts: list[str] = []
+    for p in preview[:max_items]:
+        t = (p.get("title") or "")[:24]
+        r = p.get("failure_reason_short") or ""
+        if t and r:
+            parts.append(f"{t}：{r}")
+    return " · ".join(parts)
 
 
 def queue_summary(conn: Any) -> dict[str, Any]:
@@ -148,9 +202,11 @@ def queue_summary(conn: Any) -> dict[str, Any]:
     next_at = str(next_row["scheduled_at"]) if next_row else None
     if next_at and int(due) == 0 and pending > 0:
         parts.append(f"最近排期 {next_at[:16].replace('T', ' ')}")
+    label = " · ".join(parts)
     return {
         "counts": counts,
         "due_now": int(due),
         "next_pending_at": next_at,
-        "summary_label": " · ".join(parts),
+        "summary_label": label,
+        "failed_count": failed,
     }

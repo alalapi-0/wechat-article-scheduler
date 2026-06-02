@@ -243,6 +243,14 @@
   .queue-table .hint-cell { font-size: 12px; color: var(--muted); }
   .next-steps { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--line); font-size: 13px; color: var(--text); }
   .next-steps.preflight-warn { border-color: #e8a87c; background: #fff8f0; }
+  .preflight-bar { font-size: 12px; padding: 5px 8px; border-radius: 8px; margin-top: 4px; line-height: 1.35; }
+  .preflight-bar.ok { background: var(--accent-soft); color: #0a7a3e; }
+  .preflight-bar.warn { background: #fff8f0; color: #b45309; border: 1px solid #e8a87c; }
+  .preflight-bar.err { background: #fde8e8; color: #b91c1c; border: 1px solid #f5c2c2; }
+  .queue-fail-banner { margin-bottom: 10px; padding: 10px 12px; border-radius: 10px; background: #fde8e8; border: 1px solid #f5c2c2; font-size: 13px; color: #7f1d1d; }
+  .queue-fail-banner .actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat.clickable { cursor: pointer; }
+  .stat.clickable:hover { border-color: var(--accent); }
   .next-steps ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
   .pill-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; opacity: 0.95; }
   .events ul { margin: 0; padding: 0; list-style: none; }
@@ -535,7 +543,7 @@
             <div class="section-head"><h2>发布队列</h2><span class="hint" id="queueHint">任务状态</span></div>
             <div class="card queue-box pad">
               <div class="queue-actions">
-                <button type="button" class="btn-ghost btn-sm" id="btnRetryAllFailed" hidden>重试全部失败</button>
+                <button type="button" class="btn-primary btn-sm" id="btnRetryAllFailed" hidden>重试全部失败</button>
                 <button type="button" class="btn-ghost btn-sm" id="btnRefreshQueue">刷新队列</button>
               </div>
               <div class="queue-filters" id="queueFilters" role="tablist" aria-label="队列筛选">
@@ -1215,9 +1223,25 @@ function renderStats(ov){
     { num: (ac.published||0), lbl: '已发布' },
     { num: (jc.pending||0), lbl: '待发布' },
     { num: (jc.done||0), lbl: '已完成' },
-    { num: (jc.failed||0), lbl: '失败' },
+    { num: (jc.failed||0), lbl: '失败', goto: 'err' },
   ];
-  el('statCards').innerHTML = cards.map(c => `<div class="stat"><div class="num">${c.num}</div><div class="lbl">${esc(c.lbl)}</div></div>`).join('');
+  el('statCards').innerHTML = cards.map(c => {
+    const cls = c.goto ? 'stat clickable' : 'stat';
+    const attr = c.goto ? ` data-goto-queue="${esc(c.goto)}" title="查看失败队列"` : '';
+    return `<div class="${cls}"${attr}><div class="num">${c.num}</div><div class="lbl">${esc(c.lbl)}</div></div>`;
+  }).join('');
+  el('statCards').querySelectorAll('[data-goto-queue]').forEach(card => {
+    card.addEventListener('click', async () => {
+      const key = card.getAttribute('data-goto-queue') || 'err';
+      queueFilterKey = key;
+      const box = el('queueFilters');
+      if (box) box.querySelectorAll('button[data-qf]').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-qf') === key);
+      });
+      document.getElementById('queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      await refreshAll();
+    });
+  });
 }
 
 function renderSchedule(s){
@@ -1272,21 +1296,48 @@ function renderDrafts(drafts){
   box.innerHTML = `<table class="queue-table"><thead><tr><th>作品</th><th>创建时间</th><th>草稿 ID</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+let lastQueueSummary = null;
+
 function renderQueueSummary(qsum){
+  lastQueueSummary = qsum || null;
   const hint = el('queueHint');
   const btnAll = el('btnRetryAllFailed');
   if (!hint) return;
   if (qsum && qsum.summary_label) hint.textContent = qsum.summary_label;
-  const failedCnt = (qsum && qsum.counts && qsum.counts.failed) ? qsum.counts.failed : 0;
-  if (btnAll) btnAll.hidden = !(failedCnt > 0);
+  const failedCnt = (qsum && (qsum.failed_count ?? (qsum.counts && qsum.counts.failed))) || 0;
+  if (btnAll) {
+    btnAll.hidden = !(failedCnt > 0);
+    btnAll.className = (queueFilterKey === 'err' && failedCnt > 0)
+      ? 'btn-primary btn-sm' : 'btn-ghost btn-sm';
+  }
 }
 
 function renderQueue(jobs){
+  const qsum = lastQueueSummary || {};
+  const failedCnt = (qsum && (qsum.failed_count ?? (qsum.counts && qsum.counts.failed))) || 0;
+  let failBanner = '';
+  if (queueFilterKey === 'err' && failedCnt > 0) {
+    const preview = (qsum.failed_preview || []).map(p =>
+      `<li><b>${esc(p.title||'')}</b> — ${esc(p.failure_reason_short||'')}</li>`
+    ).join('');
+    failBanner = `<div class="queue-fail-banner">
+      <div><b>失败任务 ${failedCnt} 条</b>${qsum.failure_digest ? ' · '+esc(qsum.failure_digest) : ''}</div>
+      ${preview ? `<ul style="margin:8px 0 0;padding-left:18px;font-size:12px;">${preview}</ul>` : ''}
+      <div class="actions">
+        <button type="button" class="btn-primary btn-sm" onclick="bulkRetryFailed()">重试全部失败</button>
+      </div>
+    </div>`;
+  }
   if (!jobs || !jobs.length) {
     const emptyMsg = queueFilterKey === 'wait'
       ? L(COPY.empty,'jobs','还没有待发布作品')
-      : '当前筛选下没有任务';
-    el('queueBox').innerHTML = `<div class="empty" style="padding:14px;">${esc(emptyMsg)}</div>`;
+      : (queueFilterKey === 'err'
+        ? '当前筛选下没有失败任务（可点上方「重试全部失败」处理其他失败记录）'
+        : '当前筛选下没有任务');
+    const errCta = (queueFilterKey === 'err' && failedCnt > 0)
+      ? '<p style="margin-top:10px;"><button type="button" class="btn-primary btn-sm" onclick="bulkRetryFailed()">重试全部失败</button></p>'
+      : '';
+    el('queueBox').innerHTML = failBanner + `<div class="empty" style="padding:14px;">${esc(emptyMsg)}</div>${errCta}`;
     return;
   }
   const showFailCol = queueFilterKey === 'err' || queueFilterKey === 'all' ||
@@ -1302,7 +1353,7 @@ function renderQueue(jobs){
       acts += `<button class="btn-ghost btn-sm" type="button" onclick="cancelJob(${j.id})">取消</button>`;
     }
     if (j.status === 'failed') {
-      acts += `<button class="btn-ghost btn-sm" type="button" onclick="retryJob(${j.id})">重试</button>`;
+      acts += `<button class="btn-primary btn-sm" type="button" onclick="retryJob(${j.id})">重试</button>`;
     }
     const hintRow = j.next_hint ? `<div class="hint-cell">${esc(j.next_hint)}</div>` : '';
     return `
@@ -1316,7 +1367,7 @@ function renderQueue(jobs){
     </tr>`;
   }).join('');
   const failTh = showFailCol ? '<th>失败原因</th>' : '';
-  el('queueBox').innerHTML = `<table class="queue-table"><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th>${failTh}<th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+  el('queueBox').innerHTML = failBanner + `<table class="queue-table"><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th>${failTh}<th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function retryJob(jobId){
@@ -1368,11 +1419,16 @@ function renderWorks(arts){
     const checked = selectedWorkIds.has(a.id) ? 'checked' : '';
     const selCls = selectedWorkIds.has(a.id) ? ' selected' : '';
     const pillCls = a.status==='published'?'ok':(a.latest_job_status==='failed'?'err':(a.latest_job_status==='pending'?'warn':''));
+    const pf = a.preflight_bar || {};
+    const pfBar = pf.bar_level && pf.bar_level !== 'ok'
+      ? `<div class="preflight-bar ${esc(pf.bar_level)}" title="发布前检查">${esc(pf.bar_text||'')}</div>`
+      : '';
     return `
       <div class="work${selCls}" data-work-id="${a.id}" data-work-index="${idx}">
         <div class="thumb">${thumb}</div>
         <div class="body">
           <div class="title"><label><input type="checkbox" data-sel-work="${a.id}" ${checked}/> ${esc(a.title||'（无标题）')}</label></div>
+          ${pfBar}
           <div class="summary">${summary}</div>
           <div class="meta"><span class="pill ${pillCls}">${esc(statusLbl)}</span><span class="chip">${esc(a.collection_name||a.collection_slug||'默认')}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}${(a.content_hints||[]).map(h => `<span class="chip">${esc(h)}</span>`).join('')}</div>
           <div class="acts">

@@ -2118,6 +2118,23 @@
   - [x] 队列摘要强化
   - [x] agent_gate round_108 冒烟
 
+### Round 109 - 微信 P0 续（预检条与失败队列）
+
+- 目标：作品库/详情预检条与 blocking 联动；失败队列 Tab 强化重试与错误摘要。
+- 范围：`article_preflight`、`queue_display`、`admin_template`、作品详情页。
+- 非目标：真实联网发布；Phase5 新平台。
+- 输入：round_108 预检与队列摘要。
+- 输出：作品 API `preflight_bar`；详情顶栏预检；失败 Tab 横幅与批量重试；`failed_preview`/`failure_digest`。
+- 验收标准：`test_round_109_wechat_p0`；mock@8080 浏览器走作品卡→详情→失败队列。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_109_wechat_p0.py -q`。
+- 退出标准：gate round_109。
+- 风险：无。
+- 回滚点：移除作品 preflight_bar 与队列 failed_preview。
+- 交付项：
+  - [x] 作品预检条与 blocking 联动
+  - [x] 队列失败 Tab 重试与错误摘要
+  - [x] agent_gate round_109 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
