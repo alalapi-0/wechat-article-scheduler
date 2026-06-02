@@ -834,6 +834,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             **build_roadmap_status_fields(),
         }
 
+    @app.get("/api/agent-gate-status")
+    def agent_gate_status() -> dict[str, Any]:
+        """只读 agent_gate 轮次状态（与 CLI status 一致，不含密钥）。"""
+        from wechat_article_scheduler.web.agent_gate_status import (
+            build_agent_gate_status_api,
+        )
+
+        return build_agent_gate_status_api()
+
     @app.get("/api/overview")
     def overview() -> dict[str, Any]:
         """工作台首页聚合数据：状态摘要、最近任务与事件。"""

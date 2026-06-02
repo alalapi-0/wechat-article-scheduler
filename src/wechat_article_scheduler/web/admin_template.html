@@ -642,6 +642,7 @@ try {
         <div class="section-head"><h2>高级信息</h2><span class="hint">仅排错用，普通用户可忽略</span></div>
         <div class="card pad">
           <div id="advRoadmap" class="adv-roadmap-block" style="margin-bottom:12px;font-size:13px;"></div>
+          <div id="advAgentGate" class="adv-agent-gate-block" style="margin-bottom:12px;font-size:13px;"></div>
           <div id="advMeta" style="font-size:13px;color:var(--muted);"></div>
           <pre id="advRaw">…</pre>
         </div>
@@ -1633,7 +1634,8 @@ async function refreshAll(){
     const wcPromise = queueFilterKey === 'confirm'
       ? fetch('/api/waiting-confirmation').then(r => r.json())
       : Promise.resolve(null);
-    const [ov, arts, trash, jobs, qsum, drafts, dsum, wc] = await Promise.all([
+    const agPromise = fetch('/api/agent-gate-status').then(r => r.json()).catch(() => null);
+    const [ov, arts, trash, jobs, qsum, drafts, dsum, wc, agStatus] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
@@ -1642,6 +1644,7 @@ async function refreshAll(){
       (await fetch(draftsUrl)).json(),
       (await fetch('/api/drafts-summary')).json(),
       wcPromise,
+      agPromise,
     ]);
     lastWaitingConfirmMeta = wc;
     queueJobsList = (queueFilterKey === 'confirm' && wc)
@@ -1665,7 +1668,7 @@ async function refreshAll(){
     renderEvents(ov.recent_events);
     renderWorks(arts);
     renderTrash(trash);
-    renderAdvanced(ov);
+    renderAdvanced(ov, agStatus);
   } catch(e){
     setAlert('err', '读取数据失败：' + e);
   }
@@ -2810,7 +2813,36 @@ function changeCover(id){
   openCoverBatchModal();
 }
 
-function renderAdvanced(ov){
+function renderAgentGatePanel(ag){
+  const box = el('advAgentGate');
+  if (!box) return;
+  if (!ag || !ag.current_round) {
+    box.innerHTML = '<span class="hint">Agent gate 状态未加载</span>';
+    return;
+  }
+  const cur = ag.current_round;
+  let html = `<p style="margin:0 0 8px;"><b>Agent gate</b>：${esc(ag.gate_summary || (cur.id + ' · ' + cur.status))}</p>`;
+  if (ag.last_completed_round && ag.last_completed_round.id) {
+    const l = ag.last_completed_round;
+    html += `<p style="margin:0 0 8px;color:var(--muted);font-size:12px;">最近完成：${esc(l.id)} · ${esc(l.completed_at || '—')}</p>`;
+  }
+  const acc = ag.acceptance_criteria || [];
+  if (acc.length) {
+    html += '<p style="margin:0 0 4px;font-size:12px;">验收标准：</p><ul style="margin:0 0 8px;padding-left:18px;font-size:12px;color:var(--muted);">' +
+      acc.map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
+  }
+  const na = ag.next_actions || [];
+  if (na.length) {
+    html += '<p style="margin:0 0 4px;font-size:12px;">next_actions：</p><ul style="margin:0 0 8px;padding-left:18px;font-size:12px;">' +
+      na.map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
+  }
+  if (ag.suggested_command) {
+    html += `<p style="margin:0;font-size:11px;color:var(--muted);"><code>${esc(ag.suggested_command)}</code></p>`;
+  }
+  box.innerHTML = html;
+}
+
+function renderAdvanced(ov, agStatus){
   const st = ov.status || {};
   const hint = st.roadmap_hint || {};
   const lcr = st.last_completed_round;
@@ -2833,6 +2865,7 @@ function renderAdvanced(ov){
       actions.map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
   }
   el('advRoadmap').innerHTML = road || '<span class="hint">路线图状态未加载</span>';
+  renderAgentGatePanel(agStatus);
   el('advMeta').innerHTML = `运行模式 mode=${esc(st.wechat_mode)} · DRY_RUN=${esc(st.dry_run)} · 发布开关 wechat_enable_publish=${esc(st.wechat_enable_publish)}<br/>数据库 ${esc(st.database)}`;
   el('advRaw').textContent = JSON.stringify(ov, null, 2);
 }

@@ -178,6 +178,7 @@ ROUND_ORDER = [
     "round_121",
     "round_122",
     "round_123",
+    "round_124",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1476,7 +1477,19 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 开启高级信息后可见",
         ],
         "next_actions": [
-            "在 docs/rounds.md 规划 round_124 后续能力",
+            "推进 round_124 agent-gate-status API",
+        ],
+    },
+    "round_124": {
+        "name": "Round 124 - Agent gate 状态 API",
+        "summary": "GET /api/agent-gate-status 只读；高级面板 advAgentGate 展示 gate 摘要",
+        "acceptance_criteria": [
+            "GET /api/agent-gate-status 与 CLI status 结构一致",
+            "高级面板 advAgentGate 展示 gate_summary 与 next_actions",
+            "mock@8080 开启高级信息后可见",
+        ],
+        "next_actions": [
+            "在 docs/rounds.md 规划 round_125 后续能力",
         ],
     },
 }
@@ -2656,6 +2669,13 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                 "pytest wechat p0 round_123",
             ),
         ]
+    elif round_id == "round_124":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_124_wechat_p0.py", "-q"],
+                "pytest wechat p0 round_124",
+            ),
+        ]
     else:
         return True, "unknown round skipped"
 
@@ -2709,25 +2729,60 @@ def suggest_next_command(round_id: str, status: str) -> str:
     return "python scripts/agent_gate.py gate  # 实现任务后校验；通过后 advance --commit"
 
 
-def cmd_status(*, json_out: bool) -> int:
+def build_status_payload() -> dict[str, Any]:
+    """与 ``agent_gate status`` 一致的只读 JSON（无密钥、无 git 输出）。"""
     data = load_round_state()
     round_id = get_current_round_id()
     cur = data.get("current_round", {}) if isinstance(data.get("current_round"), dict) else {}
     status = str(cur.get("status", "active"))
-    payload = {
+    acceptance = (
+        data.get("acceptance_criteria")
+        or ROUND_META.get(round_id, {}).get("acceptance_criteria", [])
+    )
+    next_actions = (
+        data.get("next_actions") or ROUND_META.get(round_id, {}).get("next_actions", [])
+    )
+    if not isinstance(acceptance, list):
+        acceptance = []
+    if not isinstance(next_actions, list):
+        next_actions = []
+    acceptance = [str(x) for x in acceptance]
+    next_actions = [str(x) for x in next_actions]
+
+    lcr_raw = data.get("last_completed_round")
+    last_completed_round: dict[str, str] | None = None
+    if isinstance(lcr_raw, dict) and lcr_raw.get("id"):
+        last_completed_round = {
+            "id": str(lcr_raw.get("id", "")),
+            "completed_at": str(lcr_raw.get("completed_at", "")),
+        }
+
+    name = str(cur.get("name") or ROUND_META.get(round_id, {}).get("name", round_id))
+    return {
         "current_round": {
             "id": round_id,
-            "name": cur.get("name") or ROUND_META.get(round_id, {}).get("name", round_id),
+            "name": name,
             "status": status,
         },
-        "last_completed_round": data.get("last_completed_round"),
-        "next_actions": data.get("next_actions") or ROUND_META.get(round_id, {}).get("next_actions", []),
-        "acceptance_criteria": data.get("acceptance_criteria")
-        or ROUND_META.get(round_id, {}).get("acceptance_criteria", []),
-        "protocol_standard_sync_required": data.get("protocol_standard_sync_required", False),
+        "last_completed_round": last_completed_round,
+        "next_actions": next_actions,
+        "acceptance_criteria": acceptance,
+        "protocol_standard_sync_required": bool(
+            data.get("protocol_standard_sync_required", False)
+        ),
         "suggested_command": suggest_next_command(round_id, status),
         "docs": str(ROUNDS_DOC.relative_to(ROOT)),
+        "gate_summary": (
+            f"{round_id} · {name}（{status}）— "
+            f"{len(acceptance)} 项验收 · {len(next_actions)} 条 next_actions"
+        ),
     }
+
+
+def cmd_status(*, json_out: bool) -> int:
+    payload = build_status_payload()
+    round_id = payload["current_round"]["id"]
+    status = payload["current_round"]["status"]
     if json_out:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:

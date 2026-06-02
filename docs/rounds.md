@@ -2397,6 +2397,23 @@
   - [x] 高级面板路线图位置与 doc 链接
   - [x] agent_gate round_123 冒烟
 
+### Round 124 - Agent gate 状态 API
+
+- 目标：`GET /api/agent-gate-status` 只读暴露 agent_gate status 摘要；高级面板 `#advAgentGate` 展示 gate 摘要。
+- 范围：`agent_gate.build_status_payload`、`web/agent_gate_status.py`、`app.py`、`admin_template.html`。
+- 非目标：执行 gate/advance；暴露密钥或 git 输出。
+- 输入：round_123 完成态。
+- 输出：API JSON；`advAgentGate` 区块（advanced-only）。
+- 验收标准：`test_round_124_wechat_p0`；mock@8080 开启高级信息后可见 Agent gate 摘要。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_124_wechat_p0.py -q`。
+- 退出标准：gate round_124。
+- 风险：无。
+- 回滚点：移除 API 与 advAgentGate。
+- 交付项：
+  - [x] /api/agent-gate-status 只读端点
+  - [x] 高级面板 advAgentGate
+  - [x] agent_gate round_124 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
