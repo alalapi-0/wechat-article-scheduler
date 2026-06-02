@@ -451,6 +451,45 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         items = list_channels()
         return {"count": len(items), "channels": items}
 
+    @app.get("/api/video-package/platforms")
+    def api_video_package_platforms() -> dict[str, Any]:
+        from wechat_article_scheduler.content_packages.video_presearch import (
+            list_video_platforms,
+        )
+
+        items = list_video_platforms()
+        return {"count": len(items), "platforms": items}
+
+    @app.get("/api/video-package-plan")
+    def api_video_package_plan(
+        platform: str = "bilibili",
+        package_id: str | None = None,
+        title: str | None = None,
+        video_path: str | None = None,
+    ) -> dict[str, Any]:
+        from wechat_article_scheduler.content_packages.video_presearch import (
+            build_video_package_dry_run,
+        )
+
+        try:
+            return build_video_package_dry_run(
+                platform=platform,
+                package_id=package_id,
+                title=title,
+                video_path=video_path,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/wechat-chain-summary")
+    def api_wechat_chain_summary() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            from wechat_article_scheduler.wechat_chain_summary import (
+                build_wechat_chain_summary,
+            )
+
+            return build_wechat_chain_summary(cfg, conn)
+
     @app.get("/api/webhook-plan")
     def api_webhook_plan(
         channel: str = "generic",
@@ -564,6 +603,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             ).fetchall()
             schedule = summarize_schedule(conn)
             preflight = build_publish_preflight(cfg, conn)
+            from wechat_article_scheduler.wechat_chain_summary import build_wechat_chain_summary
+
+            chain_summary = build_wechat_chain_summary(cfg, conn)
         recent_jobs_out = []
         for r in recent_jobs:
             row = _enrich_job_row(dict(r), cfg)
@@ -585,6 +627,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "schedule_summary": schedule,
             "workbench": workbench,
             "publish_preflight": preflight,
+            "wechat_chain_summary": chain_summary,
             "docs": [
                 {"label": "README", "path": "README.md"},
                 {"label": "开发路线图", "path": "docs/rounds.md"},
@@ -1261,6 +1304,8 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>local_blog 评估（静态站）</h2><pre id="local-blog-static">加载中…</pre>
 <h2>local_blog 评估（WordPress）</h2><pre id="local-blog-wp">加载中…</pre>
 <h2>Webhook 评估（generic）</h2><pre id="webhook-plan">加载中…</pre>
+<h2>Phase3 视频内容包预研</h2><pre id="video-package">加载中…</pre>
+<h2>微信闭环链路摘要</h2><pre id="wechat-chain">加载中…</pre>
 <h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
 <h2>outbox 导出包</h2><pre id="outbox">加载中…</pre>
 <script>
@@ -1276,9 +1321,11 @@ Promise.all([
   fetch('/api/local-blog-plan?destination=static_site'),
   fetch('/api/local-blog-plan?destination=wordpress'),
   fetch('/api/webhook-plan?channel=generic'),
+  fetch('/api/video-package-plan?platform=bilibili'),
+  fetch('/api/wechat-chain-summary'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1290,7 +1337,9 @@ Promise.all([
   document.getElementById('local-blog-static').textContent = JSON.stringify(await i.json(), null, 2);
   document.getElementById('local-blog-wp').textContent = JSON.stringify(await j.json(), null, 2);
   document.getElementById('webhook-plan').textContent = JSON.stringify(await k.json(), null, 2);
-  document.getElementById('waiting').textContent = JSON.stringify(await l.json(), null, 2);
-  document.getElementById('outbox').textContent = JSON.stringify(await m.json(), null, 2);
+  document.getElementById('video-package').textContent = JSON.stringify(await l.json(), null, 2);
+  document.getElementById('wechat-chain').textContent = JSON.stringify(await m.json(), null, 2);
+  document.getElementById('waiting').textContent = JSON.stringify(await n.json(), null, 2);
+  document.getElementById('outbox').textContent = JSON.stringify(await o.json(), null, 2);
 });
 </script></body></html>"""

@@ -1808,6 +1808,38 @@
   - [x] webhook 干跑与测试
   - [x] agent_gate round_089 冒烟
 
+### Round 90 - Phase3 视频内容包预研
+
+- 目标：路线图 Round 29 — 视频内容包字段与平台占位（dry-run，不上传）。
+- 范围：`video_presearch.py`、`phase3_video_content_package.md`、registry 占位、video manifest 示例。
+- 非目标：视频上传；改 articles 表；Bilibili 真实导出。
+- 输入：content_package backlog、round_085 registry。
+- 输出：bilibili/wechat_channels/xiaohongshu 预研 assessment；`video-package-plan` CLI/API。
+- 验收标准：`content_type=video` manifest 校验；guardrails 含不上传。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_video_presearch.py -q`。
+- 退出标准：gate round_090；`/debug` 可见视频预研 JSON。
+- 风险：误实现上传 adapter。
+- 回滚点：移除 video API。
+- 交付项：
+  - [x] 视频预研与测试
+  - [x] agent_gate round_090 冒烟
+
+### Round 91 - 微信闭环链路摘要
+
+- 目标：工作台可读「下一步 scan/plan/run-once」建议（真实功能）。
+- 范围：`wechat_chain_summary.py`、CLI、`/api/wechat-chain-summary`、overview 聚合。
+- 非目标：自动执行；Phase3 开发。
+- 输入：现有 SQLite 与 scan/plan 语义。
+- 输出：`recommended_next_action` 与 `recommended_cli`。
+- 验收标准：空库建议 scan；导入未排期建议 plan；`test_wechat_chain_stability` 仍通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_wechat_chain_summary.py tests/test_wechat_chain_stability.py -q`。
+- 退出标准：gate round_091；`/debug` 可见链路摘要 JSON。
+- 风险：误导用户以为已自动执行。
+- 回滚点：移除 chain summary API。
+- 交付项：
+  - [x] 链路摘要与测试
+  - [x] agent_gate round_091 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

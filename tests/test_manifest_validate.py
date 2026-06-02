@@ -31,3 +31,13 @@ def test_load_manifest_roundtrip():
     data = load_manifest(SAMPLE)
     assert data["schema_version"] == 1
     assert data["project_id"] == "demo-novel"
+
+
+def test_video_manifest_requires_video_path():
+    video = ROOT / "manifests" / "examples" / "sample_video_manifest.json"
+    data, result = validate_manifest_file(video)
+    assert result.ok
+    raw = load_manifest(video)
+    del raw["video_path"]
+    bad = validate_manifest(raw)
+    assert not bad.ok

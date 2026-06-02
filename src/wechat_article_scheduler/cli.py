@@ -80,6 +80,17 @@ def _build_parser() -> argparse.ArgumentParser:
     wh.add_argument("--article-id", type=str, default=None)
     wh.add_argument("--event-type", type=str, default="article.ready")
 
+    vp = sub.add_parser(
+        "video-package-plan",
+        help="Phase3 视频内容包预研 dry-run（不上传）",
+    )
+    vp.add_argument("--platform", type=str, default="bilibili")
+    vp.add_argument("--package-id", type=str, default=None)
+    vp.add_argument("--title", type=str, default=None)
+    vp.add_argument("--video-path", type=str, default=None)
+
+    sub.add_parser("wechat-chain-summary", help="微信公众号闭环链路摘要 JSON")
+
     mark_wc = sub.add_parser(
         "mark-waiting-confirmation",
         help="将发布任务标为待人工确认（browser_assist/manual_export）",
@@ -281,6 +292,37 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
             return 1
         print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "video-package-plan":
+        import json
+
+        from wechat_article_scheduler.content_packages.video_presearch import (
+            build_video_package_dry_run,
+        )
+
+        try:
+            plan = build_video_package_dry_run(
+                platform=args.platform,
+                package_id=args.package_id,
+                title=args.title,
+                video_path=args.video_path,
+            )
+        except ValueError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "wechat-chain-summary":
+        import json
+
+        from wechat_article_scheduler.wechat_chain_summary import build_wechat_chain_summary
+
+        db.init_db(config.database_path)
+        with db.connect(config.database_path) as conn:
+            summary = build_wechat_chain_summary(config, conn)
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "mark-waiting-confirmation":

@@ -153,6 +153,46 @@ BUILTIN_CAPABILITIES: tuple[AdapterCapability, ...] = (
         risk_level="low",
         notes="Webhook 通知；成功不等于平台已发布。",
     ),
+    AdapterCapability(
+        platform="bilibili",
+        adapter_type="manual_export",
+        content_types=("video",),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="high",
+        notes="Phase3 预研占位：Bilibili 人工上传包，未实现导出。",
+    ),
+    AdapterCapability(
+        platform="bilibili",
+        adapter_type="browser_assist",
+        content_types=("video",),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="high",
+        notes="Phase3 预研占位：上传页辅助评估 only。",
+    ),
+    AdapterCapability(
+        platform="wechat_channels",
+        adapter_type="manual_export",
+        content_types=("video",),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="high",
+        notes="视频号人工包预研占位；非公众号 API。",
+    ),
+    AdapterCapability(
+        platform="xiaohongshu",
+        adapter_type="manual_export",
+        content_types=("video", "article"),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="high",
+        notes="小红书预研占位；高风控 deferred。",
+    ),
 )
 
 
@@ -208,4 +248,10 @@ def infer_platform_from_account_id(platform_account_id: str) -> str | None:
         return "local_blog"
     if "webhook" in lower or "feishu" in lower or "slack" in lower:
         return "notification"
+    if "bilibili" in lower or "b23" in lower:
+        return "bilibili"
+    if "channels" in lower or "video_account" in lower or "sph" in lower:
+        return "wechat_channels"
+    if "xiaohongshu" in lower or "xhs" in lower:
+        return "xiaohongshu"
     return None

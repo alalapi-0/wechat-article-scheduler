@@ -48,7 +48,15 @@ def validate_manifest(data: dict[str, Any]) -> ManifestValidationResult:
     elif content_type not in ("article", "chapter", "note", "video", "audio"):
         warnings.append(f"非常见 content_type: {content_type}")
 
-    if not data.get("body_md") and not data.get("body_html"):
+    ctype = (data.get("content_type") or "article").strip().lower()
+    if ctype == "video":
+        if not data.get("video_path"):
+            errors.append("content_type=video 时必须提供 video_path")
+        if not data.get("cover_path") and not any(
+            isinstance(m, dict) and m.get("role") == "cover" for m in (data.get("media_refs") or [])
+        ):
+            warnings.append("视频 manifest 建议提供 cover_path 或 media_refs.cover")
+    elif not data.get("body_md") and not data.get("body_html"):
         errors.append("必须提供 body_md 或 body_html 之一")
 
     targets = data.get("targets")

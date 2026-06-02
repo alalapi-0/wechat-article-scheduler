@@ -143,6 +143,8 @@ ROUND_ORDER = [
     "round_087",
     "round_088",
     "round_089",
+    "round_090",
+    "round_091",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1045,7 +1047,29 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "webhook-plan CLI 与 /debug",
         ],
         "next_actions": [
-            "注册 round_090 或微信修复轮",
+            "Phase3 视频预研 round_090",
+        ],
+    },
+    "round_090": {
+        "name": "Round 90 - Phase3 视频内容包预研",
+        "acceptance_criteria": [
+            "video_package dry-run 与三平台占位",
+            "registry bilibili/wechat_channels 占位",
+            "video manifest 校验与 sample JSON",
+        ],
+        "next_actions": [
+            "微信闭环链路摘要 round_091",
+        ],
+    },
+    "round_091": {
+        "name": "Round 91 - 微信闭环链路摘要",
+        "acceptance_criteria": [
+            "wechat-chain-summary CLI/API",
+            "overview 含 recommended_next_action",
+            "scan/plan 主线不回归",
+        ],
+        "next_actions": [
+            "注册 round_092 或 Bilibili 导出预研",
         ],
     },
 }
@@ -1798,6 +1822,27 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_webhook_eval.py", "-q"],
                 "pytest webhook eval",
+            ),
+        ]
+    elif round_id == "round_090":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_video_presearch.py", "-q"],
+                "pytest video presearch",
+            ),
+        ]
+    elif round_id == "round_091":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_wechat_chain_summary.py",
+                    "tests/test_wechat_chain_stability.py",
+                    "-q",
+                ],
+                "pytest wechat chain summary and stability",
             ),
         ]
     else:

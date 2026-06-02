@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "project_id": "demo-video",
+  "package_id": "clip-001",
+  "content_type": "video",
+  "title": "示例视频：Phase3 预研",
+  "summary": "仅用于 manifest 与 video 干跑测试。",
+  "video_path": "media/sample.mp4",
+  "cover_path": "media/cover.png",
+  "media_refs": [
+    {"path": "media/sample.mp4", "role": "video"},
+    {"path": "media/cover.png", "role": "cover"}
+  ],
+  "targets": [
+    {
+      "platform_account_id": "bilibili_main",
+      "adapter_type": "manual_export",
+      "review_required": true
+    }
+  ]
+}

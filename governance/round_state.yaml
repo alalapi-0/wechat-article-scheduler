@@ -1,16 +1,15 @@
 current_round:
-  id: round_089
-  name: Round 89 - Webhook 适配器评估
-  status: completed
-  updated_at: '2026-06-02T18:08:01.062121+00:00'
-  completed_at: '2026-06-02'
+  id: round_090
+  name: Round 90 - Phase3 视频内容包预研
+  status: active
+  updated_at: '2026-06-02T26:00:00+00:00'
 last_completed_round:
   id: round_089
-  completed_at: '2026-06-02T18:08:01.062121+00:00'
+  completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- webhook dry-run 不发起 HTTP
-- notification+webhook 在 registry
-- webhook-plan CLI 与 /debug
+- video dry-run 与 registry 占位
+- 不上传、不改 articles 表
+- video manifest 示例校验
 next_actions:
-- 注册 round_090 或微信修复轮
+- 微信链路摘要 round_091

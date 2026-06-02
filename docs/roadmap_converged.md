@@ -340,16 +340,22 @@ Phase 2 暂不开发。只有 Phase 1 验收通过后，才允许启动。
 
 Phase 3 暂不开发。短视频和图文平台风控更高，当前仅保留 backlog。
 
-### Round 29：视频内容包抽象
+### Round 29：视频内容包抽象（已完成 — agent `round_090`）
 
 - 本轮目标：预研视频内容包是否必要。
-- 具体任务：定义视频、封面、标题、标签、字幕的最小模型。
-- 交付物：预研文档。
+- 具体任务：视频字段清单、三平台 registry 占位、`video-package-plan` dry-run、video manifest 校验。
+- 交付物：`docs/phase3_video_content_package.md`；不上传、不改 articles 表。
 - 验收标准：不改当前数据库主线。
 - 不做什么：不上传视频。
-- 允许改动范围：docs only。
+- 允许改动范围：预研模块、docs、tests、registry 占位。
 - 风险边界：不能影响微信文章发布。
-- 下一轮衔接：进入 Bilibili manual_export。
+- 下一轮衔接：微信链路摘要（`round_091`）或 Bilibili manual_export。
+
+### Round 29b：微信闭环链路摘要（已完成 — agent `round_091`）
+
+- 本轮目标：工作台提示下一步 scan/plan/run-once。
+- 交付物：`wechat_chain_summary` CLI/API；overview 聚合。
+- 下一轮衔接：Bilibili manual_export 或 round_092。
 
 ### Round 30：Bilibili manual_export
 

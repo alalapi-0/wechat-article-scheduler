@@ -128,3 +128,9 @@ round_088:
 
 round_089:
   - python3 -m pytest tests/test_webhook_eval.py -q
+
+round_090:
+  - python3 -m pytest tests/test_video_presearch.py -q
+
+round_091:
+  - python3 -m pytest tests/test_wechat_chain_summary.py tests/test_wechat_chain_stability.py -q
