@@ -1,6 +1,7 @@
 # 文档索引
 
 - [当前状态审计](current_state_audit.md)
+- [微信主链路稳定性](wechat_chain_stability.md)
 - [路线收敛审计](route_convergence_audit.md)
 - [产品愿景](product_vision.md)
 - [微信公众号优先架构](architecture.md)

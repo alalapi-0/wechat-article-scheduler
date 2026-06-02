@@ -100,7 +100,7 @@
 | Round 54 | 真实微信 API 闭环验证 | 已完成 |
 | Round 55 | Auto-Approved Real API Pipeline | 已完成 |
 | Round 56 | 路线收敛治理轮 | 已完成 |
-| Round 57 | 收敛后微信链路稳定化 | 进行中 |
+| Round 57 | 收敛后微信链路稳定化 | 已完成 |
 
 ## 轮次字段规范
 
@@ -1263,8 +1263,8 @@
 - 回滚点：仅保留文档与测试登记，暂停链路代码改动。
 - 交付项：
   - [x] 收敛路线图 Round 2 入口登记（agent_gate `round_057`）
-  - [ ] 链路稳定性审计文档
-  - [ ] mock/real draft-only 行为对照测试补强
+  - [x] 链路稳定性审计文档
+  - [x] mock/real draft-only 行为对照测试补强
 
 ## 历史说明
 

@@ -8,7 +8,7 @@ Status: Current P0 state audit
 
 - 当前已实现：CLI `init-db/scan/plan/run-once/scheduler`、FastAPI Web 工作台、网页批量上传作品与封面、SQLite 迁移、微信 mock/real adapter、真实微信草稿创建验证、事件审计与发布前预检。
 - 当前第一保护对象：微信公众号草稿创建链路，尤其是 `scan -> plan -> run-once -> RealWechatAdapter.create_draft`。
-- 收敛 Round 2（2026-06-02）：`tests/test_wechat_chain_stability.py` 覆盖 mock 端到端；`scanner.py` 补齐 `sqlite3` 导入以修复重复上传 reconcile 路径。
+- 收敛 Round 57（2026-06-02）：`docs/wechat_chain_stability.md` + `tests/test_wechat_chain_stability.py`（mock 端到端、`should_submit_publish` 矩阵、real draft-only 回归）。
 - 当前安全默认：`WECHAT_MODE=mock` 不联网；显式设置 `WECHAT_MODE=real` 后进入真实 API 测试模式，默认允许验证草稿创建和正式发布接口；需要草稿-only 时设置 `WECHAT_ENABLE_PUBLISH=false`。
 - 当前数据模型仍是微信单平台模型：`articles`、`publish_jobs`、`wechat_drafts`、`events`，外加 `collections`、`tags`、`article_tags`。
 - 当前产品叙事：用户上传作品即视为想发布的内容，没有内容审核门禁；真实发布安全由默认 mock、real 模式显式切换、任务级发布选择、二次确认和预检承担。

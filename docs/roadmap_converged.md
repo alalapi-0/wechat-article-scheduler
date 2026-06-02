@@ -19,7 +19,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不能删除重要历史材料；不能让 backlog 继续伪装成当前开发任务。
 - 下一轮衔接：进入 Round 57 / 收敛路线图 Round 2，稳定现有微信公众号链路。
 
-### Round 57 / 收敛 Round 2：微信公众号现有链路稳定化（进行中）
+### Round 57 / 收敛 Round 2：微信公众号现有链路稳定化（已完成）
 
 - 本轮目标：保护并加固 `scan -> plan -> run-once -> create_draft`。
 - Agent 登记：`round_057`；冒烟 `tests/test_wechat_chain_stability.py`。
