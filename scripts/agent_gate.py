@@ -182,6 +182,7 @@ ROUND_ORDER = [
     "round_125",
     "round_126",
     "round_127",
+    "round_128",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1528,7 +1529,19 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 作品卡与详情各验证一种平台",
         ],
         "next_actions": [
-            "在 docs/rounds.md 规划 round_128 后续能力",
+            "推进 round_128 普通视图 export toast 回归",
+        ],
+    },
+    "round_128": {
+        "name": "Round 128 - 普通视图 export toast 回归",
+        "summary": "普通视图作品卡导出 toast 含未自动发布；test_128 + E2E",
+        "acceptance_criteria": [
+            "test_round_128 普通视图导出下拉与 toast 文案",
+            "test_round_127 回归",
+            "mock@8080 普通视图导出（可选）",
+        ],
+        "next_actions": [
+            "在 docs/rounds.md 规划 round_129 后续能力",
         ],
     },
 }
@@ -2746,6 +2759,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_round_126_wechat_p0.py::test_detail_page_export_dropdown_markup", "-q"],
                 "pytest detail export regression",
+            ),
+        ]
+    elif round_id == "round_128":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_round_128_wechat_p0.py",
+                    "tests/test_round_127_wechat_p0.py",
+                    "-q",
+                ],
+                "pytest wechat p0 round_128",
             ),
         ]
     else:

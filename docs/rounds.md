@@ -2465,6 +2465,23 @@
   - [x] 工作台与详情统一 toast
   - [x] agent_gate round_127 冒烟
 
+### Round 128 - 普通视图 export toast 回归
+
+- 目标：普通视图（不开高级）作品卡导出成功 toast 含「未自动发布」；扩展 E2E/单测。
+- 范围：`test_round_128_wechat_p0.py`、`test_ui_e2e` 可选 Playwright。
+- 非目标：改导出 UI 交互。
+- 输入：round_127 共用 toast。
+- 输出：普通视图导出下拉可见；toast 文案断言。
+- 验收标准：`test_round_128` + round_127 回归；gate round_128。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_128_wechat_p0.py tests/test_round_127_wechat_p0.py -q`。
+- 退出标准：gate round_128。
+- 风险：Playwright 环境缺失时 E2E 跳过。
+- 回滚点：移除 round_128 测试。
+- 交付项：
+  - [x] test_round_128 普通视图 toast 断言
+  - [x] test_ui_e2e 普通视图导出（可选）
+  - [x] agent_gate round_128 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。
