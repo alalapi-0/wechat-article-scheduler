@@ -74,3 +74,6 @@ round_070:
 
 round_071:
   - python3 -m pytest tests/test_draft_update.py tests/test_mock_adapter.py tests/test_real_adapter.py -q
+
+round_072:
+  - python3 -m pytest tests/test_wechat_field_matrix.py -q

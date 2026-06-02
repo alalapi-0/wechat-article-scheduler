@@ -1513,6 +1513,23 @@
   - [x] CLI update-draft 与 Web 按钮
   - [x] agent_gate round_071 冒烟
 
+### Round 72 - 微信字段能力矩阵核验
+
+- 目标：梳理公众号字段的 API 支持、本仓库实现、缺口与处理方式。
+- 范围：`wechat_field_matrix.py`、`wechat_capability_matrix.md`、API/CLI、测试。
+- 非目标：其他平台矩阵；未核验字段不得标为 supported。
+- 输入：Round 71 草稿更新、现有 adapter 字段。
+- 输出：字段缺口摘要、debug 页矩阵 JSON。
+- 验收标准：每字段有四列说明；待核验项明确标注。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_wechat_field_matrix.py -q`。
+- 退出标准：gate round_072 通过；`/debug` 可加载 `/api/wechat-field-matrix`。
+- 风险：误报 API 能力导致用户过度依赖自动化。
+- 回滚点：仅保留原高层能力表。
+- 交付项：
+  - [x] 字段矩阵代码与文档
+  - [x] field-matrix CLI 与 Web API
+  - [x] agent_gate round_072 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

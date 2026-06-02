@@ -1,16 +1,15 @@
 current_round:
-  id: round_071
-  name: Round 71 - 微信草稿更新能力
-  status: completed
-  updated_at: '2026-06-02T07:14:23.971942+00:00'
-  completed_at: '2026-06-02'
+  id: round_072
+  name: Round 72 - 微信字段能力矩阵核验
+  status: active
+  updated_at: '2026-06-02T12:00:00+00:00'
 last_completed_round:
   id: round_071
   completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- mock/real update_draft 与 draft/update 路径
-- 内容指纹幂等；superseded 历史不丢 media_id
-- CLI/Web 更新入口与测试
+- 字段级矩阵：API 支持/实现/缺口/处理方式
+- wechat_field_matrix.py 与文档同步
+- CLI field-matrix 与 /api/wechat-field-matrix
 next_actions:
-- 按 docs/roadmap_converged.md 继续 Round 17：微信公众号字段能力矩阵核验
+- 按 docs/roadmap_converged.md 继续 Round 18：browser_assist 方案

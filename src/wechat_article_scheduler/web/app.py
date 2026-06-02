@@ -60,6 +60,11 @@ from wechat_article_scheduler.web.workbench_mvp import build_workbench_hints
 from wechat_article_scheduler.web.article_detail import build_article_detail
 from wechat_article_scheduler.web.queue_display import list_queue_jobs, queue_summary
 from wechat_article_scheduler.draft_update import humanize_update_result, update_article_wechat_draft
+from wechat_article_scheduler.wechat_field_matrix import (
+    field_gaps,
+    list_field_matrix,
+    matrix_summary,
+)
 from wechat_article_scheduler.web.drafts_display import (
     drafts_summary,
     get_wechat_draft,
@@ -323,6 +328,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail=result.get("error", "更新失败"))
         result.setdefault("human", humanize_update_result(result))
         return result
+
+    @app.get("/api/wechat-field-matrix")
+    def api_wechat_field_matrix() -> dict[str, Any]:
+        """微信公众号字段能力矩阵（Round 17）。"""
+        return {
+            "summary": matrix_summary(),
+            "fields": list_field_matrix(),
+            "gaps": field_gaps(),
+        }
 
     @app.get("/api/user-labels")
     def user_labels() -> dict[str, Any]:
@@ -1052,9 +1066,15 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <p>此处展示内部字段与原始 JSON，普通用户无需查看。<a href="/">返回工作台</a></p>
 <h2>状态</h2><pre id="status">加载中…</pre>
 <h2>概况</h2><pre id="overview">加载中…</pre>
+<h2>微信字段能力矩阵</h2><pre id="fields">加载中…</pre>
 <script>
-Promise.all([fetch('/api/status'), fetch('/api/overview')]).then(async ([a,b])=>{
+Promise.all([
+  fetch('/api/status'),
+  fetch('/api/overview'),
+  fetch('/api/wechat-field-matrix'),
+]).then(async ([a,b,c])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
+  document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
 });
 </script></body></html>"""

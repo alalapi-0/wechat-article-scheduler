@@ -21,3 +21,31 @@
 | 内容审核 / review_status | 已移除 | n/a | Round 43 产品重定位移除，不再有审核步骤 |
 | 完整封面裁剪流程 | 暂不做 | n/a | 仅上传与绑定，不做在线裁剪 |
 | 网页登录后台自动化 | 禁止 | n/a | 安全边界：不模拟后台登录 |
+
+## 字段级能力矩阵
+
+> 机器可读来源：`src/wechat_article_scheduler/wechat_field_matrix.py`（`GET /api/wechat-field-matrix`）。**未核验**项不得当作已支持；缺口处理以 `handling` 列为准。
+
+| 字段 ID | 名称 | API 支持 | 本仓库实现 | 缺口 | 处理方式 |
+|---------|------|----------|------------|------|----------|
+| title | 标题 | supported | yes | 无 | draft/add、draft/update |
+| digest | 摘要 | supported | yes | 超 120 字截断 | clamp_summary + 事件 |
+| body | 正文 HTML | supported | yes | 标题重复/HTML 需预检 | render_for_publish |
+| author | 作者 | supported | yes | 无 | PublishConfig → DraftOptions |
+| content_source_url | 原文链接 | supported | yes | 无 | 任务级配置 |
+| need_open_comment | 开启留言 | supported | yes | 无 | 草稿字段 |
+| only_fans_can_comment | 仅粉丝留言 | supported | yes | 需先开启留言 | 草稿字段 |
+| cover_thumb | 封面素材 | supported | yes | 缺省用默认图 | material/add_material |
+| cover_crop | 封面裁剪 | unverified | partial | API 映射未确认 | 本地 cover_config；人工核对 |
+| local_schedule | 本地排期 | n/a | yes | 非微信字段 | publish_jobs + scheduler |
+| wechat_backend_schedule | 后台定时群发 | unverified | no | 未写入后台 | browser_assist 后备 |
+| draft_create | 草稿创建 | supported | yes | 无 | draft/add |
+| draft_update | 草稿更新 | supported | yes | 需已有 media_id | draft/update |
+| freepublish | 正式发布 | supported | yes | 受发布开关限制 | freepublish/submit |
+| show_cover_pic | 正文内显示封面 | unverified | no | 未接线 | 待核验 |
+
+### 字段缺口摘要（Round 72）
+
+- **待核验 API**：`cover_crop`、`wechat_backend_schedule`、`show_cover_pic` — 不对外声称已支持。
+- **明确未实现**：公众号后台定时 — 当前仅本地到点；见 `docs/wechat_browser_assist_strategy.md`。
+- **部分实现**：封面裁剪仅存本地 JSON，发布前请在后台确认视觉效果。

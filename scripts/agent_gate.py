@@ -125,6 +125,7 @@ ROUND_ORDER = [
     "round_069",
     "round_070",
     "round_071",
+    "round_072",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -832,6 +833,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "按 docs/roadmap_converged.md 继续 Round 17：微信公众号字段能力矩阵核验",
         ],
     },
+    "round_072": {
+        "name": "Round 72 - 微信字段能力矩阵核验",
+        "acceptance_criteria": [
+            "字段级矩阵：API 支持/实现/缺口/处理方式",
+            "wechat_field_matrix.py 与文档同步",
+            "CLI field-matrix 与 /api/wechat-field-matrix",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 18：browser_assist 方案",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1375,6 +1387,19 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest draft update",
+            ),
+        ]
+    elif round_id == "round_072":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_wechat_field_matrix.py",
+                    "-q",
+                ],
+                "pytest wechat field matrix",
             ),
         ]
     else:

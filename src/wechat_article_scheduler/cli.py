@@ -32,6 +32,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="常驻调度（同 scheduler；见 docs/scheduler_runbook.md）",
     )
     sub.add_parser("scheduler-health", help="调度器健康检查（队列/锁/卡住任务）")
+    sub.add_parser("field-matrix", help="输出微信公众号字段能力矩阵 JSON")
 
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
     reject_p.add_argument("--article-id", type=int, required=True)
@@ -100,6 +101,28 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scheduler-health":
         print_scheduler_health(config)
+        return 0
+
+    if args.command == "field-matrix":
+        import json
+
+        from wechat_article_scheduler.wechat_field_matrix import (
+            field_gaps,
+            list_field_matrix,
+            matrix_summary,
+        )
+
+        print(
+            json.dumps(
+                {
+                    "summary": matrix_summary(),
+                    "fields": list_field_matrix(),
+                    "gaps": field_gaps(),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 0
 
     if args.command == "reject":
