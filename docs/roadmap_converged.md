@@ -108,7 +108,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不能重复生成 pending 任务。
 - 下一轮衔接：进入 Web 控制台 MVP。
 
-### Round 10：Web 控制台 MVP
+### Round 10：Web 控制台 MVP（已完成 — agent `round_065`）
 
 - 本轮目标：形成本地电脑浏览器工作台第一版。
 - 具体任务：Dashboard、文章列表、队列、事件日志、scan/plan/run-once 操作入口。

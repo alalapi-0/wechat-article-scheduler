@@ -53,3 +53,6 @@ round_063:
 
 round_064:
   - python3 -m pytest tests/test_collection_schedule.py tests/test_web_schedule.py -q
+
+round_065:
+  - python3 -m pytest tests/test_web_console_mvp.py tests/test_web_app.py -q

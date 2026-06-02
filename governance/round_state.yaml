@@ -1,16 +1,15 @@
 current_round:
-  id: round_064
-  name: Round 64 - 合集排期规则
-  status: completed
-  updated_at: '2026-06-02T06:29:03.411276+00:00'
-  completed_at: '2026-06-02'
+  id: round_065
+  name: Round 65 - Web 控制台 MVP
+  status: active
+  updated_at: '2026-06-02T06:35:00+00:00'
 last_completed_round:
   id: round_064
   completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- collection.yaml schedule 块可解析并参与 plan
-- 按合集 max_per_day / 偏好时段 / stagger 错峰
-- plan 返回 by_collection 与可读 hints
+- Dashboard 概览含下一步提示与统计
+- scan/plan/run-once 入口与普通用户队列筛选
+- 普通视图默认隐藏高级信息；8080 核心 API 无失败
 next_actions:
-- 按 docs/roadmap_converged.md 继续 Round 10：Web 控制台 MVP
+- 按 docs/roadmap_converged.md 继续 Round 11：文章详情与预览页面

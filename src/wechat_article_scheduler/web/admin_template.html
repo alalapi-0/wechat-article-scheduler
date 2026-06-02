@@ -233,6 +233,11 @@
   th { color: var(--muted); font-weight: 560; background: var(--surface-soft); font-size: 12px; }
   tbody tr:last-child td { border-bottom: none; }
   .queue-box { overflow: hidden; }
+  .queue-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .queue-filters button { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; }
+  .queue-filters button.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  .next-steps { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--line); font-size: 13px; color: var(--text); }
+  .next-steps ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
   .events ul { margin: 0; padding: 0; list-style: none; }
   .events li { list-style: none; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; display: grid; gap: 2px; }
   .events li:last-child { border-bottom: 0; }
@@ -425,6 +430,10 @@
               <span class="hint">作品与任务</span>
             </div>
             <div class="stats" id="statCards"></div>
+            <div class="next-steps" id="nextSteps" hidden>
+              <div id="nextStepsHeadline"></div>
+              <ul id="nextStepsList"></ul>
+            </div>
           </section>
 
           <!-- 作品库 + 上传 -->
@@ -493,6 +502,7 @@
             <div class="card pad">
               <div class="banner" id="scheduleBanner">读取计划中…</div>
               <div class="upload-actions">
+                <button class="btn-ghost" id="btnScan" type="button">扫描本地收件箱</button>
                 <button class="btn-primary" id="btnPlan">自动推荐时间</button>
                 <button class="btn-ghost" id="btnOpenSchedule" type="button">自定义安排…</button>
                 <button class="btn-primary" id="btnRun">执行到点发布</button>
@@ -513,8 +523,17 @@
           </section>
 
           <section id="queue" class="section">
-            <div class="section-head"><h2>发布队列</h2><span class="hint">计划中</span></div>
-            <div class="card queue-box"><div id="queueBox"></div></div>
+            <div class="section-head"><h2>发布队列</h2><span class="hint">任务状态</span></div>
+            <div class="card queue-box pad">
+              <div class="queue-filters" id="queueFilters" role="tablist" aria-label="队列筛选">
+                <button type="button" class="active" data-qf="wait">待发布</button>
+                <button type="button" data-qf="active">发布中</button>
+                <button type="button" data-qf="ok">已完成</button>
+                <button type="button" data-qf="err">失败</button>
+                <button type="button" data-qf="all">全部</button>
+              </div>
+              <div id="queueBox"></div>
+            </div>
           </section>
 
           <section id="events" class="events section">
@@ -890,6 +909,7 @@ async function boot(){
   setupWorksSelection();
   setupCoverBatchModal();
   setupScheduleModal();
+  el('btnScan').addEventListener('click', () => runAction('scan', '/api/scan'));
   el('btnPlan').addEventListener('click', () => runAction('plan', '/api/plan'));
   el('btnOpenSchedule').addEventListener('click', () => {
     if (selectedWorkIds.size > 0) openScheduleModal('batch');
@@ -921,8 +941,25 @@ async function boot(){
   if (btnOrphanCovers) btnOrphanCovers.addEventListener('click', cleanupOrphanCovers);
   el('modalClose').addEventListener('click', () => el('modalBack').classList.remove('open'));
   el('modalBack').addEventListener('click', e => { if(e.target===el('modalBack')) el('modalBack').classList.remove('open'); });
+  setupQueueFilters();
   renderSteps();
   await refreshAll();
+}
+
+let queueJobsList = [];
+let queueFilterKey = 'wait';
+const QUEUE_FILTER_API = { wait: 'pending', active: 'running', ok: 'done', err: 'failed', all: '' };
+
+function setupQueueFilters(){
+  const box = el('queueFilters');
+  if (!box) return;
+  box.querySelectorAll('button[data-qf]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      queueFilterKey = btn.getAttribute('data-qf') || 'wait';
+      box.querySelectorAll('button[data-qf]').forEach(b => b.classList.toggle('active', b === btn));
+      await refreshAll();
+    });
+  });
 }
 
 function setupNav(){
@@ -1044,16 +1081,23 @@ async function refreshAll(){
     const artUrl = selectedCollectionSlug
       ? `/api/articles?collection_slug=${encodeURIComponent(selectedCollectionSlug)}`
       : '/api/articles';
-    const [ov, arts, trash] = await Promise.all([
+    const apiStatus = QUEUE_FILTER_API[queueFilterKey] ?? '';
+    const jobsUrl = apiStatus
+      ? `/api/jobs?limit=40&status=${encodeURIComponent(apiStatus)}`
+      : '/api/jobs?limit=40';
+    const [ov, arts, trash, jobs] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
+      (await fetch(jobsUrl)).json(),
     ]);
+    queueJobsList = jobs || [];
     await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
     renderStats(ov);
+    renderNextSteps(ov.workbench);
     renderSchedule(ov.schedule_summary);
-    renderQueue(ov.recent_jobs);
+    renderQueue(queueJobsList);
     renderEvents(ov.recent_events);
     renderWorks(arts);
     renderTrash(trash);
@@ -1096,8 +1140,25 @@ function renderSchedule(s){
   el('scheduleBanner').textContent = s.next_summary || '暂无发布计划';
 }
 
+function renderNextSteps(wb){
+  const box = el('nextSteps');
+  if (!wb || !wb.headline) { box.hidden = true; return; }
+  box.hidden = false;
+  el('nextStepsHeadline').innerHTML = `<b>下一步</b> · ${esc(wb.headline)}`;
+  const hints = wb.hints || [];
+  el('nextStepsList').innerHTML = hints.length
+    ? hints.map(h => `<li>${esc(h)}</li>`).join('')
+    : '<li>按右侧主操作继续即可</li>';
+}
+
 function renderQueue(jobs){
-  if (!jobs || !jobs.length) { el('queueBox').innerHTML = `<div class="empty" style="padding:14px;">${esc(L(COPY.empty,'jobs','还没有待发布作品'))}</div>`; return; }
+  if (!jobs || !jobs.length) {
+    const emptyMsg = queueFilterKey === 'wait'
+      ? L(COPY.empty,'jobs','还没有待发布作品')
+      : '当前筛选下没有任务';
+    el('queueBox').innerHTML = `<div class="empty" style="padding:14px;">${esc(emptyMsg)}</div>`;
+    return;
+  }
   const rows = jobs.map(j => {
     const cancelBtn = j.status === 'pending'
       ? `<button class="btn-ghost btn-sm" type="button" onclick="cancelJob(${j.id})">取消</button>`

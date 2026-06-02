@@ -1394,6 +1394,23 @@
   - [x] humanize_plan_result hints
   - [x] agent_gate round_064 冒烟
 
+### Round 65 - Web 控制台 MVP
+
+- 目标：桌面优先本地工作台 MVP：概览、导航、scan/plan/run 入口、发布队列与下一步提示。
+- 范围：admin_template、overview/workbench API、user_copy、Web 测试与文档。
+- 非目标：React/Vue 重写；裸露数据库路径于普通视图。
+- 输入：Round 19–37 普通用户视图与 Round 64 合集能力。
+- 输出：`workbench_mvp`、扫描收件箱按钮、队列状态筛选、`docs/web_console_mvp_converged.md`。
+- 验收标准：Web 可完成导入（上传/扫描）、排期、执行并查看队列与操作记录；高级信息默认关闭。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_web_console_mvp.py tests/test_web_app.py -q`。
+- 退出标准：8080 mock 浏览器验证核心 API 无失败；pytest 通过。
+- 风险：队列筛选与 overview 数据不一致。
+- 回滚点：队列仍用 overview.recent_jobs。
+- 交付项：
+  - [x] 下一步提示与 scan 入口
+  - [x] /api/jobs 状态筛选与队列 Tab
+  - [x] agent_gate round_065 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

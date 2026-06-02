@@ -55,6 +55,7 @@ from wechat_article_scheduler.web.user_copy import (
     humanize_schedule_single_result,
 )
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
+from wechat_article_scheduler.web.workbench_mvp import build_workbench_hints
 from wechat_article_scheduler.publish_config import (
     defaults_from_rules,
     human_publish_config_summary,
@@ -327,13 +328,21 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             row = _enrich_job_row(dict(r), cfg)
             row["scheduled_at_label"] = format_scheduled_at(row.get("scheduled_at"))
             recent_jobs_out.append(row)
+        article_counts = {str(r["status"]): int(r["count"]) for r in article_rows}
+        job_counts = {str(r["status"]): int(r["count"]) for r in job_rows}
+        workbench = build_workbench_hints(
+            article_counts=article_counts,
+            job_counts=job_counts,
+            schedule_summary=schedule,
+        )
         return {
             "status": status(),
-            "article_counts": {str(r["status"]): int(r["count"]) for r in article_rows},
-            "job_counts": {str(r["status"]): int(r["count"]) for r in job_rows},
+            "article_counts": article_counts,
+            "job_counts": job_counts,
             "recent_jobs": recent_jobs_out,
             "recent_events": [dict(r) for r in list_events(cfg, limit=10)],
             "schedule_summary": schedule,
+            "workbench": workbench,
             "publish_preflight": preflight,
             "docs": [
                 {"label": "README", "path": "README.md"},
@@ -508,21 +517,23 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return {"ok": True, **result}
 
     @app.get("/api/jobs")
-    def jobs(limit: int = 50) -> list[dict[str, Any]]:
+    def jobs(limit: int = 50, status: str | None = None) -> list[dict[str, Any]]:
         with db.connect(cfg.database_path) as conn:
-            rows = conn.execute(
-                """
+            sql = """
                 SELECT j.id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       j.publish_config_json, a.title
+                       j.adapter_mode, j.updated_at, j.publish_config_json, a.title
                 FROM publish_jobs j
                 JOIN articles a ON a.id = j.article_id
                 WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
                   AND j.status != 'cancelled'
-                ORDER BY j.scheduled_at ASC
-                LIMIT ?
-                """,
-                (limit,),
-            ).fetchall()
+            """
+            params: list[Any] = []
+            if status and status.strip():
+                sql += " AND j.status = ?"
+                params.append(status.strip().lower())
+            sql += " ORDER BY j.scheduled_at ASC LIMIT ?"
+            params.append(limit)
+            rows = conn.execute(sql, params).fetchall()
         out: list[dict[str, Any]] = []
         for r in rows:
             row = _enrich_job_row(dict(r), cfg)

@@ -118,6 +118,7 @@ ROUND_ORDER = [
     "round_062",
     "round_063",
     "round_064",
+    "round_065",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -745,7 +746,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "plan 返回 by_collection 与可读 hints",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 10：Web 控制台 MVP",
+            "推进 Round 65：Web 控制台 MVP（收敛 Round 10）",
+        ],
+    },
+    "round_065": {
+        "name": "Round 65 - Web 控制台 MVP",
+        "acceptance_criteria": [
+            "Dashboard 概览含下一步提示与统计",
+            "scan/plan/run-once 入口与普通用户队列筛选",
+            "普通视图默认隐藏高级信息；8080 核心 API 无失败",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 11：文章详情与预览页面",
         ],
     },
 }
@@ -1193,6 +1205,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest collection schedule rules",
+            ),
+        ]
+    elif round_id == "round_065":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_web_console_mvp.py",
+                    "tests/test_web_app.py",
+                    "-q",
+                ],
+                "pytest web console mvp",
             ),
         ]
     else:
