@@ -26,11 +26,13 @@ from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.content_library import list_collections, list_content_items
 from wechat_article_scheduler.cover_assets import (
     bind_covers_by_stem,
+    build_dual_cover_previews,
     check_cover_path,
     index_cover_directory,
     repair_invalid_cover_paths,
     scan_cover_assets,
 )
+from wechat_article_scheduler.cover_assets.crop_preview import enrich_cover_config
 from wechat_article_scheduler.preview_snapshot import (
     build_article_preview_package,
     latest_snapshot_path,
@@ -644,6 +646,47 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         if cfg_json:
             msg += "，并已应用封面位置配置"
         return {"ok": True, **stats, "human": [msg]}
+
+    @app.get("/api/articles/{article_id}/cover-previews")
+    def article_cover_previews(article_id: int) -> dict[str, Any]:
+        """横向 2.35:1 与方形 1:1 封面预览（Pillow 可选）。"""
+        with db.connect(cfg.database_path) as conn:
+            row = conn.execute(
+                """
+                SELECT cover_path, cover_config_json
+                FROM articles WHERE id = ?
+                """,
+                (article_id,),
+            ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="文章不存在")
+        cover_path = (row["cover_path"] or "").strip()
+        if not cover_path or not Path(cover_path).is_file():
+            raise HTTPException(status_code=404, detail="封面不存在")
+        result = build_dual_cover_previews(cover_path, row["cover_config_json"])
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("message", "预览失败"))
+        return result
+
+    @app.post("/api/cover-preview/dual")
+    async def cover_preview_dual(
+        cover_path: str = Form(...),
+        cover_config_json: str | None = Form(default=None),
+    ) -> dict[str, Any]:
+        """按路径与裁剪配置生成双比例预览（批量封面弹窗可用）。"""
+        path = Path(cover_path)
+        if not path.is_file():
+            raise HTTPException(status_code=400, detail="封面路径无效")
+        allowed_roots = _cover_asset_roots(cfg) + [cfg.covers_dir.resolve()]
+        if not _is_under_any(path.resolve(), allowed_roots):
+            raise HTTPException(status_code=400, detail="封面路径不在允许目录")
+        cfg_json = None
+        if cover_config_json:
+            cfg_json = enrich_cover_config(cover_config_json)
+        result = build_dual_cover_previews(path, cfg_json)
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("message", "预览失败"))
+        return result
 
     @app.get("/media/cover/{article_id}")
     def media_cover(article_id: int) -> FileResponse:

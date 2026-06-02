@@ -24,6 +24,20 @@ def normalize_cover_config(raw: str | dict | None) -> str | None:
         for key in ("x", "y", "width", "height"):
             if key in crop and not isinstance(crop[key], (int, float)):
                 raise ValueError(f"cover_config.crop.{key} 必须是数字")
+        from wechat_article_scheduler.cover_assets.crop_preview import (
+            crop_focal_point,
+            normalize_crop_dict,
+        )
+
+        data["crop"] = normalize_crop_dict(crop)
+        data["focal"] = crop_focal_point(data["crop"])
+    focal = data.get("focal")
+    if focal is not None:
+        if not isinstance(focal, dict):
+            raise ValueError("cover_config.focal 必须是对象")
+        for key in ("x", "y"):
+            if key in focal and not isinstance(focal[key], (int, float)):
+                raise ValueError(f"cover_config.focal.{key} 必须是数字")
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
 

@@ -314,6 +314,19 @@
     font-size: 13px;
   }
   .cover-crop-scale-wrap input[type="range"] { flex: 1; }
+  .cover-dual-previews { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .cover-dual-previews .dual-item { display: flex; flex-direction: column; gap: 4px; }
+  .cover-dual-previews .dual-label { font-size: 12px; color: var(--muted); }
+  .cover-dual-frame {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #e8ecf1;
+    background-repeat: no-repeat;
+    border: 1px solid var(--border, #dde3ea);
+  }
+  .cover-dual-frame.ratio-wide { aspect-ratio: 2.35 / 1; }
+  .cover-dual-frame.ratio-square { aspect-ratio: 1 / 1; }
 
   .schedule-form { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
   .schedule-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
@@ -579,6 +592,17 @@
           <span>缩放</span>
           <input type="range" id="coverCropScale" min="1" max="3" step="0.01" value="1" />
         </label>
+        <div class="cover-dual-previews" id="coverDualPreviews" hidden>
+          <div class="dual-item">
+            <span class="dual-label">横向封面（2.35:1）</span>
+            <div class="cover-dual-frame ratio-wide" id="coverPreviewWide"></div>
+          </div>
+          <div class="dual-item">
+            <span class="dual-label">公众号头像区（1:1）</span>
+            <div class="cover-dual-frame ratio-square" id="coverPreviewSquare"></div>
+          </div>
+        </div>
+        <p class="cover-crop-hint" id="coverDualHint" hidden>双比例预览为近似效果；无 Pillow 时仅 CSS 裁切预览。</p>
       </div>
       <div class="cover-batch-actions">
         <button class="btn-primary" id="coverBatchApply" type="button">应用到选中作品</button>
@@ -1306,6 +1330,8 @@ function resetCoverCrop(){
   el('coverCropImage').removeAttribute('src');
   el('coverCropSection').hidden = true;
   el('coverCropViewport').classList.remove('dragging');
+  el('coverDualPreviews').hidden = true;
+  el('coverDualHint').hidden = true;
 }
 
 function syncCoverCropVisibility(){
@@ -1364,6 +1390,51 @@ function applyCoverCropTransform(){
   img.style.height = `${Ih * scale}px`;
   img.style.left = `${ox}px`;
   img.style.top = `${oy}px`;
+  updateDualCoverPreviews();
+}
+
+function squareCropFromNormalized(crop){
+  const cx = crop.x + crop.width / 2;
+  const cy = crop.y + crop.height / 2;
+  const half = Math.min(cx, cy, 1 - cx, 1 - cy);
+  return { x: cx - half, y: cy - half, width: half * 2, height: half * 2 };
+}
+
+function applyCssCoverPreview(frameEl, src, crop){
+  if (!frameEl || !src || !crop) return;
+  const px = 100 / crop.width;
+  const py = 100 / crop.height;
+  frameEl.style.backgroundImage = `url("${src}")`;
+  frameEl.style.backgroundSize = `${px}% ${py}%`;
+  frameEl.style.backgroundPosition = `${-crop.x * px}% ${-crop.y * py}%`;
+}
+
+function updateDualCoverPreviews(){
+  const wrap = el('coverDualPreviews');
+  const hint = el('coverDualHint');
+  if (!coverCrop.active || el('coverReuseConfig').checked) {
+    wrap.hidden = true;
+    hint.hidden = true;
+    return;
+  }
+  const cfgRaw = computeCoverCropConfig();
+  if (!cfgRaw) {
+    wrap.hidden = true;
+    hint.hidden = true;
+    return;
+  }
+  const data = JSON.parse(cfgRaw);
+  const crop = data.crop;
+  if (!crop) {
+    wrap.hidden = true;
+    hint.hidden = true;
+    return;
+  }
+  const src = el('coverCropImage').src;
+  applyCssCoverPreview(el('coverPreviewWide'), src, crop);
+  applyCssCoverPreview(el('coverPreviewSquare'), src, squareCropFromNormalized(crop));
+  wrap.hidden = false;
+  hint.hidden = false;
 }
 
 function updateCoverCropScaleSlider(){

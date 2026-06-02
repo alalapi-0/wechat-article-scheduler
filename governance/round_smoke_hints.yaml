@@ -44,3 +44,6 @@ round_060:
 
 round_061:
   - python3 -m pytest tests/test_cover_manager.py tests/test_cover_assets.py -q
+
+round_062:
+  - python3 -m pytest tests/test_cover_crop_preview.py tests/test_web_batch_select.py -q

@@ -115,6 +115,7 @@ ROUND_ORDER = [
     "round_059",
     "round_060",
     "round_061",
+    "round_062",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -709,7 +710,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "无效 cover_path 可修复；孤儿封面可安全清理",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 7：封面裁剪与双比例预览",
+            "推进 Round 62：封面裁剪与双比例预览",
+        ],
+    },
+    "round_062": {
+        "name": "Round 62 - 封面裁剪与双比例预览",
+        "acceptance_criteria": [
+            "桌面 Web 可预览横向 2.35:1 与方形 1:1 封面",
+            "cover_config 含 crop/focal 并可保存",
+            "无 Pillow 时 CSS 预览降级且测试通过",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 8：多合集内容库",
         ],
     },
 }
@@ -1115,6 +1127,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest cover asset management",
+            ),
+        ]
+    elif round_id == "round_062":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_cover_crop_preview.py",
+                    "tests/test_web_batch_select.py",
+                    "-q",
+                ],
+                "pytest cover crop dual preview",
             ),
         ]
     else:

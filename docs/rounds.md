@@ -1340,6 +1340,24 @@
   - [x] 多目录孤儿清理
   - [x] agent_gate round_061 冒烟
 
+### Round 62 - 封面裁剪与双比例预览
+
+- 目标：发布前在桌面 Web 预览横向 2.35:1 与方形 1:1 封面效果，并保存裁剪配置。
+- 范围：`cover_assets/crop_preview.py`、封面 API、批量封面弹窗双预览、文档与测试。
+- 非目标：复杂图片编辑器；AI 作图。
+- 输入：Round 61 封面路径与 `cover_config_json`、现有裁剪编辑器。
+- 输出：`docs/cover_crop_dual_preview.md`、双比例 API、Web 实时 CSS 预览（Pillow 可选 JPEG）。
+- 验收标准：两种比例可预览；配置含 crop/focal 可保存；无 Pillow 时优雅降级。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_cover_crop_preview.py tests/test_web_batch_select.py -q`。
+- 退出标准：pytest 通过；8080 批量封面弹窗可见双预览。
+- 风险：预览与微信后台像素级不一致。
+- 回滚点：仅保留 2.35:1 单视口编辑器。
+- 交付项：
+  - [x] 裁剪/方形推导与双预览 API
+  - [x] Web 双比例 CSS 预览
+  - [x] Pillow 可选 JPEG 渲染
+  - [x] agent_gate round_062 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

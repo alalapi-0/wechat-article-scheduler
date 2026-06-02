@@ -75,7 +75,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不能丢失已有封面路径；不能强制上传真实素材。
 - 下一轮衔接：进入封面裁剪和双比例预览。
 
-### Round 7：封面裁剪与双比例预览
+### Round 7：封面裁剪与双比例预览（已完成 — agent `round_062`）
 
 - 本轮目标：发布前看到方形和横向封面效果。
 - 具体任务：支持 focal point、裁剪配置、方形/横向预览、保存封面配置。
