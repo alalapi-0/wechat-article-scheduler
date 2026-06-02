@@ -8,7 +8,7 @@ Status: Current execution roadmap after Round 56
 
 ## Phase 1：微信公众号闭环，P0
 
-### Round 1：路线收敛治理轮
+### Round 56（治理）：路线收敛治理轮
 
 - 本轮目标：把项目路线从多平台发散收敛为微信公众号优先。
 - 具体任务：完成路线审计、产品愿景、架构、路线图、平台优先级、browser_assist 策略、repo protocol、README 和 backlog 归档。
@@ -17,11 +17,12 @@ Status: Current execution roadmap after Round 56
 - 不做什么：不实现新平台，不重构微信 adapter，不迁移数据库，不引入大型前端或队列系统。
 - 允许改动范围：docs、README、治理 YAML、小范围安全默认值和聚焦测试。
 - 风险边界：不能删除重要历史材料；不能让 backlog 继续伪装成当前开发任务。
-- 下一轮衔接：进入 Round 2，稳定现有微信公众号链路。
+- 下一轮衔接：进入 Round 57 / 收敛路线图 Round 2，稳定现有微信公众号链路。
 
-### Round 2：微信公众号现有链路稳定化
+### Round 57 / 收敛 Round 2：微信公众号现有链路稳定化（进行中）
 
 - 本轮目标：保护并加固 `scan -> plan -> run-once -> create_draft`。
+- Agent 登记：`round_057`；冒烟 `tests/test_wechat_chain_stability.py`。
 - 具体任务：梳理当前 CLI 入口、adapter 调用、事件记录、draft-only 行为和 real/mock 差异；补最小回归测试。
 - 交付物：稳定性审计、聚焦测试、必要的小修复。
 - 验收标准：mock 和 real draft-only 路径均可解释；`WECHAT_ENABLE_PUBLISH=false` 不正式发布；现有测试通过。

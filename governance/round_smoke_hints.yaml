@@ -29,3 +29,6 @@ round_056:
   - python3 scripts/check_rounds_doc.py
   - python3 -m pytest tests/test_agent_gate.py tests/test_check_rounds_doc.py -q
   - python3 -m pytest tests/test_parser.py tests/test_digest_limits.py tests/test_scheduler_hardening.py tests/test_real_adapter.py tests/test_workflow.py -q
+
+round_057:
+  - python3 -m pytest tests/test_wechat_chain_stability.py tests/test_scheduler_hardening.py -q

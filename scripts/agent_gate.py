@@ -110,6 +110,7 @@ ROUND_ORDER = [
     "round_054",
     "round_055",
     "round_056",
+    "round_057",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -650,7 +651,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "默认 mock 不联网；real 模式用于真实 API 测试；browser_assist 只作为个人本地自用后备方案",
         ],
         "next_actions": [
-            "下一轮优先执行 Round 2：当前微信公众号链路稳定化",
+            "推进 Round 57：收敛后微信链路稳定化",
+        ],
+    },
+    "round_057": {
+        "name": "Round 57 - 收敛后微信链路稳定化（启动）",
+        "acceptance_criteria": [
+            "scan/plan/run-once mock 主链路测试通过",
+            "draft-only 与正式发布路径在文档和测试中可区分",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 3：摘要、错误码与幂等",
         ],
     },
 }
@@ -998,6 +1009,13 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
         steps = [
             ([py, "scripts/check_rounds_doc.py"], "check rounds doc"),
             ([py, "-m", "pytest", "tests/test_agent_gate.py", "tests/test_check_rounds_doc.py", "-q"], "pytest governance"),
+        ]
+    elif round_id == "round_057":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_wechat_chain_stability.py", "tests/test_scheduler_hardening.py", "-q"],
+                "pytest wechat chain stability",
+            ),
         ]
     else:
         return True, "unknown round skipped"

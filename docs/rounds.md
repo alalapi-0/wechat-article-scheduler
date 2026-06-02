@@ -1,4 +1,4 @@
-# 开发路线图（Round 0 ~ Round 56）
+# 开发路线图（Round 0 ~ Round 57）
 
 本文件是路线图**人类权威源**；机器可读状态见 `governance/round_state.yaml`，机器轮次注册表见 `scripts/agent_gate.py` 的 `ROUND_ORDER` / `ROUND_META`。
 任何轮次调整都必须同次同步 `tests/test_agent_gate.py` 与治理范围字段。
@@ -100,6 +100,7 @@
 | Round 54 | 真实微信 API 闭环验证 | 已完成 |
 | Round 55 | Auto-Approved Real API Pipeline | 已完成 |
 | Round 56 | 路线收敛治理轮 | 已完成 |
+| Round 57 | 收敛后微信链路稳定化 | 进行中 |
 
 ## 轮次字段规范
 
@@ -1237,16 +1238,33 @@
 - 风险：旧长期蓝图继续误导推进方向；过度收敛时误删未来设计材料；安全默认值与文档不一致。
 - 回滚点：保留当前微信 CLI 与 adapter；backlog 文档可从 `docs/backlog/` 重新引用；安全默认值可通过显式环境变量开启。
 - 交付项：
-  - [ ] 路线发散审计
-  - [ ] 产品愿景收敛
-  - [ ] 微信公众号优先架构
-  - [ ] roadmap_converged.md
-  - [ ] platform_priority.md
-  - [ ] wechat_browser_assist_strategy.md
-  - [ ] 多平台文档归档到 backlog
-  - [ ] repo_protocol / rounds / agent_gate / tests 同步
-  - [ ] mock 默认不联网与 real API 测试模式验证
-  - [ ] 治理测试和 CLI smoke 记录
+  - [x] 路线发散审计
+  - [x] 产品愿景收敛
+  - [x] 微信公众号优先架构
+  - [x] roadmap_converged.md
+  - [x] platform_priority.md
+  - [x] wechat_browser_assist_strategy.md
+  - [x] 多平台文档归档到 backlog
+  - [x] repo_protocol / rounds / agent_gate / tests 同步
+  - [x] mock 默认不联网与 real API 测试模式验证
+  - [x] 治理测试和 CLI smoke 记录
+
+### Round 57 - 收敛后微信链路稳定化（启动）
+
+- 目标：按 `docs/roadmap_converged.md` Phase 1 Round 2，巩固 `scan → plan → run-once → create_draft` mock 主链路。
+- 范围：聚焦测试与小修复；梳理 CLI/adapter 差异；不扩展多平台。
+- 非目标：多平台 adapter、数据库大迁移、真实发布默认开启。
+- 输入：Round 56 收敛文档、现有 `tests/test_wechat_chain_stability.py`。
+- 输出：链路稳定性说明、补强测试、必要的小修复。
+- 验收标准：`tests/test_wechat_chain_stability.py` 通过；mock 默认不回归；`WECHAT_ENABLE_PUBLISH=false` 时 draft-only 行为可解释。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_wechat_chain_stability.py tests/test_scheduler_hardening.py -q`。
+- 退出标准：收敛路线图 Round 2 入口可被 Agent 直接执行，不回到多平台叙事。
+- 风险：真实 API 测试误开 `WECHAT_ENABLE_PUBLISH`；重复草稿。
+- 回滚点：仅保留文档与测试登记，暂停链路代码改动。
+- 交付项：
+  - [x] 收敛路线图 Round 2 入口登记（agent_gate `round_057`）
+  - [ ] 链路稳定性审计文档
+  - [ ] mock/real draft-only 行为对照测试补强
 
 ## 历史说明
 
