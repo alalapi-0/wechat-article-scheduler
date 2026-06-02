@@ -1,11 +1,12 @@
 current_round:
   id: round_126
   name: Round 126 - 详情页导出下拉
-  status: active
+  status: completed
   updated_at: '2026-06-02T20:02:17.038637+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_125
-  completed_at: '2026-06-02T20:02:17.038637+00:00'
+  id: round_126
+  completed_at: '2026-06-02T20:03:27.398638+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
 - 详情页 export-drop 联动 manual-export/platforms
