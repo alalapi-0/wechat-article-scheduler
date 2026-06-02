@@ -176,3 +176,7 @@ round_103:
 round_104:
   - python3 -m pytest tests/test_cross_project_calendar.py -q
   - python3 -m pytest tests/test_multi_project_dry_run.py -q
+
+round_105:
+  - python3 -m pytest tests/test_unified_outbox_presearch.py -q
+  - python3 -m pytest tests/test_cross_project_calendar.py -q

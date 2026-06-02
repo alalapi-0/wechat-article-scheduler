@@ -2051,6 +2051,23 @@
   - [x] CLI/API 与 /debug
   - [x] agent_gate round_104 冒烟
 
+### Round 105 - Phase5 统一 outbox 预研
+
+- 目标：路线图 Round 41 — 聚合各平台 `outbox/` 导出目录索引与 publish_manifest 汇总 dry-run。
+- 范围：`unified_outbox_presearch.py`、`unified_outbox.example.yaml`、CLI/API、`/debug`。
+- 非目标：移动/删除 outbox；标记已发布；与 `articles/` 合并。
+- 输入：round_084+ `export-outbox`、round_103 projects manifest。
+- 输出：`unified-outbox-dry-run`；`/api/unified-outbox/dry-run` 与 `/index`。
+- 验收标准：`test_unified_outbox_presearch` 通过；只读扫描。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_unified_outbox_presearch.py -q`。
+- 退出标准：gate round_105。
+- 风险：误将 outbox 当发布完成。
+- 回滚点：移除 unified-outbox API。
+- 交付项：
+  - [x] outbox 索引与 manifest 汇总
+  - [x] CLI/API 与 /debug
+  - [x] agent_gate round_105 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

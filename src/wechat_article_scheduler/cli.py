@@ -85,6 +85,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="同账号相邻排期最小间隔（分钟）",
     )
 
+    uob = sub.add_parser(
+        "unified-outbox-dry-run",
+        help="统一 outbox 目录索引与 publish_manifest 汇总（只读）",
+    )
+    uob.add_argument("--config", type=str, default=None, help="unified_outbox.yaml 路径")
+    uob.add_argument("--projects", type=str, default=None)
+
     lb = sub.add_parser(
         "local-blog-plan",
         help="local_blog 评估干跑 JSON（静态站/WordPress/本地目录，不真发）",
@@ -332,6 +339,25 @@ def main(argv: list[str] | None = None) -> int:
             ROOT,
             projects_path=projects_path,
             min_gap_minutes=args.min_gap_minutes,
+        )
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0 if summary.get("ok") else 1
+
+    if args.command == "unified-outbox-dry-run":
+        import json
+        from pathlib import Path
+
+        from wechat_article_scheduler.config import ROOT
+        from wechat_article_scheduler.core.unified_outbox_presearch import (
+            build_unified_outbox_dry_run,
+        )
+
+        config_path = Path(args.config) if args.config else None
+        projects_path = Path(args.projects) if args.projects else None
+        summary = build_unified_outbox_dry_run(
+            ROOT,
+            config_path=config_path,
+            projects_path=projects_path,
         )
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 0 if summary.get("ok") else 1

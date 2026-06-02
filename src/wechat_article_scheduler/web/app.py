@@ -632,6 +632,27 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "mode": "dry_run",
         }
 
+    @app.get("/api/unified-outbox/dry-run")
+    def api_unified_outbox_dry_run() -> dict[str, Any]:
+        from wechat_article_scheduler.core.unified_outbox_presearch import (
+            build_unified_outbox_dry_run,
+        )
+
+        return build_unified_outbox_dry_run(cfg.root)
+
+    @app.get("/api/unified-outbox/index")
+    def api_unified_outbox_index() -> dict[str, Any]:
+        from wechat_article_scheduler.core.unified_outbox_presearch import (
+            default_unified_outbox_config_path,
+            index_outbox_directories,
+            load_unified_outbox_config,
+        )
+
+        cfg_path = default_unified_outbox_config_path(cfg.root)
+        ucfg = load_unified_outbox_config(cfg_path)
+        scan_roots = [str(r) for r in (ucfg.get("scan_roots") or ["outbox"])]
+        return index_outbox_directories(cfg.root, scan_roots=scan_roots)
+
     @app.get("/api/waiting-confirmation")
     def api_waiting_confirmation() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
@@ -1415,6 +1436,8 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>Phase5 多项目 manifest 干跑</h2><pre id="projects-dry-run">加载中…</pre>
 <h2>Phase5 跨项目发布日历</h2><pre id="publish-calendar">加载中…</pre>
 <h2>Phase5 日历冲突检测</h2><pre id="publish-calendar-conflicts">加载中…</pre>
+<h2>Phase5 统一 outbox 索引</h2><pre id="unified-outbox-index">加载中…</pre>
+<h2>Phase5 统一 outbox dry-run</h2><pre id="unified-outbox-dry-run">加载中…</pre>
 <h2>local_blog 评估（静态站）</h2><pre id="local-blog-static">加载中…</pre>
 <h2>local_blog 评估（WordPress）</h2><pre id="local-blog-wp">加载中…</pre>
 <h2>Webhook 评估（generic）</h2><pre id="webhook-plan">加载中…</pre>
@@ -1443,6 +1466,8 @@ Promise.all([
   fetch('/api/projects/dry-run'),
   fetch('/api/publish-calendar/dry-run'),
   fetch('/api/publish-calendar/conflicts'),
+  fetch('/api/unified-outbox/index'),
+  fetch('/api/unified-outbox/dry-run'),
   fetch('/api/local-blog-plan?destination=static_site'),
   fetch('/api/local-blog-plan?destination=wordpress'),
   fetch('/api/webhook-plan?channel=generic'),
@@ -1454,7 +1479,7 @@ Promise.all([
   fetch('/api/audio-package-plan?platform=netease_music'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,pr,pd,pc,pcc,l,m,n,o,p,q,r,s,t,u,v])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,pr,pd,pc,pcc,uoi,uod,l,m,n,o,p,q,r,s,t,u,v])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1470,6 +1495,8 @@ Promise.all([
   document.getElementById('projects-dry-run').textContent = JSON.stringify(await pd.json(), null, 2);
   document.getElementById('publish-calendar').textContent = JSON.stringify(await pc.json(), null, 2);
   document.getElementById('publish-calendar-conflicts').textContent = JSON.stringify(await pcc.json(), null, 2);
+  document.getElementById('unified-outbox-index').textContent = JSON.stringify(await uoi.json(), null, 2);
+  document.getElementById('unified-outbox-dry-run').textContent = JSON.stringify(await uod.json(), null, 2);
   document.getElementById('local-blog-static').textContent = JSON.stringify(await l.json(), null, 2);
   document.getElementById('local-blog-wp').textContent = JSON.stringify(await m.json(), null, 2);
   document.getElementById('webhook-plan').textContent = JSON.stringify(await n.json(), null, 2);

@@ -481,7 +481,18 @@ Phase 4 暂不开发。音频、版权和审核复杂度高，仅保留长期 ba
 - 不做什么：不做 SaaS 日历。
 - 允许改动范围：core、web debug、tests。
 - 风险边界：个人本地 dry-run。
-- 下一轮衔接：Round 41 统一 outbox 预研。
+- 下一轮衔接：Round 41 统一 outbox 预研（`round_105`）。
+
+### Round 41：统一 outbox（已完成 — agent `round_105`）
+
+- 本轮目标：多平台 `outbox/` 只读索引与 projects publish_manifest 汇总 dry-run。
+- 具体任务：`unified_outbox_presearch`；按平台聚合；CLI/API；`/debug`。
+- 交付物：`docs/phase5_unified_outbox.md`、`config/unified_outbox.example.yaml`。
+- 验收标准：不移动文件；不与 `articles/` 混淆。
+- 不做什么：不标记导出即发布。
+- 允许改动范围：core、config 示例、web、tests。
+- 风险边界：proof 须人工确认。
+- 下一轮衔接：Round 42 长期运维预研。
 
 ### Round 37：网易云音乐发布包预研
 
@@ -517,16 +528,9 @@ Phase 5 是长期 backlog。当前不开发。
 
 - 已落地为 agent `round_104`（见上）。DB 级统一日历仍属 backlog。
 
-### Round 41：统一 outbox
+### Round 41（原 backlog）：统一 outbox
 
-- 本轮目标：评估多平台/多项目导出目录。
-- 具体任务：定义 outbox 结构、proof、备份和清理策略。
-- 交付物：评估文档。
-- 验收标准：不和当前 `articles/` 混淆。
-- 不做什么：不标记导出即发布。
-- 允许改动范围：docs only。
-- 风险边界：proof 必须人工确认。
-- 下一轮衔接：进入长期运维。
+- 已落地为 agent `round_105`（见上）。备份/清理自动化仍属 backlog。
 
 ### Round 42：长期备份、日志轮转、迁移系统
 

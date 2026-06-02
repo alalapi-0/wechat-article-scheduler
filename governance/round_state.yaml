@@ -1,17 +1,16 @@
 current_round:
-  id: round_104
-  name: Round 104 - Phase5 跨项目发布日历预研
-  status: completed
-  updated_at: '2026-06-02T34:00:00+00:00'
-  completed_at: '2026-06-02'
+  id: round_105
+  name: Round 105 - Phase5 统一 outbox 预研
+  status: active
+  updated_at: '2026-06-02T35:00:00+00:00'
 last_completed_round:
   id: round_104
   completed_at: '2026-06-02T18:36:47.158506+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- manifest scheduled_at 日历 dry-run 视图
-- 同账号冲突检测
-- publish-calendar API 与 /debug
-- 不写 SQLite publish_jobs
+- outbox 目录只读索引与按平台聚合
+- publish_manifest 汇总 dry-run
+- unified-outbox API 与 /debug
+- 不移动真实文件
 next_actions:
 - gate 通过后 advance

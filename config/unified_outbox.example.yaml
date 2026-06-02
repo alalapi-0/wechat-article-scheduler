@@ -1,0 +1,10 @@
+# 统一 outbox 预研配置（Phase5 / round_105）
+# 只读索引；不移动 outbox/ 与 articles/ 下文件。
+schema_version: 1
+scan_roots:
+  - outbox
+include_publish_manifests_from_projects: true
+guardrails:
+  - 导出包不等于已发布
+  - 不自动移动或删除 outbox 目录
+  - proof 须人工确认

@@ -159,6 +159,7 @@ ROUND_ORDER = [
     "round_102",
     "round_103",
     "round_104",
+    "round_105",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1229,7 +1230,19 @@ ROUND_META: dict[str, dict[str, Any]] = {
         ],
         "next_actions": [
             "round_105 统一 outbox 预研",
-            "见 docs/roadmap_converged.md Round 41",
+        ],
+    },
+    "round_105": {
+        "name": "Round 105 - Phase5 统一 outbox 预研",
+        "acceptance_criteria": [
+            "outbox 目录只读索引与按平台聚合",
+            "publish_manifest 汇总 dry-run",
+            "unified-outbox API 与 /debug",
+            "不移动真实文件",
+        ],
+        "next_actions": [
+            "round_106 长期运维预研或维护",
+            "见 docs/roadmap_converged.md Round 42",
         ],
     },
 }
@@ -2120,6 +2133,17 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_multi_project_dry_run.py", "-q"],
                 "pytest multi-project regression",
+            ),
+        ]
+    elif round_id == "round_105":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_unified_outbox_presearch.py", "-q"],
+                "pytest unified outbox presearch",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_cross_project_calendar.py", "-q"],
+                "pytest phase5 calendar regression",
             ),
         ]
     else:
