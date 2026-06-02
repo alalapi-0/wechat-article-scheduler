@@ -57,7 +57,9 @@
       <div class="actions">
         <button type="button" class="btn-primary" id="btnPreview">刷新正文预览</button>
         <button type="button" class="btn" id="btnUpdateDraft" hidden>更新微信草稿</button>
-        <button type="button" class="btn" id="btnExportOutbox">导出 outbox 包</button>
+        <button type="button" class="btn" id="btnExportOutbox">导出通用包</button>
+        <button type="button" class="btn" id="btnExportZhihu">导出知乎包</button>
+        <button type="button" class="btn" id="btnExportDouban">导出豆瓣包</button>
         <a class="btn" id="btnWorkbench" href="/#works">去工作台安排发布</a>
       </div>
     </section>
@@ -133,13 +135,18 @@ async function boot(){
     document.body.classList.toggle('show-advanced', e.target.checked);
   });
   document.getElementById('btnPreview').addEventListener('click', loadPreview);
-  document.getElementById('btnExportOutbox').addEventListener('click', async () => {
-    if (!window.confirm('将导出 Markdown/HTML/封面到本地 outbox 目录，不会自动发布。继续？')) return;
+  async function doExportOutbox(platform, label){
+    if (!window.confirm(`将导出${label}到本地 outbox，不会联网或自动发布。继续？`)) return;
     try {
-      const r = await (await fetch(`/api/articles/${ARTICLE_ID}/export-outbox`, { method:'POST' })).json();
+      const url = `/api/articles/${ARTICLE_ID}/export-outbox?platform=${encodeURIComponent(platform)}`;
+      const r = await (await fetch(url, { method:'POST' })).json();
+      if (!r.ok) { alert(r.detail || r.error || '导出失败'); return; }
       alert((r.human||['已导出']).join('\n') + (r.relative_path ? '\n\n路径：'+r.relative_path : ''));
     } catch(e) { alert('导出失败：'+e); }
-  });
+  }
+  document.getElementById('btnExportOutbox').addEventListener('click', () => doExportOutbox('generic', '通用 outbox'));
+  document.getElementById('btnExportZhihu').addEventListener('click', () => doExportOutbox('zhihu', '知乎发布包'));
+  document.getElementById('btnExportDouban').addEventListener('click', () => doExportOutbox('douban', '豆瓣发布包'));
   const btnUpd = document.getElementById('btnUpdateDraft');
   if (btnUpd) btnUpd.addEventListener('click', async () => {
     if (!window.confirm('将当前作品内容同步到已有微信草稿？演练模式不会改动公众号后台。')) return;

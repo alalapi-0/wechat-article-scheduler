@@ -1629,6 +1629,39 @@
   - [x] outbox 列表 API
   - [x] agent_gate round_078 冒烟
 
+### Round 79 - 知乎发布包模板
+
+- 目标：生成知乎可人工复制的完整发布包（标题/导语/正文/封面/清单）。
+- 范围：`platforms/zhihu.py`、`zhihu_publish_pack.md`、Web 知乎导出按钮。
+- 非目标：登录知乎或自动发布。
+- 输入：Round 77–78 outbox 骨架。
+- 输出：`zhihu_*` 字段文件与 `zhihu_publish.md`。
+- 验收标准：只导出；manifest.platform=zhihu；文章状态不变。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_zhihu_publish_pack.py -q`。
+- 退出标准：gate round_079 通过；详情页可导出知乎包。
+- 风险：误称已对接知乎 API。
+- 回滚点：回退为 zhihu_copy.md 简版。
+- 交付项：
+  - [x] 知乎发布包文件集
+  - [x] /api/manual-export/platforms
+  - [x] agent_gate round_079 冒烟
+
+### Round 80 - 豆瓣发布包模板
+
+- 目标：生成豆瓣可人工复制的发布包（标题/正文/标签提示/封面）。
+- 范围：`platforms/douban.py`、详情页豆瓣导出。
+- 非目标：登录豆瓣；自动发布。
+- 输入：Round 79 平台包结构。
+- 输出：`douban_*` 文件集。
+- 验收标准：platform=douban 导出完整；不联网。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_douban_publish_pack.py -q`。
+- 退出标准：gate round_080 通过。
+- 风险：范围蔓延到 browser_assist。
+- 回滚点：仅保留知乎包。
+- 交付项：
+  - [x] 豆瓣发布包文件集
+  - [x] agent_gate round_080 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

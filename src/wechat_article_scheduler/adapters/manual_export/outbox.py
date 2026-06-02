@@ -13,45 +13,12 @@ from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.parser import clamp_summary
 from wechat_article_scheduler.publish_preview import render_for_publish
+from wechat_article_scheduler.adapters.manual_export.platforms import (
+    SUPPORTED_PLATFORMS,
+    build_platform_pack,
+)
 
-OUTBOX_VERSION = 1
-
-_PLATFORM_PACKS: dict[str, str] = {
-    "zhihu": "zhihu_copy.md",
-    "douban": "douban_copy.md",
-}
-
-
-def _write_platform_pack(
-    dest: Path, *, platform: str, title: str, digest: str
-) -> str | None:
-    key = (platform or "generic").strip().lower()
-    if key == "generic" or key not in _PLATFORM_PACKS:
-        return None
-    fname = _PLATFORM_PACKS[key]
-    hints = {
-        "zhihu": [
-            "# 知乎发布提示",
-            "",
-            f"建议标题：{title}",
-            f"建议摘要/导语：{digest}",
-            "",
-            "- 从 `article.md` 或 `article.html` 复制正文",
-            "- 封面使用 `cover.*`（若有）",
-            "- 发布后在作品详情提交 proof，勿在本地标为已发布",
-        ],
-        "douban": [
-            "# 豆瓣发布提示",
-            "",
-            f"标题：{title}",
-            "",
-            "- 从 `article.md` 复制正文",
-            "- 标签与频道需在豆瓣后台手动选择",
-            "- 发布后在作品详情提交 proof",
-        ],
-    }
-    dest.joinpath(fname).write_text("\n".join(hints[key]) + "\n", encoding="utf-8")
-    return fname
+OUTBOX_VERSION = 2
 
 
 def outbox_root(config: AppConfig) -> Path:
@@ -85,6 +52,10 @@ def export_article_to_outbox(
     platform: str = "generic",
 ) -> dict[str, Any]:
     """导出 Markdown/HTML/封面与说明；不修改发布状态、不联网。"""
+    plat = (platform or "generic").strip().lower()
+    if plat not in SUPPORTED_PLATFORMS:
+        return {"ok": False, "error": f"不支持的平台：{platform}"}
+
     row = _article_row(conn, article_id)
     if not row:
         return {"ok": False, "error": "作品不存在"}
@@ -95,7 +66,8 @@ def export_article_to_outbox(
     digest = clamp_summary((summary or "").strip() or title, 120)
     slug = _safe_slug(title, article_id)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    dest = outbox_root(config) / f"{slug}_{article_id}_{stamp}"
+    prefix = plat if plat != "generic" else "outbox"
+    dest = outbox_root(config) / f"{prefix}_{slug}_{article_id}_{stamp}"
     if dest.exists():
         return {"ok": False, "error": "outbox 目录已存在，请稍后重试"}
     dest.mkdir(parents=True)
@@ -113,13 +85,12 @@ def export_article_to_outbox(
     )
 
     files_written = ["article.md", "article.html"]
-    cover_dest: str | None = None
     cover_src = (row.get("cover_path") or "").strip()
-    if cover_src and Path(cover_src).is_file():
+    has_cover = bool(cover_src and Path(cover_src).is_file())
+    if has_cover:
         ext = Path(cover_src).suffix or ".png"
-        cover_dest = str(dest / f"cover{ext}")
-        shutil.copy2(cover_src, cover_dest)
-        files_written.append(Path(cover_dest).name)
+        shutil.copy2(cover_src, dest / f"cover{ext}")
+        files_written.append(f"cover{ext}")
 
     instructions = dest / "INSTRUCTIONS.md"
     instructions.write_text(
@@ -133,12 +104,7 @@ def export_article_to_outbox(
                 "- 不会将作品标记为「已发布」",
                 "- 复制上传后请在作品详情提交 **发布证明（proof）**",
                 "",
-                "## 文件",
-                "",
-                "- `article.md` — Markdown 正文",
-                "- `article.html` — 公众号风格 HTML 预览稿",
-                "- `cover.*` — 封面图（若有）",
-                "- `manifest.json` — 元数据",
+                f"目标平台：**{SUPPORTED_PLATFORMS[plat]['label']}**（`{plat}`）",
                 "",
             ]
         ),
@@ -146,9 +112,20 @@ def export_article_to_outbox(
     )
     files_written.append("INSTRUCTIONS.md")
 
+    platform_files = build_platform_pack(
+        dest,
+        platform=plat,
+        title=title,
+        digest=digest,
+        body=body,
+        has_cover=has_cover,
+    )
+    files_written.extend(platform_files)
+
     manifest = {
         "outbox_version": OUTBOX_VERSION,
-        "platform": platform,
+        "platform": plat,
+        "platform_label": SUPPORTED_PLATFORMS[plat]["label"],
         "article_id": article_id,
         "title": title,
         "digest_preview": digest,
@@ -159,16 +136,11 @@ def export_article_to_outbox(
         "proof_required": True,
         "note": "导出成功不等于发布成功",
     }
-    manifest_path = dest / "manifest.json"
-    manifest_path.write_text(
+    (dest / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     files_written.append("manifest.json")
-
-    platform_file = _write_platform_pack(dest, platform=platform, title=title, digest=digest)
-    if platform_file:
-        files_written.append(platform_file)
 
     db.log_event(
         conn,
@@ -176,21 +148,23 @@ def export_article_to_outbox(
         entity_id=article_id,
         event_type="outbox_exported",
         payload=json.dumps(
-            {"outbox_path": str(dest), "platform": platform, "files": files_written},
+            {"outbox_path": str(dest), "platform": plat, "files": files_written},
             ensure_ascii=False,
         ),
     )
     conn.commit()
 
+    label = SUPPORTED_PLATFORMS[plat]["label"]
     return {
         "ok": True,
         "article_id": article_id,
+        "platform": plat,
         "outbox_path": str(dest),
         "relative_path": str(dest.relative_to(config.root)),
         "files": files_written,
         "manifest": manifest,
         "human": [
-            f"已导出 outbox 包：{dest.name}",
+            f"已导出{label} outbox 包：{dest.name}",
             "请手动复制到目标平台后，在作品详情回填发布证明",
         ],
     }
@@ -219,6 +193,7 @@ def list_outbox_packages(config: AppConfig, *, limit: int = 30) -> list[dict[str
                 "title": meta.get("title"),
                 "exported_at": meta.get("exported_at"),
                 "platform": meta.get("platform", "generic"),
+                "platform_label": meta.get("platform_label"),
             }
         )
     return out

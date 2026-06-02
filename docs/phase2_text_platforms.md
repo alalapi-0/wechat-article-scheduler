@@ -11,7 +11,9 @@ Status: Active — Phase 1 微信闭环已验收（round_076）
 ## 已实现（round_077+）
 
 - 通用 outbox 导出：`export-outbox` CLI、`POST /api/articles/{id}/export-outbox`
-- 平台提示文件：`--platform zhihu|douban` 生成 `zhihu_copy.md` 等
+- 知乎发布包（round_079）：`zhihu_title.txt`、`zhihu_excerpt.txt`、`zhihu_body.md`、`zhihu_publish_checklist.md` 等
+- 豆瓣发布包（round_080）：`douban_title.txt`、`douban_tags_hint.md` 等
+- `GET /api/manual-export/platforms`
 
 ## 后续（backlog）
 

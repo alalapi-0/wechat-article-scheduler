@@ -29,7 +29,9 @@ def test_zhihu_platform_pack(tmp_path: Path) -> None:
     with db.connect(cfg.database_path) as conn:
         result = export_article_to_outbox(cfg, conn, aid, platform="zhihu")
     assert result["ok"]
-    assert (Path(result["outbox_path"]) / "zhihu_copy.md").is_file()
+    out = Path(result["outbox_path"])
+    assert (out / "zhihu_publish.md").is_file()
+    assert (out / "zhihu_title.txt").is_file()
 
 
 def test_phase2_doc_exists() -> None:

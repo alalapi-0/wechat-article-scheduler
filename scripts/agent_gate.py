@@ -132,6 +132,8 @@ ROUND_ORDER = [
     "round_076",
     "round_077",
     "round_078",
+    "round_079",
+    "round_080",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -916,6 +918,28 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "评估知乎/豆瓣 browser_assist（backlog）",
         ],
     },
+    "round_079": {
+        "name": "Round 79 - 知乎发布包模板",
+        "acceptance_criteria": [
+            "zhihu 专用字段文件与发布清单",
+            "CLI/Web --platform zhihu 与详情页导出入口",
+            "不联网、不自动发布、需 proof",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续豆瓣发布包或知乎 browser_assist 评估",
+        ],
+    },
+    "round_080": {
+        "name": "Round 80 - 豆瓣发布包模板",
+        "acceptance_criteria": [
+            "douban 专用字段与标签提示文件",
+            "platform=douban 导出与 API 平台列表",
+            "不声称 API 已支持",
+        ],
+        "next_actions": [
+            "评估知乎/豆瓣 browser_assist（backlog）",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1552,6 +1576,32 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest manual export platform",
+            ),
+        ]
+    elif round_id == "round_079":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_zhihu_publish_pack.py",
+                    "-q",
+                ],
+                "pytest zhihu publish pack",
+            ),
+        ]
+    elif round_id == "round_080":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_douban_publish_pack.py",
+                    "-q",
+                ],
+                "pytest douban publish pack",
             ),
         ]
     else:

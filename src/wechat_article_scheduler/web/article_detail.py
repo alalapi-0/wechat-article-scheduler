@@ -249,4 +249,9 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
         "preview_url": f"/api/articles/{article_id}/render-preview",
         "can_export_outbox": True,
         "outbox_hint": "导出 outbox 包后可手动复制到其他平台，并在本页提交发布证明",
+        "manual_export_platforms": [
+            {"id": "generic", "label": "通用"},
+            {"id": "zhihu", "label": "知乎"},
+            {"id": "douban", "label": "豆瓣"},
+        ],
     }

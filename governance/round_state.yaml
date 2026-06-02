@@ -1,16 +1,15 @@
 current_round:
-  id: round_078
-  name: Round 78 - Phase 2 平台提示包
-  status: completed
-  updated_at: '2026-06-02T20:15:00+00:00'
-  completed_at: '2026-06-02'
+  id: round_079
+  name: Round 79 - 知乎发布包模板
+  status: active
+  updated_at: '2026-06-02T21:00:00+00:00'
 last_completed_round:
   id: round_078
   completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- zhihu/douban 平台 copy 提示文件
-- phase2_text_platforms.md 启动说明
-- outbox 列表 API 可在 /debug 查看
+- zhihu 专用字段文件与发布清单
+- CLI/Web --platform zhihu 与详情页导出入口
+- 不联网、不自动发布、需 proof
 next_actions:
-- 评估知乎/豆瓣 browser_assist（backlog）或注册 round_079
+- 按 docs/roadmap_converged.md 继续豆瓣发布包或知乎 browser_assist 评估

@@ -69,6 +69,7 @@ from wechat_article_scheduler.adapters.browser_assist.workflow import (
     build_dry_run_plan,
 )
 from wechat_article_scheduler.adapters.manual_export import (
+    SUPPORTED_PLATFORMS,
     export_article_to_outbox,
     list_outbox_packages,
 )
@@ -366,6 +367,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     def api_outbox_packages(limit: int = 30) -> dict[str, Any]:
         items = list_outbox_packages(cfg, limit=min(max(limit, 1), 100))
         return {"count": len(items), "items": items}
+
+    @app.get("/api/manual-export/platforms")
+    def api_manual_export_platforms() -> dict[str, Any]:
+        """manual_export 支持的平台列表（不联网）。"""
+        return {
+            "platforms": [
+                {"id": k, **v} for k, v in SUPPORTED_PLATFORMS.items()
+            ]
+        }
 
     @app.get("/api/wechat-field-matrix")
     def api_wechat_field_matrix() -> dict[str, Any]:

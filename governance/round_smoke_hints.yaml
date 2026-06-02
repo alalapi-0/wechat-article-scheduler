@@ -95,3 +95,9 @@ round_077:
 
 round_078:
   - python3 -m pytest tests/test_manual_export_platform.py -q
+
+round_079:
+  - python3 -m pytest tests/test_zhihu_publish_pack.py -q
+
+round_080:
+  - python3 -m pytest tests/test_douban_publish_pack.py -q
