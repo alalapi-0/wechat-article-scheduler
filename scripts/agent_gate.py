@@ -114,6 +114,7 @@ ROUND_ORDER = [
     "round_058",
     "round_059",
     "round_060",
+    "round_061",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -697,7 +698,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "快照可经 API/CLI 写入 storage/preview_snapshots",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 6：封面资产管理",
+            "推进 Round 61：封面资产管理",
+        ],
+    },
+    "round_061": {
+        "name": "Round 61 - 封面资产管理",
+        "acceptance_criteria": [
+            "封面素材库可扫描并汇总绑定/孤儿状态",
+            "按作品文件名 stem 可自动绑定封面",
+            "无效 cover_path 可修复；孤儿封面可安全清理",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 7：封面裁剪与双比例预览",
         ],
     },
 }
@@ -1089,6 +1101,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "preview",
                 ],
                 "pytest preview snapshot",
+            ),
+        ]
+    elif round_id == "round_061":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_cover_manager.py",
+                    "tests/test_cover_assets.py",
+                    "-q",
+                ],
+                "pytest cover asset management",
             ),
         ]
     else:

@@ -824,7 +824,7 @@ project_specific_extensions:
       symbols:
         - ROUND_ORDER
         - ROUND_META
-    round_ids: round_000..round_060
+    round_ids: round_000..round_061
     sync_rule: "docs/rounds.md is the human authority for historical rounds; docs/roadmap_converged.md is the current execution roadmap; docs/backlog/ is long-term backlog only. ROUND_ORDER/ROUND_META in scripts/agent_gate.py, tests/test_agent_gate.py, and governance roadmap range fields must stay in sync in the same change set."
     web_console_policy:
       primary_layout: desktop_first_local_workbench

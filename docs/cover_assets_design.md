@@ -7,7 +7,7 @@
 ## 当前状态
 
 - 已实现：`RealWechatAdapter` 可上传默认封面（或 1x1 PNG 占位）
-- 设计中：`cover_assets/` 目录骨架
+- 已实现：多目录素材扫描、stem 绑定、无效路径修复、孤儿清理（见 `docs/cover_asset_management.md`）
 - 暂不做：完整封面裁剪与智能生成
 
 ## 规划

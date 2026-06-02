@@ -41,3 +41,6 @@ round_059:
 
 round_060:
   - python3 -m pytest tests/test_preview_snapshot.py tests/test_web_app.py -q -k preview
+
+round_061:
+  - python3 -m pytest tests/test_cover_manager.py tests/test_cover_assets.py -q

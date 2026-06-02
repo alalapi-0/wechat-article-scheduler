@@ -43,6 +43,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     snap_p = sub.add_parser("preview-snapshot", help="生成并保存公众号预览快照 (Round 60)")
     snap_p.add_argument("--article-id", type=int, required=True)
+
+    cover_p = sub.add_parser("cover-scan", help="扫描封面素材库 (Round 61)")
+    cover_p.add_argument("--bind", action="store_true", help="按文件名 stem 自动绑定")
+    cover_p.add_argument("--repair", action="store_true", help="清除无效 cover_path")
     return parser
 
 
@@ -102,6 +106,25 @@ def main(argv: list[str] | None = None) -> int:
                 f"[{row['id']}] {row['created_at']} {row['event_type']} "
                 f"{row['entity_type']}#{row['entity_id']} {row['payload_json'] or ''}"
             )
+        return 0
+
+    if args.command == "cover-scan":
+        from wechat_article_scheduler.cover_assets import (
+            bind_covers_by_stem,
+            repair_invalid_cover_paths,
+            scan_cover_assets,
+        )
+
+        with db.connect(config.database_path) as conn:
+            if args.repair:
+                rep = repair_invalid_cover_paths(config, conn)
+                print("; ".join(rep["human"]))
+            if args.bind:
+                bound = bind_covers_by_stem(config, conn)
+                print("; ".join(bound["human"]))
+            report = scan_cover_assets(config, conn)
+        for line in report["human"]:
+            print(line)
         return 0
 
     if args.command == "preview-snapshot":

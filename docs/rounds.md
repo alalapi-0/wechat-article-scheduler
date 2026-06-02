@@ -1322,6 +1322,24 @@
   - [x] 文档与 .gitignore
   - [x] agent_gate round_060 冒烟
 
+### Round 61 - 封面资产管理
+
+- 目标：建立微信公众号封面素材的本地扫描、绑定与孤儿清理能力。
+- 范围：`cover_assets/manager.py`、封面 API/CLI、Web 扫描入口、文档与测试。
+- 非目标：视频封面；多平台素材库；完整裁剪编辑器。
+- 输入：既有 `covers_dir`/`cover_assets`、`articles.cover_path`、默认 thumb 配置。
+- 输出：`docs/cover_asset_management.md`、扫描/绑定/修复/清理 API 与 `cover-scan` CLI。
+- 验收标准：单篇封面可绑定；缺省回退默认封面；无效路径可修复；孤儿可列出并安全删除。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_cover_manager.py tests/test_cover_assets.py -q`。
+- 退出标准：扫描报告准确；stem 绑定与孤儿清理有测试覆盖。
+- 风险：误删仍被引用的封面；绑定错 stem。
+- 回滚点：仅保留 `covers_dir` 单目录孤儿清理。
+- 交付项：
+  - [x] 封面资产管理模块
+  - [x] API/CLI 与 Web 扫描按钮
+  - [x] 多目录孤儿清理
+  - [x] agent_gate round_061 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

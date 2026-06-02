@@ -24,7 +24,13 @@ from wechat_article_scheduler.schedule_assign import (
 )
 from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.content_library import list_collections, list_content_items
-from wechat_article_scheduler.cover_assets import check_cover_path, index_cover_directory
+from wechat_article_scheduler.cover_assets import (
+    bind_covers_by_stem,
+    check_cover_path,
+    index_cover_directory,
+    repair_invalid_cover_paths,
+    scan_cover_assets,
+)
 from wechat_article_scheduler.preview_snapshot import (
     build_article_preview_package,
     latest_snapshot_path,
@@ -462,6 +468,26 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             conn.commit()
         return {"ok": True, **result}
 
+    @app.get("/api/covers/scan")
+    def covers_scan() -> dict[str, Any]:
+        """扫描封面素材库、绑定状态与孤儿文件。"""
+        with db.connect(cfg.database_path) as conn:
+            return scan_cover_assets(cfg, conn)
+
+    @app.post("/api/covers/bind")
+    async def covers_bind_stems() -> dict[str, Any]:
+        """按作品文件名 stem 自动绑定磁盘封面。"""
+        with db.connect(cfg.database_path) as conn:
+            result = bind_covers_by_stem(cfg, conn)
+        return {"ok": True, **result}
+
+    @app.post("/api/covers/repair")
+    async def covers_repair_paths() -> dict[str, Any]:
+        """清除指向不存在文件的 cover_path。"""
+        with db.connect(cfg.database_path) as conn:
+            result = repair_invalid_cover_paths(cfg, conn)
+        return {"ok": True, **result}
+
     @app.get("/api/jobs")
     def jobs(limit: int = 50) -> list[dict[str, Any]]:
         with db.connect(cfg.database_path) as conn:
@@ -726,6 +752,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             if cfg.wechat_default_thumb_path
             else None,
         )
+        with db.connect(cfg.database_path) as conn:
+            scan = scan_cover_assets(cfg, conn)
         return {
             "directory": str(roots[0]),
             "directories": [str(root) for root in roots],
@@ -739,6 +767,14 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 for item in indexed
             ],
             "publish_check": check,
+            "scan_summary": {
+                "asset_count": scan["asset_count"],
+                "missing_cover_count": scan["missing_cover_count"],
+                "broken_binding_count": scan["broken_binding_count"],
+                "bindable_count": scan["bindable_count"],
+                "orphan_count": scan["orphan_count"],
+                "human": scan["human"],
+            },
         }
 
     @app.get("/api/content-library")

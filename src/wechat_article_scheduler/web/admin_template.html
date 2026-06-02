@@ -443,6 +443,7 @@
               <button class="btn-ghost btn-sm" id="btnBulkCover" type="button" disabled>批量设置封面</button>
               <button class="btn-ghost btn-sm" id="btnBulkSchedule" type="button" disabled>批量发布设置</button>
               <button class="btn-ghost btn-sm" id="btnBulkTrash" type="button" disabled>删除选中</button>
+              <button class="btn-ghost btn-sm advanced-only" id="btnCoverScan" type="button" title="扫描素材库与绑定状态">扫描封面</button>
               <button class="btn-ghost btn-sm advanced-only" id="btnCleanupOrphanCovers" type="button" title="删除作品库未引用的封面文件">清理未引用封面</button>
             </div>
             <div class="works-wrap" id="worksWrap">
@@ -878,6 +879,8 @@ async function boot(){
   });
   el('btnBulkRestore').addEventListener('click', bulkRestoreSelected);
   el('btnPurgeTrash').addEventListener('click', purgeTrashBin);
+  const btnCoverScan = el('btnCoverScan');
+  if (btnCoverScan) btnCoverScan.addEventListener('click', scanCovers);
   const btnOrphanCovers = el('btnCleanupOrphanCovers');
   if (btnOrphanCovers) btnOrphanCovers.addEventListener('click', cleanupOrphanCovers);
   el('modalClose').addEventListener('click', () => el('modalBack').classList.remove('open'));
@@ -1684,6 +1687,19 @@ async function cancelJob(jobId){
     setAlert('ok', (d.human||['已取消任务']).join('；'));
     await refreshAll();
   } catch(e){ setAlert('err', '取消失败：'+e); }
+}
+
+async function scanCovers(){
+  try {
+    const d = await (await fetch('/api/covers/scan')).json();
+    const msg = (d.human || []).join('；');
+    setAlert('info', msg || '扫描完成');
+    if (d.bindable_count > 0 && window.confirm(`发现 ${d.bindable_count} 篇可按文件名自动绑定封面，是否现在绑定？`)) {
+      const bound = await (await fetch('/api/covers/bind', { method:'POST' })).json();
+      setAlert('ok', (bound.human || ['绑定完成']).join('；'));
+      await refreshAll();
+    }
+  } catch(e){ setAlert('err', '扫描失败：'+e); }
 }
 
 async function cleanupOrphanCovers(){
