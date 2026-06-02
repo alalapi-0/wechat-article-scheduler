@@ -228,6 +228,68 @@ def test_plan_skips_trashed_articles(app_config: AppConfig) -> None:
     assert gone not in planned_ids
 
 
+def test_delete_preview_counts_pending_jobs(app_config: AppConfig) -> None:
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        aid = _insert_article(conn)
+        conn.execute(
+            """
+            INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
+            VALUES (?, datetime('now'), 'pending', 'mock')
+            """,
+            (aid,),
+        )
+        conn.commit()
+    data = client.post("/api/articles/delete-preview", json={"ids": [aid]}).json()
+    assert data["article_count"] == 1
+    assert data["pending_jobs_to_cancel"] == 1
+
+
+def test_cancel_publish_job_api(app_config: AppConfig) -> None:
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        aid = _insert_article(conn)
+        conn.execute(
+            """
+            INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
+            VALUES (?, datetime('now'), 'pending', 'mock')
+            """,
+            (aid,),
+        )
+        conn.commit()
+        jid = int(conn.execute("SELECT id FROM publish_jobs").fetchone()[0])
+    assert client.post(f"/api/jobs/{jid}/cancel").status_code == 200
+    jobs = client.get("/api/jobs").json()
+    assert all(j.get("id") != jid for j in jobs)
+
+
+def test_orphan_cover_cleanup_skips_referenced(app_config: AppConfig) -> None:
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    used = app_config.covers_dir / "used.jpg"
+    orphan = app_config.covers_dir / "orphan.jpg"
+    used.write_bytes(b"\xff\xd8\xff" + b"\x00" * 8)
+    orphan.write_bytes(b"\xff\xd8\xff" + b"\x00" * 8)
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO articles (source_path, title, summary, body, content_hash, status, cover_path)
+            VALUES ('a.md', 't', '', 'b', 'h', 'imported', ?)
+            """,
+            (str(used),),
+        )
+        conn.commit()
+    listed = client.get("/api/covers/orphans").json()
+    assert listed["count"] == 1
+    assert listed["orphans"][0]["name"] == "orphan.jpg"
+    out = client.post("/api/covers/cleanup-orphans").json()
+    assert out["removed"] == 1
+    assert used.exists()
+    assert not orphan.exists()
+
+
 def test_bulk_trash_only_affects_selected(app_config: AppConfig) -> None:
     """Round 52：批量删除仅作用于选中作品。"""
     db.init_db(app_config.database_path)

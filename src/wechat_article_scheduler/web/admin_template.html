@@ -439,6 +439,7 @@
               <button class="btn-ghost btn-sm" id="btnBulkCover" type="button" disabled>批量设置封面</button>
               <button class="btn-ghost btn-sm" id="btnBulkSchedule" type="button" disabled>批量发布设置</button>
               <button class="btn-ghost btn-sm" id="btnBulkTrash" type="button" disabled>删除选中</button>
+              <button class="btn-ghost btn-sm advanced-only" id="btnCleanupOrphanCovers" type="button" title="删除作品库未引用的封面文件">清理未引用封面</button>
             </div>
             <div class="works-wrap" id="worksWrap">
               <div class="works-marquee" id="worksMarquee"></div>
@@ -869,6 +870,8 @@ async function boot(){
   });
   el('btnBulkRestore').addEventListener('click', bulkRestoreSelected);
   el('btnPurgeTrash').addEventListener('click', purgeTrashBin);
+  const btnOrphanCovers = el('btnCleanupOrphanCovers');
+  if (btnOrphanCovers) btnOrphanCovers.addEventListener('click', cleanupOrphanCovers);
   el('modalClose').addEventListener('click', () => el('modalBack').classList.remove('open'));
   el('modalBack').addEventListener('click', e => { if(e.target===el('modalBack')) el('modalBack').classList.remove('open'); });
   renderSteps();
@@ -1024,14 +1027,20 @@ function renderSchedule(s){
 
 function renderQueue(jobs){
   if (!jobs || !jobs.length) { el('queueBox').innerHTML = `<div class="empty" style="padding:14px;">${esc(L(COPY.empty,'jobs','还没有待发布作品'))}</div>`; return; }
-  const rows = jobs.map(j => `
+  const rows = jobs.map(j => {
+    const cancelBtn = j.status === 'pending'
+      ? `<button class="btn-ghost btn-sm" type="button" onclick="cancelJob(${j.id})">取消</button>`
+      : '';
+    return `
     <tr>
       <td>${esc(j.title||'（无标题）')}</td>
       <td>${esc(j.scheduled_at_label||'未安排')}</td>
       <td>${esc(j.publish_config_label||'—')}</td>
       <td><span class="pill ${pillForJob(j.status)}">${esc(L(COPY.job_status, j.status, j.status))}</span></td>
-    </tr>`).join('');
-  el('queueBox').innerHTML = `<table><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th></tr></thead><tbody>${rows}</tbody></table>`;
+      <td>${cancelBtn}</td>
+    </tr>`;
+  }).join('');
+  el('queueBox').innerHTML = `<table><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function pillForJob(s){ return s==='done'?'ok':(s==='failed'?'err':(s==='running'?'warn':'')); }
 
@@ -1067,7 +1076,7 @@ function renderWorks(arts){
         <div class="body">
           <div class="title"><label><input type="checkbox" data-sel-work="${a.id}" ${checked}/> ${esc(a.title||'（无标题）')}</label></div>
           <div class="summary">${summary}</div>
-          <div class="meta"><span class="pill ${pillCls}">${esc(statusLbl)}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}</div>
+          <div class="meta"><span class="pill ${pillCls}">${esc(statusLbl)}</span>${a.has_cover_config ? '<span class="chip">已设封面位置</span>' : ''}${(a.content_hints||[]).map(h => `<span class="chip">${esc(h)}</span>`).join('')}</div>
           <div class="acts">
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
             <button class="btn-ghost btn-sm" onclick="scheduleArticle(${a.id})">安排时间</button>
@@ -1653,10 +1662,38 @@ async function restoreArticle(id){
   } catch(e){ setAlert('err', '恢复失败：'+e); }
 }
 
+async function cancelJob(jobId){
+  if (!window.confirm('取消该待发布任务？作品仍保留在作品库，可重新安排时间。')) return;
+  try {
+    const d = await (await fetch(`/api/jobs/${jobId}/cancel`, { method:'POST' })).json();
+    setAlert('ok', (d.human||['已取消任务']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '取消失败：'+e); }
+}
+
+async function cleanupOrphanCovers(){
+  try {
+    const prev = await (await fetch('/api/covers/orphans')).json();
+    if (!prev.count) { setAlert('info', '没有未引用的封面文件'); return; }
+    if (!window.confirm(`将删除 ${prev.count} 个未被作品引用的封面文件，且不可恢复。确定吗？`)) return;
+    const d = await (await fetch('/api/covers/cleanup-orphans', { method:'POST' })).json();
+    setAlert('ok', (d.human||['清理完成']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '清理失败：'+e); }
+}
+
 async function bulkTrashSelected(){
   const ids = [...selectedWorkIds];
   if (!ids.length) { setAlert('warn', '请先勾选要删除的作品'); return; }
-  if (!window.confirm(`将 ${ids.length} 篇作品移入回收站？`)) return;
+  let impact = { human: [`将 ${ids.length} 篇作品移入回收站`] };
+  try {
+    impact = await (await fetch('/api/articles/delete-preview', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ ids }),
+    })).json();
+  } catch (e) { /* 降级为简短确认 */ }
+  const hint = (impact.human || []).join('\n');
+  if (!window.confirm(`${hint}\n\n移入回收站后可在回收站恢复。确定吗？`)) return;
   try {
     const d = await (await fetch('/api/articles/bulk-trash', {
       method:'POST', headers:{'Content-Type':'application/json'},

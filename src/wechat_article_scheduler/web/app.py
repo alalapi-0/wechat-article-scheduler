@@ -43,7 +43,10 @@ from wechat_article_scheduler.publish_config import (
     parse_publish_config,
     publish_config_from_payload,
 )
-from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
+from wechat_article_scheduler.web.publish_preflight import (
+    article_content_hints,
+    build_publish_preflight,
+)
 from wechat_article_scheduler.web.covers import (
     batch_set_cover_from_article,
     batch_set_cover_from_bytes,
@@ -52,6 +55,13 @@ from wechat_article_scheduler.web.covers import (
     resolve_cover_config,
 )
 from wechat_article_scheduler.web.uploads import handle_upload, save_cover_file
+from wechat_article_scheduler.web.bulk_manage import (
+    build_delete_impact,
+    bulk_cancel_publish_jobs,
+    cancel_publish_job,
+    cleanup_orphan_covers,
+    list_orphan_covers,
+)
 from wechat_article_scheduler.web.trash import (
     bulk_restore,
     bulk_soft_delete,
@@ -321,7 +331,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         with db.connect(cfg.database_path) as conn:
             rows = conn.execute(
                 """
-                SELECT a.id, a.title, a.summary, a.status, a.source_path, a.cover_path,
+                SELECT a.id, a.title, a.summary, a.body, a.status, a.source_path, a.cover_path,
                        a.cover_config_json, a.created_at, a.updated_at,
                        EXISTS(
                            SELECT 1 FROM wechat_drafts d WHERE d.article_id = a.id
@@ -349,6 +359,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 status=row.get("status"),
                 latest_job_status=row.get("latest_job_status"),
                 has_wechat_draft=row["has_wechat_draft"],
+            )
+            row["content_hints"] = article_content_hints(
+                row.get("title") or "",
+                row.get("body") or "",
             )
             out.append(row)
         return out
@@ -403,6 +417,48 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             **result,
             "human": [f"已彻底删除 {result['purged']} 篇回收站作品"],
         }
+
+    @app.post("/api/articles/delete-preview")
+    async def delete_impact_preview(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        ids = [int(x) for x in (payload.get("ids") or [])]
+        with db.connect(cfg.database_path) as conn:
+            impact = build_delete_impact(conn, ids)
+        return {"ok": True, **impact}
+
+    @app.post("/api/jobs/{job_id}/cancel")
+    async def cancel_job(job_id: int) -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            if not cancel_publish_job(conn, job_id):
+                raise HTTPException(status_code=404, detail="任务不存在或无法取消")
+            conn.commit()
+        await _sync_web_auto_runner(app, cfg)
+        return {"ok": True, "job_id": job_id, "human": ["已取消该待发布任务"]}
+
+    @app.post("/api/jobs/bulk-cancel")
+    async def bulk_cancel_jobs(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        job_ids = [int(x) for x in (payload.get("job_ids") or [])]
+        with db.connect(cfg.database_path) as conn:
+            stats = bulk_cancel_publish_jobs(conn, job_ids=job_ids)
+            conn.commit()
+        await _sync_web_auto_runner(app, cfg)
+        return {
+            "ok": True,
+            **stats,
+            "human": [f"已取消 {stats['cancelled']} 个待发布任务"],
+        }
+
+    @app.get("/api/covers/orphans")
+    def covers_orphans() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            items = list_orphan_covers(cfg, conn)
+        return {"count": len(items), "orphans": items}
+
+    @app.post("/api/covers/cleanup-orphans")
+    async def covers_cleanup_orphans() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            result = cleanup_orphan_covers(cfg, conn)
+            conn.commit()
+        return {"ok": True, **result}
 
     @app.get("/api/jobs")
     def jobs(limit: int = 50) -> list[dict[str, Any]]:

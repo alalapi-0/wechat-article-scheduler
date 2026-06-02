@@ -1,14 +1,14 @@
 current_round:
-  id: round_049
-  name: Round 49 - 公众号效果预览修正
+  id: round_052
+  name: Round 52 - 批量管理与删除一致性
   status: active
-  updated_at: '2026-06-02T05:29:56.838874+00:00'
+  updated_at: '2026-06-02T05:39:01.787038+00:00'
 last_completed_round:
-  id: round_048
-  completed_at: '2026-06-02T05:29:56.838874+00:00'
+  id: round_051
+  completed_at: '2026-06-02T05:39:01.787038+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 预览弹窗展示可读正文，不显示 HTML 标签源码
-- Web 预览与真实 draft 共用同源渲染入口
+- 作品、封面、未完成任务、回收站项都有清晰删除/恢复路径
+- 批量操作不会影响未选中作品
 next_actions:
-- 推进 Round 50：作品回收站与可逆删除
+- 推进 Round 53：发布前内容质量检查

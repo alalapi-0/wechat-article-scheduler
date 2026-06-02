@@ -73,6 +73,19 @@ def test_publish_preflight_mock_mode(client: TestClient) -> None:
     assert any("演练" in line for line in data["human"])
 
 
+def test_articles_include_content_hints(client: TestClient, app_config: AppConfig) -> None:
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            """
+            INSERT INTO articles (source_path, title, summary, body, content_hash, status)
+            VALUES ('a.md', '标题', '', '', 'h-empty', 'imported')
+            """
+        )
+        conn.commit()
+    arts = client.get("/api/articles").json()
+    assert any("正文为空" in (a.get("content_hints") or []) for a in arts)
+
+
 def test_format_scheduled_at():
     iso = "2026-05-31T14:30:00"
     assert "2026年05月31日" in format_scheduled_at(iso)
