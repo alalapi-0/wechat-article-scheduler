@@ -1,15 +1,16 @@
 current_round:
-  id: round_090
-  name: Round 90 - Phase3 视频内容包预研
-  status: active
-  updated_at: '2026-06-02T26:00:00+00:00'
-last_completed_round:
-  id: round_089
+  id: round_091
+  name: Round 91 - 微信闭环链路摘要
+  status: completed
+  updated_at: '2026-06-02T18:11:07.010826+00:00'
   completed_at: '2026-06-02'
+last_completed_round:
+  id: round_091
+  completed_at: '2026-06-02T18:11:07.010826+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- video dry-run 与 registry 占位
-- 不上传、不改 articles 表
-- video manifest 示例校验
+- wechat-chain-summary CLI/API
+- overview 含 recommended_next_action
+- scan/plan 主线不回归
 next_actions:
-- 微信链路摘要 round_091
+- 注册 round_092 或 Bilibili 导出预研
