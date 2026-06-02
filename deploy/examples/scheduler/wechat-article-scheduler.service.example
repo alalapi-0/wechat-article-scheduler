@@ -1,0 +1,19 @@
+# 复制到 /etc/systemd/system/wechat-article-scheduler.service 并编辑路径与用户。
+# sudo systemctl daemon-reload && sudo systemctl enable --now wechat-article-scheduler
+
+[Unit]
+Description=WeChat Article Scheduler (local publish jobs)
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_LINUX_USER
+WorkingDirectory=/absolute/path/to/wechat-article-scheduler
+EnvironmentFile=-/absolute/path/to/wechat-article-scheduler/.env
+Environment=WECHAT_MODE=mock
+ExecStart=/absolute/path/to/wechat-article-scheduler/scripts/run_scheduler_daemon.sh
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

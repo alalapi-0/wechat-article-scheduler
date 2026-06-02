@@ -163,7 +163,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不能无限重试；不能吞掉异常。
 - 下一轮衔接：进入 scheduler 常驻运行文档。
 
-### Round 15：scheduler 常驻运行文档
+### Round 15：scheduler 常驻运行文档（已完成 — agent `round_070`）
 
 - 本轮目标：说明个人本地如何长期运行 scheduler。
 - 具体任务：写 CLI、launchd、tmux、日志、停止、恢复和故障处理说明。

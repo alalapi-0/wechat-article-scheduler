@@ -68,3 +68,6 @@ round_068:
 
 round_069:
   - python3 -m pytest tests/test_scheduler_stability.py tests/test_scheduler_hardening.py -q
+
+round_070:
+  - python3 -m pytest tests/test_scheduler_runbook.py -q

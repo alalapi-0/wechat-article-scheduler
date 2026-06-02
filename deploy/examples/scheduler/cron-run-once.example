@@ -1,0 +1,9 @@
+# crontab -e
+# 每分钟执行 run-once（与常驻 scheduler 二选一，勿双开）
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+* * * * * /absolute/path/to/wechat-article-scheduler/scripts/cron_run_once.sh >> /absolute/path/to/wechat-article-scheduler/data/logs/cron.log 2>&1
+
+# 可选：每天凌晨扫描收件箱并排期（按需取消注释）
+# 5 8 * * * cd /absolute/path/to/wechat-article-scheduler && .venv/bin/python -m wechat_article_scheduler.cli scan && .venv/bin/python -m wechat_article_scheduler.cli plan

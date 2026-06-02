@@ -38,7 +38,20 @@ python -m wechat_article_scheduler.cli retry-failed
 
 当前定时发布是本地 scheduler 到点调用 API，不是把定时时间写入微信后台草稿箱。后者需要单独核验微信官方 API 是否支持；不支持时走 browser_assist + 人工确认。
 
-## 6. 摘要与渲染说明
+## 6. Scheduler 常驻运行（本地）
+
+默认 `WECHAT_MODE=mock` 演练，不联网。需要长期到点发布时，用 **CLI 进程** 或 **系统定时任务**，不要依赖浏览器标签页一直开着。
+
+| 方式 | 适用 | 启动 | 停止 |
+|------|------|------|------|
+| 前台 / tmux | 本机调试 | `python -m wechat_article_scheduler.cli scheduler-daemon` | Ctrl+C |
+| launchd | macOS | 见 `deploy/examples/scheduler/*.plist.example` | `launchctl stop` |
+| systemd | Linux | 见 `deploy/examples/scheduler/*.service.example` | `systemctl stop` |
+| cron | 轻量 | `scripts/cron_run_once.sh`（每分钟） | 删 crontab 行 |
+
+完整步骤、日志路径与故障处理见 **`docs/scheduler_runbook.md`**。健康检查：`scheduler-health`。勿同时跑常驻 `scheduler` 与 cron `run-once`（会争用锁）。
+
+## 7. 摘要与渲染说明
 
 - digest 摘要统一上限 120 字，发布前会自动兜底截断并记录 warning 事件。
 - Markdown 正文会按段落渲染为带 margin 的 `<p>` 标签（最小渲染骨架）。

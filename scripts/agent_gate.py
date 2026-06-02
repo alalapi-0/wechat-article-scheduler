@@ -123,6 +123,7 @@ ROUND_ORDER = [
     "round_067",
     "round_068",
     "round_069",
+    "round_070",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -808,6 +809,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "按 docs/roadmap_converged.md 继续 Round 15：scheduler 常驻运行文档",
         ],
     },
+    "round_070": {
+        "name": "Round 70 - Scheduler 常驻运行文档",
+        "acceptance_criteria": [
+            "scheduler_runbook：launchd/systemd/cron/tmux 与故障处理",
+            "deploy/examples/scheduler 可运行示例与包装脚本",
+            "README/用户手册/scheduler-daemon CLI",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 16：微信草稿更新能力",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1323,6 +1335,19 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest scheduler stability",
+            ),
+        ]
+    elif round_id == "round_070":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_scheduler_runbook.py",
+                    "-q",
+                ],
+                "pytest scheduler runbook",
             ),
         ]
     else:

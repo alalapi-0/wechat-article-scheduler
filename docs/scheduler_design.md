@@ -58,9 +58,10 @@ WHERE id = ?
 
 ## 8. 本地运行方式
 
-- CLI：`python -m wechat_article_scheduler.cli scheduler`。
+- CLI：`python -m wechat_article_scheduler.cli scheduler` / `scheduler-daemon`。
 - 手动：`python -m wechat_article_scheduler.cli run-once`。
 - 默认 mock 或 draft-only。
+- **常驻部署**（launchd / systemd / cron / tmux）：见 `docs/scheduler_runbook.md` 与 `deploy/examples/scheduler/`。
 
 ## 9. Web 控制台运行方式
 

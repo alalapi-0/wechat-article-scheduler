@@ -1479,6 +1479,23 @@
   - [x] scheduler-health
   - [x] agent_gate round_069 冒烟
 
+### Round 70 - Scheduler 常驻运行文档
+
+- 目标：用户能按文档在本机长期启动/停止 scheduler（mock 默认可演练）。
+- 范围：`docs/scheduler_runbook.md`、`deploy/examples/scheduler/`、包装脚本、`scheduler-daemon` CLI、README/用户手册。
+- 非目标：云部署安装器；复杂守护进程框架。
+- 输入：Round 69 稳定化（claim/锁/health）。
+- 输出：launchd/systemd/cron 示例、tmux 与故障处理说明。
+- 验收标准：示例文件齐全；手册区分 mock/real/草稿-only；pytest 通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_scheduler_runbook.py -q`。
+- 退出标准：gate round_070 通过。
+- 风险：用户同时开 scheduler 与 cron 导致锁冲突（文档已强调二选一）。
+- 回滚点：仅保留 CLI `scheduler` 单行说明。
+- 交付项：
+  - [x] scheduler_runbook 与 deploy 示例
+  - [x] run_scheduler_daemon.sh / cron_run_once.sh
+  - [x] agent_gate round_070 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

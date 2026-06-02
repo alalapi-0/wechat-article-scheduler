@@ -26,6 +26,10 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("plan", help="为已导入文章生成发布计划")
     sub.add_parser("run-once", help="执行所有已到期的发布任务")
     sub.add_parser("scheduler", help="后台轮询调度（阻塞）")
+    sub.add_parser(
+        "scheduler-daemon",
+        help="常驻调度（同 scheduler；见 docs/scheduler_runbook.md）",
+    )
     sub.add_parser("scheduler-health", help="调度器健康检查（队列/锁/卡住任务）")
 
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
@@ -77,7 +81,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"执行完成: {stats}")
         return 0
 
-    if args.command == "scheduler":
+    if args.command in ("scheduler", "scheduler-daemon"):
+        if args.command == "scheduler-daemon":
+            print(
+                "常驻调度已启动（WECHAT_MODE=%s）。停止：Ctrl+C。"
+                " 手册：docs/scheduler_runbook.md"
+                % config.wechat_mode
+            )
         try:
             scheduler_loop(config)
         except KeyboardInterrupt:

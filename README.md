@@ -120,6 +120,27 @@ python3 scripts/auto_approve_pipeline.py --round 1 --dry-run --skip-downstream -
 
 本地定时发布测试建议使用 Web 批量发布设置或 CLI 排期：把任务设为“正式发布”，并让本地 scheduler 到点执行。当前代码还没有把定时时间直接写入微信后台草稿箱。
 
+## Scheduler 常驻运行
+
+个人本地长期跑调度（**默认 mock**，不依赖浏览器开着）：
+
+```bash
+# 健康检查
+python3 -m wechat_article_scheduler.cli scheduler-health
+
+# 前台轮询（Ctrl+C 停止）
+python3 -m wechat_article_scheduler.cli scheduler-daemon
+
+# 或包装脚本（供 launchd / systemd 调用）
+bash scripts/run_scheduler_daemon.sh
+```
+
+- **运行手册**：`docs/scheduler_runbook.md`（tmux、launchd、systemd、cron、日志、故障处理）
+- **稳定化说明**：`docs/scheduler_stability.md`（claim、锁、退避重试）
+- **示例文件**：`deploy/examples/scheduler/`
+
+真实 API 测试请先在 `.env` 设 `WECHAT_MODE=real`；草稿-only 建议 `WECHAT_ENABLE_PUBLISH=false`。勿同时开常驻 `scheduler` 与 cron `run-once`。
+
 ## CLI 命令
 
 | 命令 | 说明 |
@@ -129,6 +150,8 @@ python3 scripts/auto_approve_pipeline.py --round 1 --dry-run --skip-downstream -
 | `plan` | 生成 `publish_jobs` |
 | `run-once` | 执行到期任务 |
 | `scheduler` | 后台轮询调度 |
+| `scheduler-daemon` | 常驻调度（同 scheduler，见运行手册） |
+| `scheduler-health` | 队列/锁/卡住任务健康检查 |
 | `reject --article-id N` | 从发布流程移除某篇文章 |
 | `retry-failed` | 重置失败任务为待执行 |
 | `events --limit N` | 查看审计事件 |
@@ -140,6 +163,7 @@ python3 scripts/auto_approve_pipeline.py --round 1 --dry-run --skip-downstream -
 - 产品愿景：`docs/product_vision.md`
 - 微信公众号优先架构：`docs/architecture.md`
 - 收敛路线图：`docs/roadmap_converged.md`
+- Scheduler 常驻手册：`docs/scheduler_runbook.md`
 - 平台优先级：`docs/platform_priority.md`
 - 微信 browser_assist 策略：`docs/wechat_browser_assist_strategy.md`
 - 历史权威轮次记录：`docs/rounds.md`
