@@ -124,12 +124,9 @@ def _purge_article_row(conn: sqlite3.Connection, cfg: AppConfig, article_id: int
     conn.execute("DELETE FROM wechat_drafts WHERE article_id = ?", (article_id,))
     conn.execute("DELETE FROM article_tags WHERE article_id = ?", (article_id,))
     conn.execute("DELETE FROM articles WHERE id = ?", (article_id,))
-    db.log_event(
-        conn,
-        entity_type="article",
-        entity_id=article_id,
-        event_type="article_purged",
-        payload=json.dumps({"files_removed": files_removed}),
+    conn.execute(
+        "DELETE FROM events WHERE entity_type = 'article' AND entity_id = ?",
+        (article_id,),
     )
     return {"article_id": article_id, "removed": True, "files_removed": files_removed}
 
