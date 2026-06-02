@@ -1,14 +1,16 @@
 current_round:
-  id: round_094
-  name: Round 94 - 小红书 manual_export 发布包
-  status: active
-  updated_at: '2026-06-02T28:00:00+00:00'
-last_completed_round:
-  id: round_093
+  id: round_095
+  name: Round 95 - 小红书 browser_assist 评估
+  status: completed
+  updated_at: '2026-06-02T18:17:48.779318+00:00'
   completed_at: '2026-06-02'
+last_completed_round:
+  id: round_095
+  completed_at: '2026-06-02T18:17:48.779318+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- xiaohongshu outbox 文件集
-- 不真上传
+- platform=xiaohongshu dry-run assessment deferred
+- browser-assist/platforms 含 xiaohongshu
+- /debug 可见小红书 JSON
 next_actions:
-- 小红书 browser_assist round_095
+- 注册 round_096 或微信修复轮
