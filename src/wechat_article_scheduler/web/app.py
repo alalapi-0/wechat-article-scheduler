@@ -481,6 +481,32 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.get("/api/short-video/platforms")
+    def api_short_video_platforms() -> dict[str, Any]:
+        from wechat_article_scheduler.content_packages.short_video_deferred import (
+            list_short_video_platforms,
+        )
+
+        items = list_short_video_platforms()
+        return {"count": len(items), "platforms": items}
+
+    @app.get("/api/short-video-plan")
+    def api_short_video_plan(
+        platform: str = "douyin",
+        article_id: str | None = None,
+    ) -> dict[str, Any]:
+        from wechat_article_scheduler.content_packages.short_video_deferred import (
+            build_short_video_deferred_plan,
+        )
+
+        try:
+            return build_short_video_deferred_plan(
+                platform=platform,
+                article_id=article_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.get("/api/wechat-chain-summary")
     def api_wechat_chain_summary() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
@@ -1309,6 +1335,8 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>Webhook 评估（generic）</h2><pre id="webhook-plan">加载中…</pre>
 <h2>Phase3 视频内容包预研</h2><pre id="video-package">加载中…</pre>
 <h2>微信闭环链路摘要</h2><pre id="wechat-chain">加载中…</pre>
+<h2>抖音 deferred 评估</h2><pre id="short-video-douyin">加载中…</pre>
+<h2>快手 deferred 评估</h2><pre id="short-video-kuaishou">加载中…</pre>
 <h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
 <h2>outbox 导出包</h2><pre id="outbox">加载中…</pre>
 <script>
@@ -1329,9 +1357,11 @@ Promise.all([
   fetch('/api/webhook-plan?channel=generic'),
   fetch('/api/video-package-plan?platform=bilibili'),
   fetch('/api/wechat-chain-summary'),
+  fetch('/api/short-video-plan?platform=douyin'),
+  fetch('/api/short-video-plan?platform=kuaishou'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1348,7 +1378,9 @@ Promise.all([
   document.getElementById('webhook-plan').textContent = JSON.stringify(await n.json(), null, 2);
   document.getElementById('video-package').textContent = JSON.stringify(await o.json(), null, 2);
   document.getElementById('wechat-chain').textContent = JSON.stringify(await p.json(), null, 2);
-  document.getElementById('waiting').textContent = JSON.stringify(await q.json(), null, 2);
-  document.getElementById('outbox').textContent = JSON.stringify(await r.json(), null, 2);
+  document.getElementById('short-video-douyin').textContent = JSON.stringify(await q.json(), null, 2);
+  document.getElementById('short-video-kuaishou').textContent = JSON.stringify(await r.json(), null, 2);
+  document.getElementById('waiting').textContent = JSON.stringify(await s.json(), null, 2);
+  document.getElementById('outbox').textContent = JSON.stringify(await t.json(), null, 2);
 });
 </script></body></html>"""

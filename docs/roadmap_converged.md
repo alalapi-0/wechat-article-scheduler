@@ -418,16 +418,16 @@ Phase 3 暂不开发。短视频和图文平台风控更高，当前仅保留 ba
 - 交付物：`docs/wechat_channels_browser_assist.md`。
 - 下一轮衔接：Round 35 抖音/快手预研或 round_098。
 
-### Round 35：抖音 / 快手发布包预研
+### Round 35：抖音 / 快手发布包预研（已完成 — agent `round_098`–`round_099`）
 
 - 本轮目标：预研短视频平台人工导出可能性。
-- 具体任务：整理内容包字段、风控风险和人工 proof。
-- 交付物：预研文档。
-- 验收标准：不实现 adapter。
+- 具体任务：`build_douyin_publish_pack` / `build_kuaishou_publish_pack`；`short-video-plan` deferred 评估。
+- 交付物：`docs/short_video_douyin_kuaishou.md`；不真上传。
+- 验收标准：export-outbox 骨架；assessment deferred。
 - 不做什么：不自动发布。
-- 允许改动范围：docs only。
+- 允许改动范围：manual_export、docs、tests。
 - 风险边界：高风控默认暂缓。
-- 下一轮衔接：进入 Phase 4 音频预研。
+- 下一轮衔接：Phase 4 音频预研或 round_100。
 
 ## Phase 4：音频与音乐平台，P3
 

@@ -193,6 +193,26 @@ BUILTIN_CAPABILITIES: tuple[AdapterCapability, ...] = (
         risk_level="high",
         notes="小红书发布包（export-outbox --platform xiaohongshu）；高风控，仅人工。",
     ),
+    AdapterCapability(
+        platform="douyin",
+        adapter_type="manual_export",
+        content_types=("video",),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="high",
+        notes="抖音发布包骨架（deferred）；export-outbox --platform douyin。",
+    ),
+    AdapterCapability(
+        platform="kuaishou",
+        adapter_type="manual_export",
+        content_types=("video",),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="high",
+        notes="快手发布包骨架（deferred）；export-outbox --platform kuaishou。",
+    ),
 )
 
 
@@ -254,4 +274,8 @@ def infer_platform_from_account_id(platform_account_id: str) -> str | None:
         return "wechat_channels"
     if "xiaohongshu" in lower or "xhs" in lower:
         return "xiaohongshu"
+    if "douyin" in lower or "dy_" in lower:
+        return "douyin"
+    if "kuaishou" in lower or "ks_" in lower or lower == "ks":
+        return "kuaishou"
     return None

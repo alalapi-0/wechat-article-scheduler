@@ -151,6 +151,8 @@ ROUND_ORDER = [
     "round_095",
     "round_096",
     "round_097",
+    "round_098",
+    "round_099",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1141,7 +1143,29 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "/debug 可见视频号 JSON",
         ],
         "next_actions": [
-            "注册 round_098 或微信修复轮",
+            "抖音/快手发布包 round_098",
+        ],
+    },
+    "round_098": {
+        "name": "Round 98 - 抖音/快手 manual_export 骨架",
+        "acceptance_criteria": [
+            "export-outbox douyin 与 kuaishou 文件集",
+            "含 video placeholder 与 deferred 说明",
+            "不真上传",
+        ],
+        "next_actions": [
+            "短视频 deferred 评估 round_099",
+        ],
+    },
+    "round_099": {
+        "name": "Round 99 - 抖音/快手 deferred 评估",
+        "acceptance_criteria": [
+            "short-video-plan recommendation=deferred",
+            "registry douyin/kuaishou manual_export",
+            "/debug 可见抖音/快手 JSON",
+        ],
+        "next_actions": [
+            "注册 round_100 或微信修复轮",
         ],
     },
 }
@@ -1957,6 +1981,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_wechat_channels_browser_assist.py", "-q"],
                 "pytest wechat channels browser assist",
+            ),
+        ]
+    elif round_id == "round_098":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_douyin_kuaishou_publish_pack.py", "-q"],
+                "pytest douyin kuaishou publish pack",
+            ),
+        ]
+    elif round_id == "round_099":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_short_video_deferred.py", "-q"],
+                "pytest short video deferred",
             ),
         ]
     else:

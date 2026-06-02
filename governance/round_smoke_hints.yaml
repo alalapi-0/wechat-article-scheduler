@@ -152,3 +152,9 @@ round_096:
 
 round_097:
   - python3 -m pytest tests/test_wechat_channels_browser_assist.py -q
+
+round_098:
+  - python3 -m pytest tests/test_douyin_kuaishou_publish_pack.py -q
+
+round_099:
+  - python3 -m pytest tests/test_short_video_deferred.py -q

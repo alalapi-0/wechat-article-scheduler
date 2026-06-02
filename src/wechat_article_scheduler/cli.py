@@ -89,6 +89,13 @@ def _build_parser() -> argparse.ArgumentParser:
     vp.add_argument("--title", type=str, default=None)
     vp.add_argument("--video-path", type=str, default=None)
 
+    svp = sub.add_parser(
+        "short-video-plan",
+        help="抖音/快手 deferred 评估 dry-run（不上传）",
+    )
+    svp.add_argument("--platform", type=str, default="douyin", help="douyin | kuaishou | ks")
+    svp.add_argument("--article-id", type=str, default=None)
+
     sub.add_parser("wechat-chain-summary", help="微信公众号闭环链路摘要 JSON")
 
     mark_wc = sub.add_parser(
@@ -110,7 +117,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--platform",
         type=str,
         default="generic",
-        help="generic | zhihu | douban | bilibili | xiaohongshu | wechat_channels",
+        help="generic | zhihu | douban | bilibili | xiaohongshu | wechat_channels | douyin | kuaishou",
     )
 
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
@@ -312,6 +319,24 @@ def main(argv: list[str] | None = None) -> int:
                 package_id=args.package_id,
                 title=args.title,
                 video_path=args.video_path,
+            )
+        except ValueError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "short-video-plan":
+        import json
+
+        from wechat_article_scheduler.content_packages.short_video_deferred import (
+            build_short_video_deferred_plan,
+        )
+
+        try:
+            plan = build_short_video_deferred_plan(
+                platform=args.platform,
+                article_id=args.article_id,
             )
         except ValueError as exc:
             print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))

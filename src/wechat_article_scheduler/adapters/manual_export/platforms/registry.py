@@ -8,8 +8,14 @@ from typing import Any, Callable
 from wechat_article_scheduler.adapters.manual_export.platforms.bilibili import (
     build_bilibili_publish_pack,
 )
+from wechat_article_scheduler.adapters.manual_export.platforms.douyin import (
+    build_douyin_publish_pack,
+)
 from wechat_article_scheduler.adapters.manual_export.platforms.douban import (
     build_douban_publish_pack,
+)
+from wechat_article_scheduler.adapters.manual_export.platforms.kuaishou import (
+    build_kuaishou_publish_pack,
 )
 from wechat_article_scheduler.adapters.manual_export.platforms.wechat_channels import (
     build_wechat_channels_publish_pack,
@@ -48,6 +54,14 @@ SUPPORTED_PLATFORMS: dict[str, dict[str, str]] = {
         "label": "微信视频号",
         "description": "视频号标题、描述、封面与视频占位；与公众号 API 分离",
     },
+    "douyin": {
+        "label": "抖音",
+        "description": "短视频发布包骨架（deferred，高风控，仅人工）",
+    },
+    "kuaishou": {
+        "label": "快手",
+        "description": "短视频发布包骨架（deferred，高风控，仅人工）",
+    },
 }
 
 _BUILDERS: dict[str, PackBuilder] = {
@@ -56,6 +70,8 @@ _BUILDERS: dict[str, PackBuilder] = {
     "bilibili": build_bilibili_publish_pack,
     "xiaohongshu": build_xiaohongshu_publish_pack,
     "wechat_channels": build_wechat_channels_publish_pack,
+    "douyin": build_douyin_publish_pack,
+    "kuaishou": build_kuaishou_publish_pack,
 }
 
 

@@ -1936,6 +1936,38 @@
   - [x] 视频号 dry-run
   - [x] agent_gate round_097 冒烟
 
+### Round 98 - 抖音/快手 manual_export 骨架
+
+- 目标：路线图 Round 35 — 短视频平台发布包预研（deferred，不真上传）。
+- 范围：`douyin.py`、`kuaishou.py`、`short_video_douyin_kuaishou.md`。
+- 非目标：登录；上传；browser_assist 自动化。
+- 输入：Phase3 高风控约束。
+- 输出：douyin_* / kuaishou_* 文件集。
+- 验收标准：`test_douyin_kuaishou_publish_pack` 通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_douyin_kuaishou_publish_pack.py -q`。
+- 退出标准：gate round_098。
+- 风险：违规营销与自动发布。
+- 回滚点：移除 douyin/kuaishou 平台。
+- 交付项：
+  - [x] 双平台发布包
+  - [x] agent_gate round_098 冒烟
+
+### Round 99 - 抖音/快手 deferred 评估
+
+- 目标：统一 deferred 评估 dry-run 与 registry。
+- 范围：`short_video_deferred.py`、`short-video-plan` CLI/API、`/debug`。
+- 非目标：实现 adapter 上传。
+- 输入：round_098 发布包。
+- 输出：recommendation=deferred 双平台。
+- 验收标准：`test_short_video_deferred` 通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_short_video_deferred.py -q`。
+- 退出标准：gate round_099。
+- 风险：误启动自动化运营。
+- 回滚点：移除 short-video API。
+- 交付项：
+  - [x] deferred 评估
+  - [x] agent_gate round_099 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

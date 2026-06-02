@@ -4,7 +4,7 @@
 
 ## 入口
 
-- CLI：`export-outbox --article-id N [--platform zhihu|douban|bilibili|xiaohongshu|wechat_channels|generic]`
+- CLI：`export-outbox --article-id N [--platform zhihu|douban|bilibili|xiaohongshu|wechat_channels|douyin|kuaishou|generic]`
 - Web：作品详情「导出 outbox 包」、`GET /api/outbox-packages`
 - 代码：`adapters.manual_export.export_article_to_outbox`
 
