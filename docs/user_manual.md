@@ -31,9 +31,10 @@ python -m wechat_article_scheduler.cli retry-failed
 
 在 `.env` 设置 `WECHAT_MODE=real` 并填写 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`。
 
-- `WECHAT_MODE=real` 是真实 API 测试模式，默认可验证草稿创建和正式发布接口。
-- 若 `WECHAT_ENABLE_PUBLISH=false`：强制草稿-only，仅创建真实草稿，不提交发布。
-- 任务级选择“正式发布”时才会提交发布；Web 工作台执行到点前会弹出二次确认并展示预检清单（模式 / 封面 / 摘要）。
+- `WECHAT_MODE=real` 是真实 API 测试模式；建议配合 `WECHAT_ENABLE_PUBLISH=false` 做草稿-only 验证。
+- 批量验证入口：`python3 scripts/real_api_check.py --samples 3`（报告见 `reports/real_api_runs/`）。
+- 无凭证时：`python3 scripts/real_api_check.py --dry-run --skip-if-blocked`（写报告、退出 0，不打印 secret）。
+- 任务级选择“正式发布”且 `WECHAT_ENABLE_PUBLISH=true` 时才会提交发布；Web 执行到点前二次确认并展示预检清单。
 
 当前定时发布是本地 scheduler 到点调用 API，不是把定时时间写入微信后台草稿箱。后者需要单独核验微信官方 API 是否支持；不支持时走 browser_assist + 人工确认。
 

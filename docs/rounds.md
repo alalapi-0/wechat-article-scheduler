@@ -1198,11 +1198,11 @@
 - 风险：误创建过多公众号草稿。
 - 回滚点：仅保留 token 探测，跳过 `draft/add`。
 - 交付项：
-  - [ ] real_api_check 脚本
-  - [ ] 样本 fixtures
-  - [ ] 报告目录与示例
-  - [ ] README / 帮助文案
-  - [ ] agent_gate round_054 冒烟
+  - [x] real_api_check 脚本
+  - [x] 样本 fixtures
+  - [x] 报告目录与示例
+  - [x] README / 帮助文案
+  - [x] agent_gate round_054 冒烟
 
 ### Round 55 - Auto-Approved Real API Pipeline
 

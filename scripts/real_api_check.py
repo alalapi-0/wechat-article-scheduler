@@ -113,6 +113,15 @@ class SampleResult:
 
 
 @dataclass
+class CredentialStatus:
+    wechat_mode: str = ""
+    has_app_id: bool = False
+    has_app_secret: bool = False
+    ready: bool = False
+    reason: str = ""
+
+
+@dataclass
 class RunReport:
     started_at: str
     provider: str = "wechat_official"
@@ -129,6 +138,9 @@ class RunReport:
     results: list[SampleResult] = field(default_factory=list)
     token_ok: bool = False
     blocking_reason: str = ""
+    credentials: CredentialStatus = field(default_factory=CredentialStatus)
+    dry_run: bool = False
+    token_only: bool = False
 
 
 def _quality_notes(title: str, body: str) -> list[str]:
@@ -144,6 +156,26 @@ def _quality_notes(title: str, body: str) -> list[str]:
     if len(body) > 20000:
         notes.append("正文过长，可能接近微信上限")
     return notes
+
+
+def credential_status(cfg: Any) -> CredentialStatus:
+    """检查是否具备真实 API 验证条件（不读取或打印 secret 值）。"""
+    mode = (getattr(cfg, "wechat_mode", None) or "mock").strip().lower()
+    has_id = bool((getattr(cfg, "wechat_app_id", None) or "").strip())
+    has_secret = bool((getattr(cfg, "wechat_app_secret", None) or "").strip())
+    status = CredentialStatus(
+        wechat_mode=mode,
+        has_app_id=has_id,
+        has_app_secret=has_secret,
+    )
+    if mode != "real":
+        status.reason = "WECHAT_MODE 不是 real"
+        return status
+    if not has_id or not has_secret:
+        status.reason = "缺少 WECHAT_APP_ID / WECHAT_APP_SECRET"
+        return status
+    status.ready = True
+    return status
 
 
 def _env_auto_approve(default: bool = False) -> bool:
@@ -176,6 +208,7 @@ def run_check(
     cfg = load_config()
     started = datetime.now(timezone.utc).isoformat()
     approve = _env_auto_approve(default=False) if auto_approve is None else auto_approve
+    creds = credential_status(cfg)
     report = RunReport(
         started_at=started,
         wechat_mode=cfg.wechat_mode,
@@ -184,13 +217,17 @@ def run_check(
         auto_approve=approve,
         allow_publish=allow_publish,
         samples_requested=samples,
+        credentials=creds,
+        dry_run=dry_run,
+        token_only=token_only,
     )
 
-    if cfg.wechat_mode != "real":
-        report.blocking_reason = "WECHAT_MODE 不是 real，无法执行真实 API 验证"
-        return report
-    if not cfg.wechat_app_id or not cfg.wechat_app_secret:
-        report.blocking_reason = "缺少 WECHAT_APP_ID / WECHAT_APP_SECRET"
+    if not creds.ready:
+        report.blocking_reason = (
+            f"{creds.reason}，无法执行真实 API 验证"
+            if creds.reason
+            else "无法执行真实 API 验证"
+        )
         return report
     if allow_publish:
         cfg.wechat_enable_publish = True
@@ -303,6 +340,16 @@ def _write_report(report: RunReport) -> Path:
         f"- failure: {report.failure_count}",
         "",
     ]
+    if report.credentials.reason or not report.credentials.ready:
+        lines.append(
+            f"- credentials: mode={report.credentials.wechat_mode} "
+            f"id={'yes' if report.credentials.has_app_id else 'no'} "
+            f"secret={'yes' if report.credentials.has_app_secret else 'no'}"
+        )
+    if report.dry_run:
+        lines.append("- dry_run: true")
+    if report.token_only:
+        lines.append("- token_only: true")
     if report.blocking_reason:
         lines.append(f"**blocking:** {report.blocking_reason}\n")
     for r in report.results:
@@ -342,6 +389,11 @@ def main() -> int:
         action="store_true",
         help="自动标记 review_status=auto_approved（也可用 AUTO_APPROVE_GENERATIONS=true）",
     )
+    parser.add_argument(
+        "--skip-if-blocked",
+        action="store_true",
+        help="无凭证或非 real 模式时仍写报告并以 0 退出（Agent/CI 用，不硬停整轮）",
+    )
     args = parser.parse_args()
 
     report = run_check(
@@ -357,7 +409,10 @@ def main() -> int:
     print(f"success={report.success_count} failure={report.failure_count}")
     if report.blocking_reason:
         print(f"blocking: {report.blocking_reason}", file=sys.stderr)
-    if report.mock_used or not report.token_ok:
+    blocked = bool(report.blocking_reason) and not report.token_ok
+    if args.skip_if_blocked and (report.mock_used or blocked):
+        return 0
+    if report.mock_used or (blocked and not args.token_only and not args.dry_run):
         return 2
     if report.failure_count > 0:
         return 1

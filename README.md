@@ -76,8 +76,8 @@ python3 -m wechat_article_scheduler.cli run-once
 | 模式 | 行为 |
 |---|---|
 | `WECHAT_MODE=mock` | 默认模式，不联网，生成 mock 草稿/发布结果 |
-| `WECHAT_MODE=real` | 真实 API 测试模式，默认允许测试草稿创建和 `freepublish/submit` |
-| `WECHAT_MODE=real` + `WECHAT_ENABLE_PUBLISH=false` | 强制草稿-only：只创建真实微信草稿，不提交正式发布 |
+| `WECHAT_MODE=real` | 真实 API 测试模式；`real_api_check` 与到点执行会联网 |
+| `WECHAT_MODE=real` + `WECHAT_ENABLE_PUBLISH=false` | 推荐：草稿-only，只创建真实微信草稿，不提交正式发布 |
 | `WECHAT_MODE=real` + 任务级正式发布 | 到点时允许调用 `freepublish/submit` |
 
 默认不联网；`WECHAT_MODE=real` 本身就是显式真实 API 测试开关。需要只测草稿箱时，设置 `WECHAT_ENABLE_PUBLISH=false`。任务级“仅草稿”仍不会触发正式发布。
@@ -86,13 +86,21 @@ python3 -m wechat_article_scheduler.cli run-once
 
 ## 真实 API 验证
 
-只验证 token、封面上传和草稿创建，不提交正式发布：
+样本见 `fixtures/real_api_samples/`；报告写入 `reports/real_api_runs/`。
+
+只验证 token、封面上传和草稿创建，不提交正式发布（推荐 `WECHAT_ENABLE_PUBLISH=false`）：
 
 ```bash
-WECHAT_MODE=real python3 scripts/real_api_check.py --samples 3
+WECHAT_MODE=real WECHAT_ENABLE_PUBLISH=false python3 scripts/real_api_check.py --samples 3
 ```
 
-验证正式发布接口，会调用 `freepublish/submit`：
+无本地凭证或仍为 mock 时，可 dry-run 并跳过硬失败（Agent 门控用）：
+
+```bash
+python3 scripts/real_api_check.py --dry-run --skip-if-blocked
+```
+
+验证正式发布接口，会调用 `freepublish/submit`（慎用）：
 
 ```bash
 WECHAT_MODE=real python3 scripts/real_api_check.py --samples 1 --publish

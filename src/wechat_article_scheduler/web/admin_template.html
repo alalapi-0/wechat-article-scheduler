@@ -504,6 +504,7 @@
             <div class="card pad help-text">
               <p style="margin-top:0;"><b>这是什么？</b> 一个把本地文章批量发布到微信公众号的工作台。顶部状态条显示当前模式：演练（不联网）、真实连接仅草稿、或真实发布（需二次确认）。</p>
               <p><b>怎么用？</b> ① 上传文章和封面 → ② 安排发布时间 → ③ 到时间后执行到点发布。</p>
+              <p><b>真实 API（高级）</b> 在 <code>.env</code> 设 <code>WECHAT_MODE=real</code> 与公众号凭证；推荐 <code>WECHAT_ENABLE_PUBLISH=false</code> 仅测草稿。命令行验证：<code>python3 scripts/real_api_check.py --samples 3</code>（报告在 <code>reports/real_api_runs/</code>）。</p>
               <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
             </div>
           </section>
