@@ -5,7 +5,7 @@ current_round:
   updated_at: '2026-06-02T18:27:22.803228+00:00'
   completed_at: '2026-06-02'
 last_completed_round:
-  id: round_100
+  id: round_101
   completed_at: '2026-06-02T18:27:22.803228+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:

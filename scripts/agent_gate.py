@@ -2326,6 +2326,17 @@ def cmd_advance(*, do_commit: bool, do_push: bool) -> int:
         print(f"下一轮入口: python scripts/agent_gate.py status")
     else:
         extra["advanced_to"] = "complete"
+        if yaml is not None:
+            data = load_round_state()
+            now = datetime.now(timezone.utc).isoformat()
+            data["last_completed_round"] = {
+                "id": round_id,
+                "completed_at": now,
+            }
+            ROUND_STATE_PATH.write_text(
+                yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
+                encoding="utf-8",
+            )
         print("All scripted rounds complete; 见 docs/rounds.md 维护后续规划")
 
     if do_push:
