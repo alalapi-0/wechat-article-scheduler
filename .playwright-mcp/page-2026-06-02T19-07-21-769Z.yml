@@ -1,0 +1,906 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 发布工作台
+      - generic [ref=e8]: 本地 · 安全发布
+    - navigation [ref=e9]:
+      - link "作品库" [ref=e10] [cursor=pointer]:
+        - /url: "#works"
+      - link "主操作" [ref=e11] [cursor=pointer]:
+        - /url: "#actions"
+      - link "发布队列" [ref=e12] [cursor=pointer]:
+        - /url: "#queue"
+      - link "微信草稿" [ref=e13] [cursor=pointer]:
+        - /url: "#drafts"
+      - link "草稿页" [ref=e14] [cursor=pointer]:
+        - /url: /drafts
+      - link "回收站" [ref=e15] [cursor=pointer]:
+        - /url: "#trash"
+      - link "操作记录" [ref=e16] [cursor=pointer]:
+        - /url: "#events"
+      - link "帮助" [ref=e17] [cursor=pointer]:
+        - /url: "#help"
+      - link "高级排错" [ref=e18] [cursor=pointer]:
+        - /url: /debug
+  - main [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - heading "微信公众号文章发布工作台" [level=1] [ref=e23]
+        - paragraph [ref=e24]: 像整理文档一样管理作品：上传、排期、预览、到点发布。顶部状态条会标明演练 / 真实草稿 / 真实发布，请先看再操作。
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - text: 演练模式：不联网，不会真的发到公众号 ·
+          - generic "与 scripts/auto_approve_pipeline.py 环境变量一致；不影响微信 scan/plan。" [ref=e993]: AUTO_APPROVE
+        - generic [ref=e28]:
+          - checkbox "显示高级信息" [ref=e29]
+          - text: 显示高级信息
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]:
+            - heading "概览" [level=2] [ref=e34]
+            - generic [ref=e35]: 作品与任务
+          - generic [ref=e36]:
+            - generic [ref=e994]:
+              - generic [ref=e995]: "19"
+              - generic [ref=e996]: 已收录作品
+            - generic [ref=e997]:
+              - generic [ref=e998]: "1"
+              - generic [ref=e999]: 已发布
+            - generic [ref=e1000]:
+              - generic [ref=e1001]: "13"
+              - generic [ref=e1002]: 待发布
+            - generic [ref=e1003]:
+              - generic [ref=e1004]: "22"
+              - generic [ref=e1005]: 已完成
+            - generic "查看失败队列" [ref=e1006] [cursor=pointer]:
+              - generic [ref=e1007]: "0"
+              - generic [ref=e1008]: 失败
+            - generic "查看失败队列" [ref=e1009] [cursor=pointer]:
+              - generic [ref=e1010]: "1"
+              - generic [ref=e1011]: 待人工确认
+          - generic [ref=e158]:
+            - generic [ref=e159]: 下一步 · 下一篇《004 是谁杀死了勇者》计划在 2026年06月03日 14:00 发布
+            - list [ref=e160]:
+              - listitem [ref=e1012]: 到时间后点「执行到点发布」
+              - listitem [ref=e1013]: 预检提示：有 20 篇文章摘要超过 120 字，发布前会自动截断
+              - listitem [ref=e1014]:
+                - code [ref=e1015]: python -m wechat_article_scheduler.cli plan
+          - generic [ref=e1017]:
+            - generic [ref=e1018]: 待人工确认 1 条 AUTO_APPROVE · 待人工确认 1 条，需提交发布证明
+            - list [ref=e1019]:
+              - listitem [ref=e1020]:
+                - link "003 是谁杀死了勇者" [ref=e1021] [cursor=pointer]:
+                  - /url: /articles/44#proof
+                - text: · 待提交证明
+            - generic [ref=e1022]:
+              - button "查看待确认队列" [ref=e1023] [cursor=pointer]
+              - button "全部快速确认" [ref=e1024] [cursor=pointer]
+          - paragraph [ref=e165]: 微信闭环建议：生成排期
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - heading "作品库" [level=2] [ref=e39]
+            - generic [ref=e40]: 上传即待发布
+          - generic [ref=e42] [cursor=pointer]:
+            - generic [ref=e43]: 拖拽作品和封面到这里
+            - generic [ref=e44]: 支持 md / txt / html 与 jpg / png / gif / webp；同名封面会自动绑定
+            - generic [ref=e45]:
+              - button "选择作品" [ref=e46]
+              - button "选择封面" [ref=e47]
+              - button "上传" [disabled] [ref=e48]
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: 合集
+              - combobox "合集" [ref=e52]:
+                - option "全部合集" [selected]
+                - option "默认集合 (20)"
+                - option "演示合集 (0)"
+            - generic [ref=e53]:
+              - checkbox "全选" [ref=e54]
+              - text: 全选
+            - button "取消全选" [ref=e55] [cursor=pointer]
+            - generic [ref=e56]: 已选 0 篇
+            - button "批量设置封面" [disabled] [ref=e57]
+            - button "批量发布设置" [disabled] [ref=e58]
+            - button "删除选中" [disabled] [ref=e59]
+          - generic [ref=e167]:
+            - generic [ref=e1025]:
+              - img "封面" [ref=e1027]
+              - generic [ref=e1028]:
+                - generic [ref=e1030]:
+                  - checkbox "020 是谁杀死了勇者" [ref=e1031]
+                  - text: 020 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1032]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1033]: 020 是谁杀死了勇者 发售纪念SS 麒麟儿3 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/20/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 隣村は壊滅的な被害を被っていた。無数の魔物たちが村の中を跋扈している。 邻村遭受了毁灭性的破坏。无
+                - generic [ref=e1034]:
+                  - generic [ref=e1035]: 已收录 · 微信草稿已创建
+                  - generic [ref=e1036]: 默认集合
+                  - generic [ref=e1037]: 已设封面位置
+                  - generic [ref=e1038]: 标题或重复首行
+                - generic [ref=e1039]:
+                  - link "详情" [ref=e1040] [cursor=pointer]:
+                    - /url: /articles/61
+                  - button "预览" [ref=e1041] [cursor=pointer]
+                  - button "安排时间" [ref=e1042] [cursor=pointer]
+                  - button "换封面" [ref=e1043] [cursor=pointer]
+                  - button "删除" [ref=e1044] [cursor=pointer]
+            - generic [ref=e1045]:
+              - img "封面" [ref=e1047]
+              - generic [ref=e1048]:
+                - generic [ref=e1050]:
+                  - checkbox "019 是谁杀死了勇者" [ref=e1051]
+                  - text: 019 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1052]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1053]: 019 是谁杀死了勇者 发售纪念SS 麒麟儿2 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/19/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 アレスの話は村を大きく揺るがした。 亚雷斯的话让村子大受震动。 アレスの言葉通り、逃げる準備を進め
+                - generic [ref=e1054]:
+                  - generic [ref=e1055]: 已收录 · 微信草稿已创建
+                  - generic [ref=e1056]: 默认集合
+                  - generic [ref=e1057]: 已设封面位置
+                  - generic [ref=e1058]: 标题或重复首行
+                - generic [ref=e1059]:
+                  - link "详情" [ref=e1060] [cursor=pointer]:
+                    - /url: /articles/60
+                  - button "预览" [ref=e1061] [cursor=pointer]
+                  - button "安排时间" [ref=e1062] [cursor=pointer]
+                  - button "换封面" [ref=e1063] [cursor=pointer]
+                  - button "删除" [ref=e1064] [cursor=pointer]
+            - generic [ref=e1065]:
+              - img "封面" [ref=e1067]
+              - generic [ref=e1068]:
+                - generic [ref=e1070]:
+                  - checkbox "018 是谁杀死了勇者" [ref=e1071]
+                  - text: 018 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1072]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1073]: 018 是谁杀死了勇者 发售纪念SS 麒麟儿1 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/18/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 ３日連続で投稿します。 接下来会连续三天投稿。 本編を読んだことを前提とした話となっておりますので
+                - generic [ref=e1074]:
+                  - generic [ref=e1075]: 已收录 · 微信草稿已创建
+                  - generic [ref=e1076]: 默认集合
+                  - generic [ref=e1077]: 已设封面位置
+                  - generic [ref=e1078]: 标题或重复首行
+                - generic [ref=e1079]:
+                  - link "详情" [ref=e1080] [cursor=pointer]:
+                    - /url: /articles/59
+                  - button "预览" [ref=e1081] [cursor=pointer]
+                  - button "安排时间" [ref=e1082] [cursor=pointer]
+                  - button "换封面" [ref=e1083] [cursor=pointer]
+                  - button "删除" [ref=e1084] [cursor=pointer]
+            - generic [ref=e1085]:
+              - img "封面" [ref=e1087]
+              - generic [ref=e1088]:
+                - generic [ref=e1090]:
+                  - checkbox "017 是谁杀死了勇者" [ref=e1091]
+                  - text: 017 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1092]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1093]: 017 是谁杀死了勇者 尾声 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/17/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 レティンの村に行くのには、それから少し時間がかかった。 后来，我们又花了一些时间才抵达雷廷村。 ソロンの転移魔法は一
+                - generic [ref=e1094]:
+                  - generic [ref=e1095]: 已收录 · 微信草稿已创建
+                  - generic [ref=e1096]: 默认集合
+                  - generic [ref=e1097]: 已设封面位置
+                  - generic [ref=e1098]: 标题或重复首行
+                - generic [ref=e1099]:
+                  - link "详情" [ref=e1100] [cursor=pointer]:
+                    - /url: /articles/58
+                  - button "预览" [ref=e1101] [cursor=pointer]
+                  - button "安排时间" [ref=e1102] [cursor=pointer]
+                  - button "换封面" [ref=e1103] [cursor=pointer]
+                  - button "删除" [ref=e1104] [cursor=pointer]
+            - generic [ref=e1105]:
+              - img "封面" [ref=e1107]
+              - generic [ref=e1108]:
+                - generic [ref=e1110]:
+                  - checkbox "016 是谁杀死了勇者" [ref=e1111]
+                  - text: 016 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1112]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1113]: 016 是谁杀死了勇者 断章8 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/16/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 この忌まわしい力が最初に発動したのは、魔王軍がこの城を攻め落とし、魔王自らが結界を破って、神殿へやってきたときだっ
+                - generic [ref=e1114]:
+                  - generic [ref=e1115]: 已收录 · 微信草稿已创建
+                  - generic [ref=e1116]: 默认集合
+                  - generic [ref=e1117]: 已设封面位置
+                  - generic [ref=e1118]: 标题或重复首行
+                - generic [ref=e1119]:
+                  - link "详情" [ref=e1120] [cursor=pointer]:
+                    - /url: /articles/57
+                  - button "预览" [ref=e1121] [cursor=pointer]
+                  - button "安排时间" [ref=e1122] [cursor=pointer]
+                  - button "换封面" [ref=e1123] [cursor=pointer]
+                  - button "删除" [ref=e1124] [cursor=pointer]
+            - generic [ref=e1125]:
+              - img "封面" [ref=e1127]
+              - generic [ref=e1128]:
+                - generic [ref=e1130]:
+                  - checkbox "015 是谁杀死了勇者" [ref=e1131]
+                  - text: 015 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1132]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1133]: 015 是谁杀死了勇者 其七 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/15/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 神殿は王城の地下にあった。 神殿位于王城地下。 城の地下に神殿を作ったのではなく、神殿があった場所に城を作ったという
+                - generic [ref=e1134]:
+                  - generic [ref=e1135]: 待发布（已排期）
+                  - generic [ref=e1136]: 默认集合
+                  - generic [ref=e1137]: 已设封面位置
+                  - generic [ref=e1138]: 标题或重复首行
+                - generic [ref=e1139]:
+                  - link "详情" [ref=e1140] [cursor=pointer]:
+                    - /url: /articles/56
+                  - button "预览" [ref=e1141] [cursor=pointer]
+                  - button "安排时间" [ref=e1142] [cursor=pointer]
+                  - button "换封面" [ref=e1143] [cursor=pointer]
+                  - button "删除" [ref=e1144] [cursor=pointer]
+            - generic [ref=e1145]:
+              - img "封面" [ref=e1147]
+              - generic [ref=e1148]:
+                - generic [ref=e1150]:
+                  - checkbox "014 是谁杀死了勇者" [ref=e1151]
+                  - text: 014 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1152]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1153]: 014 是谁杀死了勇者 其六 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/14/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 「シェラのことは解決したけど、ザックの居場所はわからないままよ？」 “希拉的事是解决了，可我们还是不知道扎克在哪里吧
+                - generic [ref=e1154]:
+                  - generic [ref=e1155]: 待发布（已排期）
+                  - generic [ref=e1156]: 默认集合
+                  - generic [ref=e1157]: 已设封面位置
+                  - generic [ref=e1158]: 标题或重复首行
+                - generic [ref=e1159]:
+                  - link "详情" [ref=e1160] [cursor=pointer]:
+                    - /url: /articles/55
+                  - button "预览" [ref=e1161] [cursor=pointer]
+                  - button "安排时间" [ref=e1162] [cursor=pointer]
+                  - button "换封面" [ref=e1163] [cursor=pointer]
+                  - button "删除" [ref=e1164] [cursor=pointer]
+            - generic [ref=e1165]:
+              - img "封面" [ref=e1167]
+              - generic [ref=e1168]:
+                - generic [ref=e1170]:
+                  - checkbox "013 是谁杀死了勇者" [ref=e1171]
+                  - text: 013 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1172]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1173]: 013 是谁杀死了勇者 断章7 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/13/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 ロゾロフ大森林の戦いを経て、僕はレオン、マリア、ソロンとパーティーを組むことになり、正式に勇者として認められた。
+                - generic [ref=e1174]:
+                  - generic [ref=e1175]: 待发布（已排期）
+                  - generic [ref=e1176]: 默认集合
+                  - generic [ref=e1177]: 已设封面位置
+                  - generic [ref=e1178]: 标题或重复首行
+                - generic [ref=e1179]:
+                  - link "详情" [ref=e1180] [cursor=pointer]:
+                    - /url: /articles/54
+                  - button "预览" [ref=e1181] [cursor=pointer]
+                  - button "安排时间" [ref=e1182] [cursor=pointer]
+                  - button "换封面" [ref=e1183] [cursor=pointer]
+                  - button "删除" [ref=e1184] [cursor=pointer]
+            - generic [ref=e1185]:
+              - img "封面" [ref=e1187]
+              - generic [ref=e1188]:
+                - generic [ref=e1190]:
+                  - checkbox "012 是谁杀死了勇者" [ref=e1191]
+                  - text: 012 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1192]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1193]: 012 是谁杀死了勇者 其五 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/12/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 「来たか」 “来了啊。” すんなり通された部屋には、待ち構えていたかのようにソロンが座っていた。いつものように紫色の
+                - generic [ref=e1194]:
+                  - generic [ref=e1195]: 待发布（已排期）
+                  - generic [ref=e1196]: 默认集合
+                  - generic [ref=e1197]: 已设封面位置
+                  - generic [ref=e1198]: 标题或重复首行
+                - generic [ref=e1199]:
+                  - link "详情" [ref=e1200] [cursor=pointer]:
+                    - /url: /articles/53
+                  - button "预览" [ref=e1201] [cursor=pointer]
+                  - button "安排时间" [ref=e1202] [cursor=pointer]
+                  - button "换封面" [ref=e1203] [cursor=pointer]
+                  - button "删除" [ref=e1204] [cursor=pointer]
+            - generic [ref=e1205]:
+              - img "封面" [ref=e1207]
+              - generic [ref=e1208]:
+                - generic [ref=e1210]:
+                  - checkbox "011 是谁杀死了勇者" [ref=e1211]
+                  - text: 011 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1212]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1213]: 011 是谁杀死了勇者 断章6 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/11/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 あのときから８年経った。 自那以后，已经过去了八年。 この森は何も変わっていない。空を覆うほど巨大で圧迫感のある木
+                - generic [ref=e1214]:
+                  - generic [ref=e1215]: 待发布（已排期）
+                  - generic [ref=e1216]: 默认集合
+                  - generic [ref=e1217]: 已设封面位置
+                  - generic [ref=e1218]: 标题或重复首行
+                - generic [ref=e1219]:
+                  - link "详情" [ref=e1220] [cursor=pointer]:
+                    - /url: /articles/52
+                  - button "预览" [ref=e1221] [cursor=pointer]
+                  - button "安排时间" [ref=e1222] [cursor=pointer]
+                  - button "换封面" [ref=e1223] [cursor=pointer]
+                  - button "删除" [ref=e1224] [cursor=pointer]
+            - generic [ref=e1225]:
+              - img "封面" [ref=e1227]
+              - generic [ref=e1228]:
+                - generic [ref=e1230]:
+                  - checkbox "010 是谁杀死了勇者" [ref=e1231]
+                  - text: 010 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1232]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1233]: 010 是谁杀死了勇者 断章5 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/10/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 結果的にアレスは何とか助かった。 结果，亚雷斯总算勉强保住了性命。 魔人がすぐに絶命したおかげで、首の傷も思ったよ
+                - generic [ref=e1234]:
+                  - generic [ref=e1235]: 待发布（已排期）
+                  - generic [ref=e1236]: 默认集合
+                  - generic [ref=e1237]: 已设封面位置
+                  - generic [ref=e1238]: 标题或重复首行
+                - generic [ref=e1239]:
+                  - link "详情" [ref=e1240] [cursor=pointer]:
+                    - /url: /articles/51
+                  - button "预览" [ref=e1241] [cursor=pointer]
+                  - button "安排时间" [ref=e1242] [cursor=pointer]
+                  - button "换封面" [ref=e1243] [cursor=pointer]
+                  - button "删除" [ref=e1244] [cursor=pointer]
+            - generic [ref=e1245]:
+              - img "封面" [ref=e1247]
+              - generic [ref=e1248]:
+                - generic [ref=e1250]:
+                  - checkbox "009 是谁杀死了勇者" [ref=e1251]
+                  - text: 009 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1252]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1253]: 009 是谁杀死了勇者 断章4 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/9/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 「ザックが一緒に来てくれて助かったよ」 “扎克能和我一起来，真是帮大忙了。” 村を離れ、大分歩いた後にアレスがポツリ
+                - generic [ref=e1254]:
+                  - generic [ref=e1255]: 待发布（已排期）
+                  - generic [ref=e1256]: 默认集合
+                  - generic [ref=e1257]: 已设封面位置
+                  - generic [ref=e1258]: 标题或重复首行
+                - generic [ref=e1259]:
+                  - link "详情" [ref=e1260] [cursor=pointer]:
+                    - /url: /articles/50
+                  - button "预览" [ref=e1261] [cursor=pointer]
+                  - button "安排时间" [ref=e1262] [cursor=pointer]
+                  - button "换封面" [ref=e1263] [cursor=pointer]
+                  - button "删除" [ref=e1264] [cursor=pointer]
+            - generic [ref=e1265]:
+              - img "封面" [ref=e1267]
+              - generic [ref=e1268]:
+                - generic [ref=e1270]:
+                  - checkbox "008 是谁杀死了勇者" [ref=e1271]
+                  - text: 008 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1272]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1273]: 008 是谁杀死了勇者 其四 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/8/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 その村は大きくもなく小さくもなく、山間によくある村のひとつだった。 那座村子不大也不小，是山间常见的村落之一。 王都か
+                - generic [ref=e1274]:
+                  - generic [ref=e1275]: 待发布（已排期）
+                  - generic [ref=e1276]: 默认集合
+                  - generic [ref=e1277]: 已设封面位置
+                  - generic [ref=e1278]: 标题或重复首行
+                - generic [ref=e1279]:
+                  - link "详情" [ref=e1280] [cursor=pointer]:
+                    - /url: /articles/49
+                  - button "预览" [ref=e1281] [cursor=pointer]
+                  - button "安排时间" [ref=e1282] [cursor=pointer]
+                  - button "换封面" [ref=e1283] [cursor=pointer]
+                  - button "删除" [ref=e1284] [cursor=pointer]
+            - generic [ref=e1285]:
+              - img "封面" [ref=e1287]
+              - generic [ref=e1288]:
+                - generic [ref=e1290]:
+                  - checkbox "007 是谁杀死了勇者" [ref=e1291]
+                  - text: 007 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1292]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1293]: 007 是谁杀死了勇者 断章3 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/7/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 自分に課した剣の修練と、週に一度開催されるマリアの試練にも次第に慣れた僕は、次なる目標に向けて進むことにした。 我渐
+                - generic [ref=e1294]:
+                  - generic [ref=e1295]: 待发布（已排期）
+                  - generic [ref=e1296]: 默认集合
+                  - generic [ref=e1297]: 已设封面位置
+                  - generic [ref=e1298]: 标题或重复首行
+                - generic [ref=e1299]:
+                  - link "详情" [ref=e1300] [cursor=pointer]:
+                    - /url: /articles/48
+                  - button "预览" [ref=e1301] [cursor=pointer]
+                  - button "安排时间" [ref=e1302] [cursor=pointer]
+                  - button "换封面" [ref=e1303] [cursor=pointer]
+                  - button "删除" [ref=e1304] [cursor=pointer]
+            - generic [ref=e1305]:
+              - img "封面" [ref=e1307]
+              - generic [ref=e1308]:
+                - generic [ref=e1310]:
+                  - checkbox "006 是谁杀死了勇者" [ref=e1311]
+                  - text: 006 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1312]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1313]: 006 是谁杀死了勇者 其三 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/6/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 「あいつは勇者などではない。ただの馬鹿だ」 “那家伙才不是什么勇者。只是个笨蛋罢了。” 大賢者と称えられる男は忌々しげ
+                - generic [ref=e1314]:
+                  - generic [ref=e1315]: 待发布（已排期）
+                  - generic [ref=e1316]: 默认集合
+                  - generic [ref=e1317]: 已设封面位置
+                  - generic [ref=e1318]: 标题或重复首行
+                - generic [ref=e1319]:
+                  - link "详情" [ref=e1320] [cursor=pointer]:
+                    - /url: /articles/47
+                  - button "预览" [ref=e1321] [cursor=pointer]
+                  - button "安排时间" [ref=e1322] [cursor=pointer]
+                  - button "换封面" [ref=e1323] [cursor=pointer]
+                  - button "删除" [ref=e1324] [cursor=pointer]
+            - generic [ref=e1325]:
+              - img "封面" [ref=e1327]
+              - generic [ref=e1328]:
+                - generic [ref=e1330]:
+                  - checkbox "005 是谁杀死了勇者" [ref=e1331]
+                  - text: 005 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1332]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1333]: 005 是谁杀死了勇者 断章2 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/5/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 学院では、戦士、僧侶、魔法使いと目指す職業でクラス分けされているのだが、専門分野しか学ぶことができなかった。これは完
+                - generic [ref=e1334]:
+                  - generic [ref=e1335]: 待发布（已排期）
+                  - generic [ref=e1336]: 默认集合
+                  - generic [ref=e1337]: 已设封面位置
+                  - generic [ref=e1338]: 标题或重复首行
+                - generic [ref=e1339]:
+                  - link "详情" [ref=e1340] [cursor=pointer]:
+                    - /url: /articles/46
+                  - button "预览" [ref=e1341] [cursor=pointer]
+                  - button "安排时间" [ref=e1342] [cursor=pointer]
+                  - button "换封面" [ref=e1343] [cursor=pointer]
+                  - button "删除" [ref=e1344] [cursor=pointer]
+            - generic [ref=e1345]:
+              - img "封面" [ref=e1347]
+              - generic [ref=e1348]:
+                - generic [ref=e1350]:
+                  - checkbox "004 是谁杀死了勇者" [ref=e1351]
+                  - text: 004 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1352]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1353]: 004 是谁杀死了勇者 其二 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/4/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 「私にとっても彼は勇者でした」 “对我而言，他也是勇者。” 勇者との関係を問われて、彼女は温和な笑みを浮かべて答えた。
+                - generic [ref=e1354]:
+                  - generic [ref=e1355]: 待发布（已排期）
+                  - generic [ref=e1356]: 默认集合
+                  - generic [ref=e1357]: 已设封面位置
+                  - generic [ref=e1358]: 标题或重复首行
+                - generic [ref=e1359]:
+                  - link "详情" [ref=e1360] [cursor=pointer]:
+                    - /url: /articles/45
+                  - button "预览" [ref=e1361] [cursor=pointer]
+                  - button "安排时间" [ref=e1362] [cursor=pointer]
+                  - button "换封面" [ref=e1363] [cursor=pointer]
+                  - button "删除" [ref=e1364] [cursor=pointer]
+            - generic [ref=e1365]:
+              - img "封面" [ref=e1367]
+              - generic [ref=e1368]:
+                - generic [ref=e1370]:
+                  - checkbox "003 是谁杀死了勇者" [ref=e1371]
+                  - text: 003 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1372]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1373]: 003 是谁杀死了勇者 断章1 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/3/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 学院に入学した直後、教室で声をかけられた。 刚进入学院不久，我就在教室里被人叫住了。 「おまえに勇者になる資格はない
+                - generic [ref=e1374]:
+                  - generic [ref=e1375]: 待人工确认 · 需回填发布证明
+                  - generic [ref=e1376]: 默认集合
+                  - generic [ref=e1377]: 已设封面位置
+                  - generic [ref=e1378]: 标题或重复首行
+                - generic [ref=e1379]:
+                  - link "详情" [ref=e1380] [cursor=pointer]:
+                    - /url: /articles/44
+                  - button "预览" [ref=e1381] [cursor=pointer]
+                  - button "安排时间" [ref=e1382] [cursor=pointer]
+                  - button "换封面" [ref=e1383] [cursor=pointer]
+                  - button "删除" [ref=e1384] [cursor=pointer]
+            - generic [ref=e1385]:
+              - img "封面" [ref=e1387]
+              - generic [ref=e1388]:
+                - generic [ref=e1390]:
+                  - checkbox "002 是谁杀死了勇者" [ref=e1391]
+                  - text: 002 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1392]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1393]: 002 是谁杀死了勇者 其一 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/2/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 「あいつは友だったよ」 “那家伙是我的朋友。” 勇者アレスとの関係性を聞いた時の、彼の答えは簡潔だった。 当被问及他与
+                - generic [ref=e1394]:
+                  - generic [ref=e1395]: 已发布
+                  - generic [ref=e1396]: 默认集合
+                  - generic [ref=e1397]: 已设封面位置
+                  - generic [ref=e1398]: 标题或重复首行
+                - generic [ref=e1399]:
+                  - link "详情" [ref=e1400] [cursor=pointer]:
+                    - /url: /articles/43
+                  - button "预览" [ref=e1401] [cursor=pointer]
+                  - button "安排时间" [ref=e1402] [cursor=pointer]
+                  - button "换封面" [ref=e1403] [cursor=pointer]
+                  - button "删除" [ref=e1404] [cursor=pointer]
+            - generic [ref=e1405]:
+              - img "封面" [ref=e1407]
+              - generic [ref=e1408]:
+                - generic [ref=e1410]:
+                  - checkbox "001 是谁杀死了勇者" [ref=e1411]
+                  - text: 001 是谁杀死了勇者
+                - generic "发布前检查" [ref=e1412]: 摘要超过 120 字，发布时将截断
+                - generic [ref=e1413]: 001 是谁杀死了勇者 序章 译者说明：本译文为駄犬老师作品《是谁杀死了勇者》的个人翻译，出于学习、整理与个人阅读目的制作。原文出处：https://ncode.syosetu.com/n1052ib/1/。并非官方译文；如需转载、引用或公开发布，请遵守原作者与原平台的版权规则。 この国の王家は女系だった。 这个国家的王家，是由女性血脉继承下来的。 元は神に仕える巫女の血筋だったらしいが、その時々
+                - generic [ref=e1414]:
+                  - generic [ref=e1415]: 待发布（已排期）
+                  - generic [ref=e1416]: 默认集合
+                  - generic [ref=e1417]: 已设封面位置
+                  - generic [ref=e1418]: 标题或重复首行
+                - generic [ref=e1419]:
+                  - link "详情" [ref=e1420] [cursor=pointer]:
+                    - /url: /articles/42
+                  - button "预览" [ref=e1421] [cursor=pointer]
+                  - button "安排时间" [ref=e1422] [cursor=pointer]
+                  - button "换封面" [ref=e1423] [cursor=pointer]
+                  - button "删除" [ref=e1424] [cursor=pointer]
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - heading "回收站" [level=2] [ref=e62]
+            - generic [ref=e63]: 可恢复或彻底删除
+          - generic [ref=e64]:
+            - button "恢复选中" [ref=e65] [cursor=pointer]
+            - button "清空回收站" [ref=e66] [cursor=pointer]
+          - generic [ref=e1425]: 回收站为空
+      - complementary [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - heading "发布计划" [level=2] [ref=e70]
+            - generic [ref=e71]: 下一步
+          - generic [ref=e72]:
+            - generic [ref=e73]: 下一篇《004 是谁杀死了勇者》计划在 2026年06月03日 14:00 发布 · 建议：生成排期
+            - generic [ref=e74]:
+              - button "扫描本地收件箱" [ref=e75] [cursor=pointer]
+              - button "生成排期" [ref=e76] [cursor=pointer]
+              - button "自定义安排…" [ref=e77] [cursor=pointer]
+              - button "执行到点发布" [ref=e78] [cursor=pointer]
+              - button "刷新" [ref=e79] [cursor=pointer]
+            - paragraph [ref=e570]: 收件箱暂无文稿（/Users/alalapi/PycharmProjects/wechat-article-scheduler/articles/inbox），可放入 .md/.txt 后重试
+            - paragraph [ref=e80]: 在作品库可单篇或批量指定发布时间；「自动推荐」按配置偏好时段排期。
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - heading "主操作" [level=2] [ref=e83]
+            - generic [ref=e84]: 三步完成
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - generic [ref=e87]: "1"
+              - generic [ref=e88]:
+                - text: 收录作品
+                - paragraph [ref=e89]: 拖拽上传，或扫描本地收件箱（articles/inbox）
+            - generic [ref=e90]:
+              - generic [ref=e91]: "2"
+              - generic [ref=e92]:
+                - text: 安排时间
+                - paragraph [ref=e93]: 自动推荐或自定义设定发布时间
+            - generic [ref=e94]:
+              - generic [ref=e95]: "3"
+              - generic [ref=e96]:
+                - text: 执行到点
+                - paragraph [ref=e97]: 到时间后执行发布或演练
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - heading "发布队列" [level=2] [ref=e100]
+            - generic [ref=e101]: 待发布 13 · 失败 0 · 已完成 22 · 最近排期 2026-06-03 14:00
+          - generic [ref=e102]:
+            - button "刷新队列" [ref=e104] [cursor=pointer]
+            - tablist "队列筛选" [ref=e105]:
+              - button "待发布" [ref=e106] [cursor=pointer]
+              - button "发布中" [ref=e107] [cursor=pointer]
+              - button "已完成" [ref=e108] [cursor=pointer]
+              - button "失败" [ref=e109] [cursor=pointer]
+              - button "待人工确认" [active] [ref=e110] [cursor=pointer]
+              - button "全部" [ref=e111] [cursor=pointer]
+            - generic [ref=e571]:
+              - generic [ref=e1426]:
+                - generic [ref=e1427]: AUTO_APPROVE 待人工确认 1 条 · 演练可提交 dry-run 占位证明
+                - button "全部快速确认" [ref=e1429] [cursor=pointer]
+              - table [ref=e1430]:
+                - rowgroup [ref=e1431]:
+                  - row "作品 计划时间 发布配置 状态 操作" [ref=e1432]:
+                    - columnheader "作品" [ref=e1433]
+                    - columnheader "计划时间" [ref=e1434]
+                    - columnheader "发布配置" [ref=e1435]
+                    - columnheader "状态" [ref=e1436]
+                    - columnheader "操作" [ref=e1437]
+                - rowgroup [ref=e1438]:
+                  - row "003 是谁杀死了勇者 可快速占位确认或去详情填写 2026年06月03日 09:00 待提交发布证明 待人工确认 填写证明 快速确认" [ref=e1439]:
+                    - cell "003 是谁杀死了勇者 可快速占位确认或去详情填写" [ref=e1440]:
+                      - link "003 是谁杀死了勇者" [ref=e1441] [cursor=pointer]:
+                        - /url: /articles/44#proof
+                      - generic [ref=e1442]: 可快速占位确认或去详情填写
+                    - cell "2026年06月03日 09:00" [ref=e1443]
+                    - cell "待提交发布证明" [ref=e1444]: 待提交发布证明
+                    - cell "待人工确认" [ref=e1445]:
+                      - generic [ref=e1446]: 待人工确认
+                    - cell "填写证明 快速确认" [ref=e1447]:
+                      - link "填写证明" [ref=e1448] [cursor=pointer]:
+                        - /url: /articles/44#proof
+                      - button "快速确认" [ref=e1449] [cursor=pointer]
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - heading "微信草稿" [level=2] [ref=e114]
+            - generic [ref=e115]: 共 22 条本地草稿记录
+          - generic [ref=e116]:
+            - paragraph [ref=e749]: 当前为演练模式：列表中的 media_id 均为本地记录，不代表公众号后台真实草稿。
+            - paragraph [ref=e117]: 仅显示本工具创建并写入数据库的草稿，不代表公众号后台全部草稿。
+            - tablist "草稿筛选" [ref=e118]:
+              - button "全部" [ref=e119] [cursor=pointer]
+              - button "已创建" [ref=e120] [cursor=pointer]
+            - table [ref=e1450]:
+              - rowgroup [ref=e1451]:
+                - row "作品 创建时间 草稿 ID 状态 操作" [ref=e1452]:
+                  - columnheader "作品" [ref=e1453]
+                  - columnheader "创建时间" [ref=e1454]
+                  - columnheader "草稿 ID" [ref=e1455]
+                  - columnheader "状态" [ref=e1456]
+                  - columnheader "操作" [ref=e1457]
+              - rowgroup [ref=e1458]:
+                - row "001 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-06-02 07:15:10 OM-U2wK7LzfNRgc4H6n-uV2aflND… 已更新 作品详情" [ref=e1459]:
+                  - cell "001 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1460]:
+                    - text: 001 是谁杀死了勇者
+                    - generic [ref=e1461]: 默认集合
+                    - generic [ref=e1462]: 可在作品详情继续排期或执行发布
+                  - cell "2026-06-02 07:15:10" [ref=e1463]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uV2aflND…" [ref=e1464]
+                  - cell "已更新" [ref=e1465]:
+                    - generic [ref=e1466]: 已更新
+                  - cell "作品详情" [ref=e1467]:
+                    - link "作品详情" [ref=e1468] [cursor=pointer]:
+                      - /url: /articles/42
+                - row "020 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:45:07 OM-U2wK7LzfNRgc4H6n-ud82FngE… 已创建 作品详情" [ref=e1469]:
+                  - cell "020 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1470]:
+                    - text: 020 是谁杀死了勇者
+                    - generic [ref=e1471]: 默认集合
+                    - generic [ref=e1472]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:45:07" [ref=e1473]
+                  - cell "OM-U2wK7LzfNRgc4H6n-ud82FngE…" [ref=e1474]
+                  - cell "已创建" [ref=e1475]:
+                    - generic [ref=e1476]: 已创建
+                  - cell "作品详情" [ref=e1477]:
+                    - link "作品详情" [ref=e1478] [cursor=pointer]:
+                      - /url: /articles/61
+                - row "019 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:44:06 OM-U2wK7LzfNRgc4H6n-ufzinN_J… 已创建 作品详情" [ref=e1479]:
+                  - cell "019 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1480]:
+                    - text: 019 是谁杀死了勇者
+                    - generic [ref=e1481]: 默认集合
+                    - generic [ref=e1482]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:44:06" [ref=e1483]
+                  - cell "OM-U2wK7LzfNRgc4H6n-ufzinN_J…" [ref=e1484]
+                  - cell "已创建" [ref=e1485]:
+                    - generic [ref=e1486]: 已创建
+                  - cell "作品详情" [ref=e1487]:
+                    - link "作品详情" [ref=e1488] [cursor=pointer]:
+                      - /url: /articles/60
+                - row "018 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:43:10 OM-U2wK7LzfNRgc4H6n-uc191Z45… 已创建 作品详情" [ref=e1489]:
+                  - cell "018 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1490]:
+                    - text: 018 是谁杀死了勇者
+                    - generic [ref=e1491]: 默认集合
+                    - generic [ref=e1492]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:43:10" [ref=e1493]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uc191Z45…" [ref=e1494]
+                  - cell "已创建" [ref=e1495]:
+                    - generic [ref=e1496]: 已创建
+                  - cell "作品详情" [ref=e1497]:
+                    - link "作品详情" [ref=e1498] [cursor=pointer]:
+                      - /url: /articles/59
+                - row "017 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:42:09 OM-U2wK7LzfNRgc4H6n-ubDKbpmC… 已创建 作品详情" [ref=e1499]:
+                  - cell "017 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1500]:
+                    - text: 017 是谁杀死了勇者
+                    - generic [ref=e1501]: 默认集合
+                    - generic [ref=e1502]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:42:09" [ref=e1503]
+                  - cell "OM-U2wK7LzfNRgc4H6n-ubDKbpmC…" [ref=e1504]
+                  - cell "已创建" [ref=e1505]:
+                    - generic [ref=e1506]: 已创建
+                  - cell "作品详情" [ref=e1507]:
+                    - link "作品详情" [ref=e1508] [cursor=pointer]:
+                      - /url: /articles/58
+                - row "016 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:41:08 OM-U2wK7LzfNRgc4H6n-uZVsZfK4… 已创建 作品详情" [ref=e1509]:
+                  - cell "016 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1510]:
+                    - text: 016 是谁杀死了勇者
+                    - generic [ref=e1511]: 默认集合
+                    - generic [ref=e1512]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:41:08" [ref=e1513]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uZVsZfK4…" [ref=e1514]
+                  - cell "已创建" [ref=e1515]:
+                    - generic [ref=e1516]: 已创建
+                  - cell "作品详情" [ref=e1517]:
+                    - link "作品详情" [ref=e1518] [cursor=pointer]:
+                      - /url: /articles/57
+                - row "015 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:40:07 OM-U2wK7LzfNRgc4H6n-uaPhpOxQ… 已创建 作品详情" [ref=e1519]:
+                  - cell "015 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1520]:
+                    - text: 015 是谁杀死了勇者
+                    - generic [ref=e1521]: 默认集合
+                    - generic [ref=e1522]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:40:07" [ref=e1523]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uaPhpOxQ…" [ref=e1524]
+                  - cell "已创建" [ref=e1525]:
+                    - generic [ref=e1526]: 已创建
+                  - cell "作品详情" [ref=e1527]:
+                    - link "作品详情" [ref=e1528] [cursor=pointer]:
+                      - /url: /articles/56
+                - row "014 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:39:05 OM-U2wK7LzfNRgc4H6n-ueqtgECA… 已创建 作品详情" [ref=e1529]:
+                  - cell "014 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1530]:
+                    - text: 014 是谁杀死了勇者
+                    - generic [ref=e1531]: 默认集合
+                    - generic [ref=e1532]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:39:05" [ref=e1533]
+                  - cell "OM-U2wK7LzfNRgc4H6n-ueqtgECA…" [ref=e1534]
+                  - cell "已创建" [ref=e1535]:
+                    - generic [ref=e1536]: 已创建
+                  - cell "作品详情" [ref=e1537]:
+                    - link "作品详情" [ref=e1538] [cursor=pointer]:
+                      - /url: /articles/55
+                - row "013 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:38:10 OM-U2wK7LzfNRgc4H6n-uTwsW6Ip… 已创建 作品详情" [ref=e1539]:
+                  - cell "013 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1540]:
+                    - text: 013 是谁杀死了勇者
+                    - generic [ref=e1541]: 默认集合
+                    - generic [ref=e1542]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:38:10" [ref=e1543]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uTwsW6Ip…" [ref=e1544]
+                  - cell "已创建" [ref=e1545]:
+                    - generic [ref=e1546]: 已创建
+                  - cell "作品详情" [ref=e1547]:
+                    - link "作品详情" [ref=e1548] [cursor=pointer]:
+                      - /url: /articles/54
+                - row "012 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:37:09 OM-U2wK7LzfNRgc4H6n-ue1Kt999… 已创建 作品详情" [ref=e1549]:
+                  - cell "012 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1550]:
+                    - text: 012 是谁杀死了勇者
+                    - generic [ref=e1551]: 默认集合
+                    - generic [ref=e1552]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:37:09" [ref=e1553]
+                  - cell "OM-U2wK7LzfNRgc4H6n-ue1Kt999…" [ref=e1554]
+                  - cell "已创建" [ref=e1555]:
+                    - generic [ref=e1556]: 已创建
+                  - cell "作品详情" [ref=e1557]:
+                    - link "作品详情" [ref=e1558] [cursor=pointer]:
+                      - /url: /articles/53
+                - row "011 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:36:08 OM-U2wK7LzfNRgc4H6n-uRcLzURe… 已创建 作品详情" [ref=e1559]:
+                  - cell "011 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1560]:
+                    - text: 011 是谁杀死了勇者
+                    - generic [ref=e1561]: 默认集合
+                    - generic [ref=e1562]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:36:08" [ref=e1563]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uRcLzURe…" [ref=e1564]
+                  - cell "已创建" [ref=e1565]:
+                    - generic [ref=e1566]: 已创建
+                  - cell "作品详情" [ref=e1567]:
+                    - link "作品详情" [ref=e1568] [cursor=pointer]:
+                      - /url: /articles/52
+                - row "010 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:35:07 OM-U2wK7LzfNRgc4H6n-uei9NJr1… 已创建 作品详情" [ref=e1569]:
+                  - cell "010 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1570]:
+                    - text: 010 是谁杀死了勇者
+                    - generic [ref=e1571]: 默认集合
+                    - generic [ref=e1572]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:35:07" [ref=e1573]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uei9NJr1…" [ref=e1574]
+                  - cell "已创建" [ref=e1575]:
+                    - generic [ref=e1576]: 已创建
+                  - cell "作品详情" [ref=e1577]:
+                    - link "作品详情" [ref=e1578] [cursor=pointer]:
+                      - /url: /articles/51
+                - row "009 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:34:10 OM-U2wK7LzfNRgc4H6n-uZC1sY3m… 已创建 作品详情" [ref=e1579]:
+                  - cell "009 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1580]:
+                    - text: 009 是谁杀死了勇者
+                    - generic [ref=e1581]: 默认集合
+                    - generic [ref=e1582]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:34:10" [ref=e1583]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uZC1sY3m…" [ref=e1584]
+                  - cell "已创建" [ref=e1585]:
+                    - generic [ref=e1586]: 已创建
+                  - cell "作品详情" [ref=e1587]:
+                    - link "作品详情" [ref=e1588] [cursor=pointer]:
+                      - /url: /articles/50
+                - row "008 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:33:09 OM-U2wK7LzfNRgc4H6n-uWpFaHqE… 已创建 作品详情" [ref=e1589]:
+                  - cell "008 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1590]:
+                    - text: 008 是谁杀死了勇者
+                    - generic [ref=e1591]: 默认集合
+                    - generic [ref=e1592]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:33:09" [ref=e1593]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uWpFaHqE…" [ref=e1594]
+                  - cell "已创建" [ref=e1595]:
+                    - generic [ref=e1596]: 已创建
+                  - cell "作品详情" [ref=e1597]:
+                    - link "作品详情" [ref=e1598] [cursor=pointer]:
+                      - /url: /articles/49
+                - row "007 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:32:09 OM-U2wK7LzfNRgc4H6n-uWjwiHYx… 已创建 作品详情" [ref=e1599]:
+                  - cell "007 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1600]:
+                    - text: 007 是谁杀死了勇者
+                    - generic [ref=e1601]: 默认集合
+                    - generic [ref=e1602]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:32:09" [ref=e1603]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uWjwiHYx…" [ref=e1604]
+                  - cell "已创建" [ref=e1605]:
+                    - generic [ref=e1606]: 已创建
+                  - cell "作品详情" [ref=e1607]:
+                    - link "作品详情" [ref=e1608] [cursor=pointer]:
+                      - /url: /articles/48
+                - row "006 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:31:08 OM-U2wK7LzfNRgc4H6n-uS1J6h_m… 已创建 作品详情" [ref=e1609]:
+                  - cell "006 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1610]:
+                    - text: 006 是谁杀死了勇者
+                    - generic [ref=e1611]: 默认集合
+                    - generic [ref=e1612]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:31:08" [ref=e1613]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uS1J6h_m…" [ref=e1614]
+                  - cell "已创建" [ref=e1615]:
+                    - generic [ref=e1616]: 已创建
+                  - cell "作品详情" [ref=e1617]:
+                    - link "作品详情" [ref=e1618] [cursor=pointer]:
+                      - /url: /articles/47
+                - row "005 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:30:08 OM-U2wK7LzfNRgc4H6n-uetNqlJI… 已创建 作品详情" [ref=e1619]:
+                  - cell "005 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1620]:
+                    - text: 005 是谁杀死了勇者
+                    - generic [ref=e1621]: 默认集合
+                    - generic [ref=e1622]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:30:08" [ref=e1623]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uetNqlJI…" [ref=e1624]
+                  - cell "已创建" [ref=e1625]:
+                    - generic [ref=e1626]: 已创建
+                  - cell "作品详情" [ref=e1627]:
+                    - link "作品详情" [ref=e1628] [cursor=pointer]:
+                      - /url: /articles/46
+                - row "004 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:29:06 OM-U2wK7LzfNRgc4H6n-uWVcWU8x… 已创建 作品详情" [ref=e1629]:
+                  - cell "004 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1630]:
+                    - text: 004 是谁杀死了勇者
+                    - generic [ref=e1631]: 默认集合
+                    - generic [ref=e1632]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:29:06" [ref=e1633]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uWVcWU8x…" [ref=e1634]
+                  - cell "已创建" [ref=e1635]:
+                    - generic [ref=e1636]: 已创建
+                  - cell "作品详情" [ref=e1637]:
+                    - link "作品详情" [ref=e1638] [cursor=pointer]:
+                      - /url: /articles/45
+                - row "003 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布 2026-05-31 21:28:05 OM-U2wK7LzfNRgc4H6n-uV-RX7_S… 已创建 作品详情" [ref=e1639]:
+                  - cell "003 是谁杀死了勇者 默认集合 可在作品详情继续排期或执行发布" [ref=e1640]:
+                    - text: 003 是谁杀死了勇者
+                    - generic [ref=e1641]: 默认集合
+                    - generic [ref=e1642]: 可在作品详情继续排期或执行发布
+                  - cell "2026-05-31 21:28:05" [ref=e1643]
+                  - cell "OM-U2wK7LzfNRgc4H6n-uV-RX7_S…" [ref=e1644]
+                  - cell "已创建" [ref=e1645]:
+                    - generic [ref=e1646]: 已创建
+                  - cell "作品详情" [ref=e1647]:
+                    - link "作品详情" [ref=e1648] [cursor=pointer]:
+                      - /url: /articles/44
+                - row "002 是谁杀死了勇者 默认集合 作品已发布，可在作品详情查看最终状态 2026-05-31 21:27:10 OM-U2wK7LzfNRgc4H6n-udgN2Myo… 已创建 作品详情" [ref=e1649]:
+                  - cell "002 是谁杀死了勇者 默认集合 作品已发布，可在作品详情查看最终状态" [ref=e1650]:
+                    - text: 002 是谁杀死了勇者
+                    - generic [ref=e1651]: 默认集合
+                    - generic [ref=e1652]: 作品已发布，可在作品详情查看最终状态
+                  - cell "2026-05-31 21:27:10" [ref=e1653]
+                  - cell "OM-U2wK7LzfNRgc4H6n-udgN2Myo…" [ref=e1654]
+                  - cell "已创建" [ref=e1655]:
+                    - generic [ref=e1656]: 已创建
+                  - cell "作品详情" [ref=e1657]:
+                    - link "作品详情" [ref=e1658] [cursor=pointer]:
+                      - /url: /articles/43
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - heading "操作记录" [level=2] [ref=e123]
+            - generic [ref=e124]: 最近
+          - list [ref=e1659]:
+            - listitem [ref=e1660]:
+              - generic [ref=e1661]: 2026-06-02 19:07:15
+              - generic [ref=e1662]: 进入待人工确认
+            - listitem [ref=e1663]:
+              - generic [ref=e1664]: 2026-06-02 18:54:27
+              - generic [ref=e1665]: 发布完成
+            - listitem [ref=e1666]:
+              - generic [ref=e1667]: 2026-06-02 18:54:27
+              - generic [ref=e1668]: draft_idempotent_reuse
+            - listitem [ref=e1669]:
+              - generic [ref=e1670]: 2026-06-02 18:54:27
+              - generic [ref=e1671]: digest_truncated_warning
+            - listitem [ref=e1672]:
+              - generic [ref=e1673]: 2026-06-02 18:54:27
+              - generic [ref=e1674]: job_misfire
+            - listitem [ref=e1675]:
+              - generic [ref=e1676]: 2026-06-02 18:30:31
+              - generic [ref=e1677]: 创建发布计划
+            - listitem [ref=e1678]:
+              - generic [ref=e1679]: 2026-06-02 07:15:10
+              - generic [ref=e1680]: draft_updated
+            - listitem [ref=e1681]:
+              - generic [ref=e1682]: 2026-06-02 05:33:18
+              - generic [ref=e1683]: article_restored
+            - listitem [ref=e1684]:
+              - generic [ref=e1685]: 2026-06-02 05:33:15
+              - generic [ref=e1686]: article_trashed
+            - listitem [ref=e1687]:
+              - generic [ref=e1688]: 2026-06-02 01:04:03
+              - generic [ref=e1689]: 微信草稿已创建
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - heading "帮助" [level=2] [ref=e128]
+            - generic [ref=e129]: 快速理解
+          - generic [ref=e130]:
+            - paragraph [ref=e131]: 这是什么？ 一个把本地文章批量发布到微信公众号的工作台。顶部状态条显示当前模式：演练（不联网）、真实连接仅草稿、或真实发布（需二次确认）。
+            - paragraph [ref=e132]: 怎么用？ ① 上传文章和封面 → ② 安排发布时间 → ③ 到时间后执行到点发布。
+            - paragraph [ref=e133]:
+              - text: 真实 API（高级） 在
+              - code [ref=e134]: .env
+              - text: 设
+              - code [ref=e135]: WECHAT_MODE=real
+              - text: 与公众号凭证；推荐
+              - code [ref=e136]: WECHAT_ENABLE_PUBLISH=false
+              - text: 仅测草稿。命令行验证：
+              - code [ref=e137]: python3 scripts/real_api_check.py --samples 3
+              - text: （报告在
+              - code [ref=e138]: reports/real_api_runs/
+              - text: ）。
+            - paragraph [ref=e139]:
+              - text: 更多见
+              - link "高级排错" [ref=e140] [cursor=pointer]:
+                - /url: /debug
+              - text: （开发者/排错用）。
