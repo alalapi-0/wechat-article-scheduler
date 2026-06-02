@@ -112,6 +112,7 @@ ROUND_ORDER = [
     "round_056",
     "round_057",
     "round_058",
+    "round_059",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -673,7 +674,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "相同 content_hash 不重复 create_draft",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 4：Markdown 到微信公众号 HTML 渲染器",
+            "推进 Round 59：微信公众号 HTML 渲染器（收敛 Phase 1 Round 4）",
+        ],
+    },
+    "round_059": {
+        "name": "Round 59 - 微信公众号 HTML 渲染器",
+        "acceptance_criteria": [
+            "预览与 draft/add 使用同源 render_for_publish",
+            "Markdown 标题/列表/引用/代码/内联样式稳定输出",
+            "正文不重复标题",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 5：公众号效果预览快照",
         ],
     },
 }
@@ -1042,6 +1054,13 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest digest errors idempotency",
+            ),
+        ]
+    elif round_id == "round_059":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_wechat_renderer.py", "tests/test_publish_preview.py", "-q"],
+                "pytest wechat html renderer",
             ),
         ]
     else:

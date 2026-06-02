@@ -1,4 +1,4 @@
-# 开发路线图（Round 0 ~ Round 58）
+# 开发路线图（Round 0 ~ Round 59）
 
 本文件是路线图**人类权威源**；机器可读状态见 `governance/round_state.yaml`，机器轮次注册表见 `scripts/agent_gate.py` 的 `ROUND_ORDER` / `ROUND_META`。
 任何轮次调整都必须同次同步 `tests/test_agent_gate.py` 与治理范围字段。
@@ -102,6 +102,7 @@
 | Round 56 | 路线收敛治理轮 | 已完成 |
 | Round 57 | 收敛后微信链路稳定化 | 已完成 |
 | Round 58 | 摘要错误码与草稿幂等 | 已完成 |
+| Round 59 | 微信公众号 HTML 渲染器 | 进行中 |
 
 ## 轮次字段规范
 
@@ -1284,6 +1285,24 @@
   - [x] 摘要统一与测试
   - [x] 草稿创建幂等实现与测试
   - [x] agent_gate round_058 冒烟
+
+### Round 59 - 微信公众号 HTML 渲染器
+
+- 目标：让本地 Markdown 稳定转换为公众号正文 HTML，预览与草稿同源。
+- 范围：`renderers/wechat.py`、发布预览、规则文档与 fixture 测试。
+- 非目标：复杂主题系统、多平台 renderer。
+- 输入：Round 58 摘要/幂等、`publish_preview`。
+- 输出：`docs/wechat_html_renderer.md`、渲染增强、测试样例。
+- 验收标准：Web 预览和 `draft/add` 同源；正文不重复标题；基础样式稳定。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_wechat_renderer.py tests/test_publish_preview.py -q`。
+- 退出标准：常见 Markdown 块级语法有覆盖测试；内嵌 HTML 不转义泄漏。
+- 风险：生成微信不接受的标签；破坏已有 HTML 输入。
+- 回滚点：仅保留旧版 `render_wechat_html` 子集。
+- 交付项：
+  - [x] 渲染规则文档
+  - [x] wechat 渲染器增强（列表/引用/代码/粗斜体）
+  - [x] 预览与 publish 同源测试
+  - [x] agent_gate round_059 冒烟
 
 ## 历史说明
 

@@ -35,3 +35,6 @@ round_057:
 
 round_058:
   - python3 -m pytest tests/test_digest_limits.py tests/test_wechat_digest_errors_idempotency.py tests/test_real_adapter.py -q
+
+round_059:
+  - python3 -m pytest tests/test_wechat_renderer.py tests/test_publish_preview.py -q

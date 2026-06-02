@@ -3,6 +3,7 @@
 - [当前状态审计](current_state_audit.md)
 - [微信主链路稳定性](wechat_chain_stability.md)
 - [摘要/错误码/幂等](wechat_digest_errors_idempotency.md)
+- [微信公众号 HTML 渲染器](wechat_html_renderer.md)
 - [路线收敛审计](route_convergence_audit.md)
 - [产品愿景](product_vision.md)
 - [微信公众号优先架构](architecture.md)

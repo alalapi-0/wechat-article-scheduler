@@ -12,7 +12,12 @@ from html.parser import HTMLParser
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$")
 _LIST_ITEM_RE = re.compile(r"^[-*]\s+(.+)$")
+_ORDERED_LIST_RE = re.compile(r"^\d+\.\s+(.+)$")
+_BLOCKQUOTE_RE = re.compile(r"^>\s?(.*)$")
+_FENCE_RE = re.compile(r"^```(\w*)?\s*$")
 _INLINE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)")
+_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+_ITALIC_RE = re.compile(r"(?<!\*)\*([^*]+?)\*(?!\*)")
 _HTML_START_RE = re.compile(r"^\s*<([a-zA-Z][\w:-]*)\b")
 
 _P_STYLE = "margin: 0 0 1em; line-height: 1.8; font-size: 16px; color: #222;"
@@ -21,6 +26,14 @@ _SPACER_STYLE = "margin: 0 0 1em; line-height: 1.6; font-size: 16px;"
 _H2_STYLE = "margin: 0 0 0.9em; line-height: 1.35; font-size: 22px; font-weight: 700; color: #111;"
 _H3_STYLE = "margin: 0 0 0.75em; line-height: 1.4; font-size: 18px; font-weight: 700; color: #111;"
 _LI_STYLE = "margin: 0 0 0.45em; line-height: 1.8; font-size: 16px; color: #222;"
+_QUOTE_STYLE = (
+    "margin: 0 0 1em; padding: 0.6em 0.9em; line-height: 1.7; font-size: 15px; "
+    "color: #555; border-left: 3px solid #ddd;"
+)
+_CODE_STYLE = (
+    "margin: 0 0 1em; padding: 0.75em; line-height: 1.5; font-size: 14px; "
+    "font-family: Menlo, Consolas, monospace; color: #333; background: #f6f6f6;"
+)
 
 
 class _InlineHTMLToWechat(HTMLParser):
@@ -58,21 +71,49 @@ class _InlineHTMLToWechat(HTMLParser):
         return "".join(self.parts)
 
 
-def _inline_markdown(text: str) -> str:
+def _apply_bold_italic(text: str) -> str:
+    """先处理粗体/斜体，再交给链接与转义逻辑。"""
+    parts: list[str] = []
+    pos = 0
+    for match in _BOLD_RE.finditer(text):
+        if match.start() > pos:
+            parts.append(_apply_italic_only(text[pos : match.start()]))
+        parts.append(f"<strong>{html.escape(match.group(1))}</strong>")
+        pos = match.end()
+    parts.append(_apply_italic_only(text[pos:]))
+    return "".join(parts)
+
+
+def _apply_italic_only(text: str) -> str:
     out: list[str] = []
     pos = 0
-    for match in _INLINE_RE.finditer(text):
+    for match in _ITALIC_RE.finditer(text):
         if match.start() > pos:
             out.append(html.escape(text[pos : match.start()]))
+        out.append(f"<em>{html.escape(match.group(1))}</em>")
+        pos = match.end()
+    out.append(html.escape(text[pos:]))
+    return "".join(out)
+
+
+def _inline_markdown(text: str) -> str:
+    base = _apply_bold_italic(text)
+    out: list[str] = []
+    pos = 0
+    for match in _INLINE_RE.finditer(base):
+        if match.start() > pos:
+            out.append(base[pos : match.start()])
         if match.group(0).startswith("!"):
             alt = html.escape(match.group(1) or "图片")
             out.append(f'<span style="color:#888;">[{alt}]</span>')
         else:
-            label = html.escape(match.group(3))
+            label = match.group(3)
+            if "<" not in label and ">" not in label:
+                label = html.escape(label)
             href = html.escape(match.group(4), quote=True)
             out.append(f'<a href="{href}">{label}</a>')
         pos = match.end()
-    out.append(html.escape(text[pos:]))
+    out.append(base[pos:])
     return "".join(out)
 
 
@@ -165,6 +206,42 @@ def render_wechat_html(markdown_text: str) -> str:
             out.append(f'<ul style="margin: 0 0 1em; padding-left: 1.2em;">{"".join(items)}</ul>')
             continue
 
+        if _ORDERED_LIST_RE.match(stripped):
+            items = []
+            while i < len(lines):
+                item = _ORDERED_LIST_RE.match(lines[i].strip())
+                if not item:
+                    break
+                items.append(f'<li style="{_LI_STYLE}">{_inline_markdown(item.group(1))}</li>')
+                i += 1
+            out.append(f'<ol style="margin: 0 0 1em; padding-left: 1.2em;">{"".join(items)}</ol>')
+            continue
+
+        if _BLOCKQUOTE_RE.match(stripped):
+            quotes: list[str] = []
+            while i < len(lines):
+                q = _BLOCKQUOTE_RE.match(lines[i].strip())
+                if not q:
+                    break
+                if q.group(1).strip():
+                    quotes.append(q.group(1).strip())
+                i += 1
+            inner = "<br/>".join(_inline_markdown(q) for q in quotes)
+            out.append(f'<p style="{_QUOTE_STYLE}">{inner}</p>')
+            continue
+
+        if _FENCE_RE.match(stripped):
+            i += 1
+            code_lines: list[str] = []
+            while i < len(lines) and not _FENCE_RE.match(lines[i].strip()):
+                code_lines.append(lines[i])
+                i += 1
+            if i < len(lines) and _FENCE_RE.match(lines[i].strip()):
+                i += 1
+            code_text = html.escape("\n".join(code_lines))
+            out.append(f'<p style="{_CODE_STYLE}">{code_text}</p>')
+            continue
+
         paragraph: list[str] = []
         while i < len(lines):
             current = lines[i]
@@ -175,6 +252,9 @@ def render_wechat_html(markdown_text: str) -> str:
                 _HEADING_RE.match(current_stripped)
                 or _HTML_START_RE.match(current)
                 or _LIST_ITEM_RE.match(current_stripped)
+                or _ORDERED_LIST_RE.match(current_stripped)
+                or _BLOCKQUOTE_RE.match(current_stripped)
+                or _FENCE_RE.match(current_stripped)
             ):
                 break
             paragraph.append(current.rstrip())

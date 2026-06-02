@@ -42,7 +42,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：不能吞掉微信 API 错误；不能在日志打印 token。
 - 下一轮衔接：进入微信公众号 HTML 渲染器。
 
-### Round 4：Markdown 到微信公众号 HTML 渲染器
+### Round 4：Markdown 到微信公众号 HTML 渲染器（已完成 — agent `round_059`）
 
 - 本轮目标：让本地 Markdown 稳定转换为公众号正文 HTML。
 - 具体任务：整理标题、段落、列表、引用、图片、链接和内联样式规则；补 fixture 和快照测试。
