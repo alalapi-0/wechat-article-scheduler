@@ -1,17 +1,15 @@
 current_round:
-  id: round_122
-  name: Round 122 - 文档同步与维护冒烟
-  status: completed
-  updated_at: '2026-06-02T19:45:05.737028+00:00'
-  completed_at: '2026-06-02'
+  id: round_123
+  name: Round 123 - 高级面板路线图位置
+  status: active
+  updated_at: '2026-06-02T19:49:59.557622+00:00'
 last_completed_round:
   id: round_122
-  completed_at: '2026-06-02T19:46:16.064607+00:00'
+  completed_at: '2026-06-02T19:49:59.557622+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- docs/rounds.md 108–121 摘要表
-- ROUND_META summary 简述
-- test_round_102 hash/返回上下文断言
-- mock@8080 /#queue 冒烟
+- /api/status 只读 roadmap_hint 与 last_completed_round
+- 高级面板 advRoadmap 显示位置与 doc 链接
+- mock@8080 开启高级信息后可见
 next_actions:
-- 在 docs/rounds.md 规划 round_123 后续能力
+- 在 docs/rounds.md 规划 round_124 后续能力
