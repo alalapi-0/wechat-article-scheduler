@@ -109,8 +109,69 @@ def test_purge_removes_db_and_safe_files(app_config: AppConfig) -> None:
         assert conn.execute("SELECT id FROM articles WHERE id = ?", (aid,)).fetchone() is None
 
 
+def test_purge_does_not_remove_active_articles(app_config: AppConfig) -> None:
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        active = _insert_article(conn, title="仍保留")
+        conn.commit()
+    out = client.post("/api/trash/purge").json()
+    assert out["purged"] == 0
+    assert any(a["id"] == active for a in client.get("/api/articles").json())
+
+
+def test_purge_removes_article_events(app_config: AppConfig) -> None:
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        aid = _insert_article(conn)
+        conn.execute(
+            """
+            INSERT INTO events (entity_type, entity_id, event_type, payload_json)
+            VALUES ('article', ?, 'article_trashed', '{}')
+            """,
+            (aid,),
+        )
+        conn.execute(
+            "UPDATE articles SET deleted_at = datetime('now') WHERE id = ?",
+            (aid,),
+        )
+        conn.commit()
+    client.post("/api/trash/purge")
+    with db.connect(app_config.database_path) as conn:
+        assert (
+            conn.execute(
+                "SELECT id FROM events WHERE entity_type = 'article' AND entity_id = ?",
+                (aid,),
+            ).fetchone()
+            is None
+        )
+
+
 def test_safe_unlink_rejects_outside_root(app_config: AppConfig) -> None:
     assert safe_unlink(app_config, "/etc/passwd") is False
+
+
+def test_plan_skips_trashed_articles(app_config: AppConfig) -> None:
+    """软删除作品不参与排期，未删除作品仍可 plan。"""
+    from wechat_article_scheduler.plan import build_plan
+
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        keep = _insert_article(conn, title="保留")
+        gone = _insert_article(conn, title="回收")
+        conn.commit()
+    client.post(f"/api/articles/{gone}/trash")
+    stats = build_plan(app_config)
+    assert stats["planned"] >= 1
+    with db.connect(app_config.database_path) as conn:
+        rows = conn.execute(
+            "SELECT article_id FROM publish_jobs WHERE status = 'pending'"
+        ).fetchall()
+        planned_ids = {int(r["article_id"]) for r in rows}
+    assert keep in planned_ids
+    assert gone not in planned_ids
 
 
 def test_bulk_trash_and_restore(app_config: AppConfig) -> None:
