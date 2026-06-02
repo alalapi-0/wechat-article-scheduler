@@ -1872,6 +1872,38 @@
   - [x] bilibili dry-run
   - [x] agent_gate round_093 冒烟
 
+### Round 94 - 小红书 manual_export 发布包
+
+- 目标：路线图 Round 32 — 小红书图文/笔记发布包预研（不真上传）。
+- 范围：`platforms/xiaohongshu.py`、`xiaohongshu_manual_export.md`。
+- 非目标：图集/视频二进制；自动发布；登录小红书。
+- 输入：manual_export 框架、Phase3 高风控约束。
+- 输出：xhs_* 文件集与发布清单。
+- 验收标准：`test_xiaohongshu_publish_pack` 通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_xiaohongshu_publish_pack.py -q`。
+- 退出标准：gate round_094。
+- 风险：合规与导流违规文案。
+- 回滚点：移除 xiaohongshu 平台。
+- 交付项：
+  - [x] 小红书发布包
+  - [x] agent_gate round_094 冒烟
+
+### Round 95 - 小红书 browser_assist 评估
+
+- 目标：路线图 Round 33 — 小红书填表辅助评估（dry-run）。
+- 范围：`xiaohongshu_workflow.py`、`/debug`、API/CLI。
+- 非目标：批量灌水；保存 cookie。
+- 输入：round_094 发布包。
+- 输出：assessment deferred；platform xhs 别名。
+- 验收标准：`browser-assist-plan?platform=xiaohongshu` 可生成。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_xiaohongshu_browser_assist.py -q`。
+- 退出标准：gate round_095；`/debug` 可见小红书 JSON。
+- 风险：误作自动化运营工具。
+- 回滚点：移除 xhs 分支。
+- 交付项：
+  - [x] xhs dry-run
+  - [x] agent_gate round_095 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

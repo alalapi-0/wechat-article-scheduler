@@ -147,6 +147,8 @@ ROUND_ORDER = [
     "round_091",
     "round_092",
     "round_093",
+    "round_094",
+    "round_095",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1093,7 +1095,29 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "/debug 可见 bilibili 评估 JSON",
         ],
         "next_actions": [
-            "注册 round_094 或微信修复轮",
+            "小红书发布包 round_094",
+        ],
+    },
+    "round_094": {
+        "name": "Round 94 - 小红书 manual_export 发布包",
+        "acceptance_criteria": [
+            "export-outbox --platform xiaohongshu 文件集完整",
+            "含 media placeholder 与 checklist",
+            "不真上传",
+        ],
+        "next_actions": [
+            "小红书 browser_assist round_095",
+        ],
+    },
+    "round_095": {
+        "name": "Round 95 - 小红书 browser_assist 评估",
+        "acceptance_criteria": [
+            "platform=xiaohongshu dry-run assessment deferred",
+            "browser-assist/platforms 含 xiaohongshu",
+            "/debug 可见小红书 JSON",
+        ],
+        "next_actions": [
+            "注册 round_096 或微信修复轮",
         ],
     },
 }
@@ -1881,6 +1905,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_bilibili_browser_assist.py", "-q"],
                 "pytest bilibili browser assist",
+            ),
+        ]
+    elif round_id == "round_094":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_xiaohongshu_publish_pack.py", "-q"],
+                "pytest xiaohongshu publish pack",
+            ),
+        ]
+    elif round_id == "round_095":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_xiaohongshu_browser_assist.py", "-q"],
+                "pytest xiaohongshu browser assist",
             ),
         ]
     else:

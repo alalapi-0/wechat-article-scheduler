@@ -10,8 +10,9 @@ Current P0 scope is WeChat Official Account fallback only. Other platform browse
 - 知乎评估（dry-run）：`zhihu_workflow.py` — `docs/zhihu_browser_assist.md`
 - 豆瓣评估（dry-run）：`douban_workflow.py` — `docs/douban_browser_assist.md`
 - Bilibili 评估（dry-run）：`bilibili_workflow.py` — `docs/bilibili_browser_assist.md`
+- 小红书评估（dry-run）：`xiaohongshu_workflow.py` — `docs/xiaohongshu_browser_assist.md`
 - 统一入口：`plans.build_dry_run_plan(platform=...)`
-- CLI：`browser-assist-plan --platform wechat_official|zhihu|douban|bilibili`
+- CLI：`browser-assist-plan --platform wechat_official|zhihu|douban|bilibili|xiaohongshu|xhs`
 - Web：`/api/browser-assist-plan`、`/api/browser-assist/platforms`；`/debug` 含知乎评估 JSON
 
 ## 安全边界

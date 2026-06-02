@@ -379,27 +379,27 @@ Phase 3 暂不开发。短视频和图文平台风控更高，当前仅保留 ba
 - 风险边界：高风险则停止。
 - 下一轮衔接：小红书发布包或 round_094。
 
-### Round 32：小红书图文/视频发布包
+### Round 32：小红书图文/视频发布包（已完成 — agent `round_094`）
 
 - 本轮目标：生成小红书人工发布包。
-- 具体任务：图文、封面、标签、正文和视频说明。
-- 交付物：小红书 outbox 模板。
-- 验收标准：只导出。
+- 具体任务：`build_xiaohongshu_publish_pack`、素材 placeholder、checklist。
+- 交付物：`docs/xiaohongshu_manual_export.md`；`export-outbox --platform xiaohongshu`。
+- 验收标准：只导出；不含图/视频二进制。
 - 不做什么：不自动登录或发布。
-- 允许改动范围：manual_export、docs。
+- 允许改动范围：manual_export、docs、tests。
 - 风险边界：高风控平台，只做人工路径。
-- 下一轮衔接：进入小红书 browser_assist 评估。
+- 下一轮衔接：小红书 browser_assist（`round_095`）。
 
-### Round 33：小红书 browser_assist
+### Round 33：小红书 browser_assist（已完成 — agent `round_095`）
 
 - 本轮目标：评估小红书本地辅助填表。
-- 具体任务：操作清单、人工确认和 proof。
-- 交付物：评估报告。
+- 具体任务：`xiaohongshu_workflow.py` dry-run；assessment deferred。
+- 交付物：`docs/xiaohongshu_browser_assist.md`。
 - 验收标准：不绕过登录、验证码、风控。
 - 不做什么：不批量灌水。
-- 允许改动范围：docs、dry-run。
+- 允许改动范围：browser_assist、docs、tests。
 - 风险边界：高风险则停止。
-- 下一轮衔接：进入微信视频号发布包。
+- 下一轮衔接：微信视频号发布包或 round_096。
 
 ### Round 34：微信视频号发布包
 

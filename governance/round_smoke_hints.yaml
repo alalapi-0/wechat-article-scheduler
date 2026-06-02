@@ -140,3 +140,9 @@ round_092:
 
 round_093:
   - python3 -m pytest tests/test_bilibili_browser_assist.py -q
+
+round_094:
+  - python3 -m pytest tests/test_xiaohongshu_publish_pack.py -q
+
+round_095:
+  - python3 -m pytest tests/test_xiaohongshu_browser_assist.py -q

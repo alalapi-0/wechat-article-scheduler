@@ -11,6 +11,9 @@ from wechat_article_scheduler.adapters.manual_export.platforms.bilibili import (
 from wechat_article_scheduler.adapters.manual_export.platforms.douban import (
     build_douban_publish_pack,
 )
+from wechat_article_scheduler.adapters.manual_export.platforms.xiaohongshu import (
+    build_xiaohongshu_publish_pack,
+)
 from wechat_article_scheduler.adapters.manual_export.platforms.zhihu import (
     build_zhihu_publish_pack,
 )
@@ -34,12 +37,17 @@ SUPPORTED_PLATFORMS: dict[str, dict[str, str]] = {
         "label": "Bilibili",
         "description": "标题、简介、封面说明、上传清单与视频占位（不自动上传）",
     },
+    "xiaohongshu": {
+        "label": "小红书",
+        "description": "图文笔记标题、正文、话题提示与素材占位（高风控，仅人工）",
+    },
 }
 
 _BUILDERS: dict[str, PackBuilder] = {
     "zhihu": build_zhihu_publish_pack,
     "douban": build_douban_publish_pack,
     "bilibili": build_bilibili_publish_pack,
+    "xiaohongshu": build_xiaohongshu_publish_pack,
 }
 
 

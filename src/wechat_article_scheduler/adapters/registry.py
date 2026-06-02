@@ -191,7 +191,7 @@ BUILTIN_CAPABILITIES: tuple[AdapterCapability, ...] = (
         supports_automated_publish=False,
         requires_human_proof=True,
         risk_level="high",
-        notes="小红书预研占位；高风控 deferred。",
+        notes="小红书发布包（export-outbox --platform xiaohongshu）；高风控，仅人工。",
     ),
 )
 
