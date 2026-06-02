@@ -26,3 +26,5 @@ config/rules.yaml
 !.cursor/skills/**
 # Playwright 诊断脚本的临时数据库/inbox（自动清理，仅以防万一）
 .ui_review_tmp/
+storage/preview_snapshots/article_*.json
+storage/preview_snapshots/article_*.html

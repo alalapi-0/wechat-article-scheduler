@@ -25,7 +25,11 @@ from wechat_article_scheduler.schedule_assign import (
 from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.content_library import list_collections, list_content_items
 from wechat_article_scheduler.cover_assets import check_cover_path, index_cover_directory
-from wechat_article_scheduler.publish_preview import build_publish_preview
+from wechat_article_scheduler.preview_snapshot import (
+    build_article_preview_package,
+    latest_snapshot_path,
+    save_preview_snapshot,
+)
 from wechat_article_scheduler.scheduler import run_due_jobs
 from wechat_article_scheduler.web.user_copy import (
     article_workflow_hint,
@@ -763,21 +767,47 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         }
 
     @app.get("/api/articles/{article_id}/render-preview")
-    def article_render_preview(article_id: int) -> dict[str, Any]:
-        """只读 HTML 预览（不调用微信 API）。"""
+    def article_render_preview(article_id: int, save_snapshot: bool = False) -> dict[str, Any]:
+        """公众号效果预览（与 draft/add 同源 HTML；可选落盘快照）。"""
         with db.connect(cfg.database_path) as conn:
             row = conn.execute(
-                "SELECT id, title, summary, body FROM articles WHERE id = ?",
+                """
+                SELECT id, title, summary, body, cover_path
+                FROM articles WHERE id = ?
+                """,
                 (article_id,),
             ).fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="文章不存在")
-        return build_publish_preview(
-            row["title"] or "",
-            row["summary"] or "",
-            row["body"] or "",
-            article_id=article_id,
-        )
+        package = build_article_preview_package(cfg, row, article_id=article_id)
+        if save_snapshot:
+            path = save_preview_snapshot(cfg, package)
+            package["snapshot_path"] = str(path.relative_to(cfg.root))
+        latest = latest_snapshot_path(cfg, article_id)
+        if latest is not None:
+            package["latest_snapshot"] = str(latest.relative_to(cfg.root))
+        return package
+
+    @app.post("/api/articles/{article_id}/preview-snapshot")
+    def article_preview_snapshot_save(article_id: int) -> dict[str, Any]:
+        """显式保存预览快照到 storage/preview_snapshots/。"""
+        with db.connect(cfg.database_path) as conn:
+            row = conn.execute(
+                """
+                SELECT id, title, summary, body, cover_path
+                FROM articles WHERE id = ?
+                """,
+                (article_id,),
+            ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="文章不存在")
+        package = build_article_preview_package(cfg, row, article_id=article_id)
+        path = save_preview_snapshot(cfg, package)
+        return {
+            "ok": True,
+            "snapshot_path": str(path.relative_to(cfg.root)),
+            "article_id": article_id,
+        }
 
     @app.get("/api/drafts/preview/{article_id}")
     def draft_preview(article_id: int) -> JSONResponse:

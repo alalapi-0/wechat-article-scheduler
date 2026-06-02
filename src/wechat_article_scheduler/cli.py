@@ -40,6 +40,9 @@ def _build_parser() -> argparse.ArgumentParser:
     serve_p = sub.add_parser("serve", help="启动 FastAPI 管理后台 (Round 6)")
     serve_p.add_argument("--host", default=None, help="监听地址，默认 WEB_HOST")
     serve_p.add_argument("--port", type=int, default=None, help="端口，默认 WEB_PORT")
+
+    snap_p = sub.add_parser("preview-snapshot", help="生成并保存公众号预览快照 (Round 60)")
+    snap_p.add_argument("--article-id", type=int, required=True)
     return parser
 
 
@@ -99,6 +102,30 @@ def main(argv: list[str] | None = None) -> int:
                 f"[{row['id']}] {row['created_at']} {row['event_type']} "
                 f"{row['entity_type']}#{row['entity_id']} {row['payload_json'] or ''}"
             )
+        return 0
+
+    if args.command == "preview-snapshot":
+        from wechat_article_scheduler.preview_snapshot import (
+            build_article_preview_package,
+            save_preview_snapshot,
+        )
+
+        with db.connect(config.database_path) as conn:
+            row = conn.execute(
+                """
+                SELECT id, title, summary, body, cover_path
+                FROM articles WHERE id = ?
+                """,
+                (args.article_id,),
+            ).fetchone()
+        if row is None:
+            print(f"文章不存在: id={args.article_id}")
+            return 1
+        package = build_article_preview_package(config, row, article_id=args.article_id)
+        path = save_preview_snapshot(config, package)
+        print(f"预览快照已保存: {path}")
+        if package.get("render_error"):
+            print(f"渲染警告: {package['render_error']}")
         return 0
 
     if args.command == "serve":

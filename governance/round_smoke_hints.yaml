@@ -38,3 +38,6 @@ round_058:
 
 round_059:
   - python3 -m pytest tests/test_wechat_renderer.py tests/test_publish_preview.py -q
+
+round_060:
+  - python3 -m pytest tests/test_preview_snapshot.py tests/test_web_app.py -q -k preview

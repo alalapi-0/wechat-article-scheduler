@@ -79,6 +79,44 @@ def test_render_preview_endpoint(app_config: AppConfig) -> None:
     assert "font-size: 22px" in data["html_body"]
     assert "font-weight: 700" in data["html_body"]
     assert data["render_error"] is None
+    assert data.get("approximation_note")
+    assert "snapshot_version" in data
+
+
+def test_render_preview_save_snapshot(app_config: AppConfig) -> None:
+    """Round 60：?save_snapshot=true 落盘 JSON/HTML。"""
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            "INSERT INTO articles (source_path, title, summary, body, content_hash, status) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            ("/tmp/snap.md", "快照文", "摘要", "段落。", "snaphash", "imported"),
+        )
+        conn.commit()
+        article_id = conn.execute("SELECT id FROM articles").fetchone()[0]
+    r = client.get(f"/api/articles/{article_id}/render-preview?save_snapshot=true")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["snapshot_path"].startswith("storage/preview_snapshots/")
+    snap_dir = app_config.root / "storage" / "preview_snapshots"
+    assert list(snap_dir.glob(f"article_{article_id}_*.json"))
+
+
+def test_preview_snapshot_post(app_config: AppConfig) -> None:
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            "INSERT INTO articles (source_path, title, summary, body, content_hash, status) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            ("/tmp/post.md", "POST", "", "正文", "posthash", "imported"),
+        )
+        conn.commit()
+        article_id = conn.execute("SELECT id FROM articles").fetchone()[0]
+    r = client.post(f"/api/articles/{article_id}/preview-snapshot")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert "preview_snapshots" in body["snapshot_path"]
 
 
 def test_render_preview_no_raw_html_entities(app_config: AppConfig) -> None:

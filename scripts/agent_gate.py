@@ -113,6 +113,7 @@ ROUND_ORDER = [
     "round_057",
     "round_058",
     "round_059",
+    "round_060",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -685,7 +686,18 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "正文不重复标题",
         ],
         "next_actions": [
-            "按 docs/roadmap_converged.md 继续 Round 5：公众号效果预览快照",
+            "推进 Round 60：公众号效果预览快照",
+        ],
+    },
+    "round_060": {
+        "name": "Round 60 - 公众号效果预览快照",
+        "acceptance_criteria": [
+            "统一预览包含摘要、正文 HTML、封面与 content_hints",
+            "预览与 draft content 同源并标注近似说明",
+            "快照可经 API/CLI 写入 storage/preview_snapshots",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 6：封面资产管理",
         ],
     },
 }
@@ -1061,6 +1073,22 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_wechat_renderer.py", "tests/test_publish_preview.py", "-q"],
                 "pytest wechat html renderer",
+            ),
+        ]
+    elif round_id == "round_060":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_preview_snapshot.py",
+                    "tests/test_web_app.py",
+                    "-q",
+                    "-k",
+                    "preview",
+                ],
+                "pytest preview snapshot",
             ),
         ]
     else:

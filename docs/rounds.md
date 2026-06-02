@@ -1304,6 +1304,24 @@
   - [x] 预览与 publish 同源测试
   - [x] agent_gate round_059 冒烟
 
+### Round 60 - 公众号效果预览快照
+
+- 目标：发布前在本地看到近似公众号正文预览，并可落盘快照供比对。
+- 范围：`preview_snapshot.py`、Web 预览弹窗、`render-preview` API、CLI、存储目录与测试。
+- 非目标：完整模拟公众号后台；跨平台预览。
+- 输入：Round 59 同源 HTML 渲染、`publish_preview`、`content_quality` 提示。
+- 输出：`docs/wechat_preview_snapshot.md`、`storage/preview_snapshots/`、预览包与快照文件。
+- 验收标准：统一预览入口；显示摘要、正文、封面与阻断项；标注近似预览；可选保存 JSON/HTML。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_preview_snapshot.py tests/test_web_app.py -q -k preview`。
+- 退出标准：API/CLI 快照写入成功；Web 预览展示封面与提示；pytest 通过。
+- 风险：用户误以为预览与微信后台完全一致。
+- 回滚点：恢复仅 `build_publish_preview` 的简单 API 响应。
+- 交付项：
+  - [x] 预览包与快照模块
+  - [x] API/CLI 与 Web 预览增强
+  - [x] 文档与 .gitignore
+  - [x] agent_gate round_060 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

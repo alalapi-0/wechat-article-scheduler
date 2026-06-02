@@ -271,6 +271,10 @@
   .preview-body h1, .preview-body h2, .preview-body h3 { margin: 0 0 .6em; font-weight: 650; }
   .preview-body a { color: #576b95; text-decoration: underline; }
   .preview-raw { margin-top: 10px; font-size: 12px; color: var(--muted); white-space: pre-wrap; font-family: ui-monospace, monospace; }
+  .preview-cover { max-width: 100%; max-height: 160px; border-radius: 8px; margin: 8px 0; object-fit: cover; }
+  .preview-warn { margin: 6px 0; padding: 8px 10px; border-radius: 8px; background: #fff8e6; color: #8a6d00; font-size: 13px; }
+  .preview-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .preview-chips span { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--chip-bg, #eef2f7); color: var(--muted); }
 
   .cover-batch-form { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
   .cover-batch-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
@@ -529,7 +533,10 @@
     <button class="btn-ghost btn-sm close" id="modalClose">关闭</button>
     <h3 id="modalTitle">预览</h3>
     <div id="modalSummary" style="color:var(--muted);font-size:13px;"></div>
-    <p class="preview-hint">公众号正文预览（标题在微信标题栏单独显示）</p>
+    <p class="preview-hint" id="modalApprox">公众号正文预览（标题在微信标题栏单独显示）</p>
+    <img id="modalCover" class="preview-cover" alt="" hidden />
+    <div id="modalHints" class="preview-chips" hidden></div>
+    <div id="modalWarn" class="preview-warn" hidden></div>
     <div class="preview-body" id="modalBody"></div>
     <pre class="preview-raw advanced-only" id="modalRaw" hidden></pre>
   </div>
@@ -1759,11 +1766,36 @@ async function preview(id){
   el('modalSummary').textContent = '';
   el('modalRaw').hidden = true;
   el('modalRaw').textContent = '';
+  el('modalCover').hidden = true;
+  el('modalHints').hidden = true;
+  el('modalHints').innerHTML = '';
+  el('modalWarn').hidden = true;
   try {
-    const d = await (await fetch(`/api/articles/${id}/render-preview`)).json();
+    const d = await (await fetch(`/api/articles/${id}/render-preview?save_snapshot=true`)).json();
     el('modalTitle').textContent = d.title || '预览';
-    el('modalSummary').textContent = d.summary || '';
-    el('modalBody').innerHTML = d.render_error ? esc('渲染失败：'+d.render_error) : (d.html_body || '（空）');
+    const digest = d.digest_preview || '';
+    el('modalSummary').textContent = (d.summary || digest)
+      ? ((d.summary || digest) + (d.digest_truncated ? '（发布时将截断至 120 字）' : ''))
+      : '';
+    if (d.approximation_note) el('modalApprox').textContent = d.approximation_note;
+    if (d.cover_url) {
+      el('modalCover').src = d.cover_url;
+      el('modalCover').alt = '封面';
+      el('modalCover').hidden = false;
+    }
+    const hints = d.content_hints || [];
+    if (hints.length) {
+      el('modalHints').innerHTML = hints.map(h => `<span>${esc(h)}</span>`).join('');
+      el('modalHints').hidden = false;
+    }
+    if (d.render_error) {
+      el('modalWarn').textContent = '渲染异常：' + d.render_error;
+      el('modalWarn').hidden = false;
+    } else if ((d.blocking_hints || []).length) {
+      el('modalWarn').textContent = '发布前注意：' + d.blocking_hints.join('；');
+      el('modalWarn').hidden = false;
+    }
+    el('modalBody').innerHTML = d.html_body || '（空）';
     if (document.body.classList.contains('show-advanced') && d.raw_body) {
       el('modalRaw').hidden = false;
       el('modalRaw').textContent = d.raw_body;
