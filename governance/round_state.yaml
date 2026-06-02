@@ -1,15 +1,16 @@
 current_round:
-  id: round_081
-  name: Round 81 - 知乎 browser_assist 评估
-  status: active
-  updated_at: '2026-06-02T22:00:00+00:00'
+  id: round_082
+  name: Round 82 - browser_assist 多平台入口
+  status: completed
+  updated_at: '2026-06-02T22:15:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_080
+  id: round_082
   completed_at: '2026-06-02'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- zhihu dry-run 计划含 checkpoints 与 assessment
-- CLI/Web/debug 入口 platform=zhihu
-- 不绕过登录/验证码、不自动发布
+- /api/browser-assist/platforms 含微信
+- 微信干跑计划默认 platform 兼容
+- 文档与测试更新
 next_actions:
-- browser_assist 多平台 API（round_082）
+- 豆瓣 browser_assist 评估或注册 round_083
