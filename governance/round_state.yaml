@@ -1,16 +1,15 @@
 current_round:
-  id: round_123
-  name: Round 123 - 高级面板路线图位置
-  status: completed
-  updated_at: '2026-06-02T19:49:59.557622+00:00'
-  completed_at: '2026-06-02'
+  id: round_124
+  name: Round 124 - Agent gate 状态 API
+  status: active
+  updated_at: '2026-06-02T19:53:52.527892+00:00'
 last_completed_round:
   id: round_123
-  completed_at: '2026-06-02T19:51:08.941185+00:00'
+  completed_at: '2026-06-02T19:53:52.527892+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- /api/status 只读 roadmap_hint 与 last_completed_round
-- 高级面板 advRoadmap 显示位置与 doc 链接
+- GET /api/agent-gate-status 与 CLI status 结构一致
+- 高级面板 advAgentGate 展示 gate_summary 与 next_actions
 - mock@8080 开启高级信息后可见
 next_actions:
-- 在 docs/rounds.md 规划 round_124 后续能力
+- 在 docs/rounds.md 规划 round_125 后续能力

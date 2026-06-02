@@ -1,14 +1,10 @@
 # Agent Gate Report
 
-- generated_at: 2026-06-02T19:51:08.941715+00:00
+- generated_at: 2026-06-02T19:54:35.038340+00:00
 - verdict: **PASS**
 
-- current_round: round_123
-- command: advance
-- git_commit: [main 2321cbf] chore(agent_gate): complete round_123
- 8 files changed, 15 insertions(+), 21 deletions(-)
-- advanced_to: complete
-- git_push: skipped (默认不 push；需远程时用 --push)
+- current_round: round_124
+- command: gate
 
 ## Agent loop
 
