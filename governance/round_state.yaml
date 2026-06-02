@@ -1,8 +1,9 @@
 current_round:
   id: round_084
   name: Round 84 - Phase2 browser_assist 收口
-  status: active
+  status: completed
   updated_at: '2026-06-02T17:59:36.845080+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
   id: round_083
   completed_at: '2026-06-02T17:59:36.845080+00:00'
