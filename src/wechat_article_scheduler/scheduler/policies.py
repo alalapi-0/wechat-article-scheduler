@@ -26,6 +26,13 @@ def should_skip_max_retries(retry_count: int, max_retries: int) -> bool:
     return retry_count >= max_retries
 
 
+def retry_backoff_seconds(retry_count: int) -> int:
+    """失败后自动重试退避：1 分钟 / 5 分钟 / 30 分钟。"""
+    steps = (60, 300, 1800)
+    idx = max(0, min(retry_count - 1, len(steps) - 1))
+    return steps[idx]
+
+
 def write_dry_run_report(config: AppConfig, stats: dict[str, int]) -> None:
     """将 dry-run 摘要写入 data/reports/（便于人工核对）。"""
     report_dir = config.root / "data" / "reports"

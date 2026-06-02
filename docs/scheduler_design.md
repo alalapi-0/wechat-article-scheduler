@@ -2,7 +2,7 @@
 
 ## 现状
 
-当前调度器支持单进程轮询、到期任务执行、失败重试计数和 Web 后台到点自动执行。当前 `publish_jobs.status` 仍承担发布状态和调度状态两种含义。
+当前调度器支持单进程轮询、到期任务执行、失败重试计数和 Web 后台到点自动执行。Round 69 已落地：**原子 claim**、`scheduler_locks` 单实例锁、**stale running 恢复**、**next_retry_at 退避**、**misfire 事件** 与 `scheduler-health` CLI（详见 `docs/scheduler_stability.md`）。`publish_jobs.status` 仍承担发布状态与队列状态两种含义；`schedule_state` 分列仍为后续演进。
 
 ## 1. 到期任务原子 claim
 

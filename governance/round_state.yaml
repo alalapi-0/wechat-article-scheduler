@@ -1,16 +1,15 @@
 current_round:
-  id: round_068
-  name: Round 68 - 微信草稿管理页面
-  status: completed
-  updated_at: '2026-06-02T06:48:44.582773+00:00'
-  completed_at: '2026-06-02'
+  id: round_069
+  name: Round 69 - 本地 scheduler 稳定化
+  status: active
+  updated_at: '2026-06-02T06:54:11.506955+00:00'
 last_completed_round:
   id: round_068
-  completed_at: '2026-06-02'
+  completed_at: '2026-06-02T06:54:11.506955+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- wechat_drafts 列表/筛选/关联作品 API
-- '工作台 #drafts 与 /drafts 页面'
-- mock 演练说明，不误导为公众号后台全量草稿
+- run-once 原子 claim 与单实例锁
+- 失败退避重试、stale running 恢复、misfire 事件
+- scheduler-health CLI 与稳定性测试
 next_actions:
-- 按 docs/roadmap_converged.md 继续 Round 14：本地 scheduler 稳定化
+- 按 docs/roadmap_converged.md 继续 Round 15：scheduler 常驻运行文档

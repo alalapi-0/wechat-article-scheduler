@@ -23,6 +23,7 @@ from wechat_article_scheduler.publish_config import (
     parse_publish_config,
     should_submit_publish,
 )
+from wechat_article_scheduler.scheduler.claim import clear_job_claim, schedule_failure_retry
 from wechat_article_scheduler.scheduler.policies import safe_payload
 
 logger = logging.getLogger(__name__)
@@ -50,12 +51,6 @@ def execute_due_job(
     article_id = int(job["article_id"])
     retry_count = int(job["retry_count"] or 0)
     adapter = get_adapter(config)
-
-    conn.execute(
-        "UPDATE publish_jobs SET status = 'running', updated_at = datetime('now') WHERE id = ?",
-        (job_id,),
-    )
-    conn.commit()
 
     try:
         raw_summary = (job["summary"] or "").strip() or (job["title"] or "")
@@ -121,7 +116,15 @@ def execute_due_job(
         force_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
         pub = adapter.submit_publish(draft.media_id, force=force_publish)
         conn.execute(
-            "UPDATE publish_jobs SET status = 'done', updated_at = datetime('now') WHERE id = ?",
+            """
+            UPDATE publish_jobs
+            SET status = 'done',
+                claim_token = NULL,
+                claimed_at = NULL,
+                next_retry_at = NULL,
+                updated_at = datetime('now')
+            WHERE id = ?
+            """,
             (job_id,),
         )
         draft_only = bool(pub.get("skipped"))
@@ -155,32 +158,29 @@ def execute_due_job(
         )
         stats["processed"] += 1
     except Exception as exc:  # noqa: BLE001 — CLI 需汇总失败数
-        new_retry = retry_count + 1
-        conn.execute(
-            """
-            UPDATE publish_jobs
-            SET status = 'failed', retry_count = ?, updated_at = datetime('now')
-            WHERE id = ?
-            """,
-            (new_retry, job_id),
-        )
-        db.log_event(
+        failure_payload = format_job_failure(exc)
+        final_status = schedule_failure_retry(
             conn,
-            entity_type="publish_job",
-            entity_id=job_id,
-            event_type="job_failed",
-            payload=format_job_failure(exc),
+            job_id=job_id,
+            article_id=article_id,
+            retry_count=retry_count,
+            config=config,
+            failure_payload=failure_payload,
         )
+        clear_job_claim(conn, job_id)
         if isinstance(exc, WechatApiError):
             logger.warning(
-                "任务 %s 失败 (retry %s): %s",
+                "任务 %s 失败: %s (status=%s)",
                 job_id,
-                new_retry,
                 exc.human_hint,
+                final_status,
             )
         else:
-            logger.exception("任务 %s 失败 (retry %s)", job_id, new_retry)
-        stats["failed"] += 1
+            logger.exception("任务 %s 失败 (status=%s)", job_id, final_status)
+        if final_status == "failed":
+            stats["failed"] += 1
+        else:
+            stats["retry_scheduled"] = stats.get("retry_scheduled", 0) + 1
 
 
 def record_dry_run_job(

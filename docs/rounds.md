@@ -1462,6 +1462,23 @@
   - [x] mock 演练说明
   - [x] agent_gate round_068 冒烟
 
+### Round 69 - 本地 scheduler 稳定化
+
+- 目标：run-once 更可靠：claim、锁、退避重试、卡住恢复、健康检查。
+- 范围：`scheduler/claim.py`、`scheduler/health.py`、`runtime`/`domain`、迁移、CLI、测试与文档。
+- 非目标：Redis/Celery；`schedule_state` 分列。
+- 输入：Round 68 草稿页、既有 `run_due_jobs`。
+- 输出：`docs/scheduler_stability.md`、`scheduler-health` 命令。
+- 验收标准：到期任务可 claim；失败可退避；running 不卡死；pytest 通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_scheduler_stability.py tests/test_scheduler_hardening.py -q`。
+- 退出标准：gate round_069 通过；`scheduler-health` 可输出队列摘要。
+- 风险：锁 TTL 过短导致并发 run-once；退避期间重复手动重试。
+- 回滚点：移除 claim 列与锁表，恢复简单 pending→running 更新。
+- 交付项：
+  - [x] claim / lock / stale recovery / backoff
+  - [x] scheduler-health
+  - [x] agent_gate round_069 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

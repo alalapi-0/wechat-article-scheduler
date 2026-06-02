@@ -49,7 +49,12 @@ def _reset_job_to_pending(conn, job_id: int) -> bool:
     conn.execute(
         """
         UPDATE publish_jobs
-        SET status = 'pending', retry_count = 0, updated_at = datetime('now')
+        SET status = 'pending',
+            retry_count = 0,
+            next_retry_at = NULL,
+            claim_token = NULL,
+            claimed_at = NULL,
+            updated_at = datetime('now')
         WHERE id = ?
         """,
         (int(job_id),),

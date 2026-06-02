@@ -4,7 +4,7 @@ agent_policy:
   roadmap_authority:
     human: docs/rounds.md
     machine_registry: scripts/agent_gate.py
-    round_range: round_000..round_068
+    round_range: round_000..round_069
     sync_rule: "修改 docs/rounds.md 时须同次更新 ROUND_ORDER/ROUND_META、tests/test_agent_gate.py 与相关治理范围字段；当前执行路线见 docs/roadmap_converged.md；长期多平台蓝图仅见 docs/backlog/"
   web_console_policy:
     default_view: ordinary_user_first

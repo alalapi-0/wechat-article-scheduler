@@ -14,6 +14,14 @@ from wechat_article_scheduler.publish_config import (
     parse_publish_config,
     should_submit_publish,
 )
+from wechat_article_scheduler.scheduler.claim import (
+    acquire_run_lock,
+    log_misfire_if_needed,
+    new_claim_token,
+    recover_stale_running_jobs,
+    release_run_lock,
+    try_claim_job,
+)
 from wechat_article_scheduler.scheduler.domain import execute_due_job, record_dry_run_job
 from wechat_article_scheduler.scheduler.policies import (
     max_retries_for,
@@ -54,7 +62,6 @@ def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[
 
     only_auto_execute=True 时仅处理 publish_config.auto_execute 为真的任务（Web 后台自动执行）。
     DRY_RUN=true 时只记录计划动作，不调用适配器。
-    返回：processed, skipped_future, failed, dry_run, skipped_max_retries
     """
     stats = {
         "processed": 0,
@@ -66,6 +73,11 @@ def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[
         "drafted": 0,
         "draft_reused": 0,
         "skipped_manual": 0,
+        "skipped_locked": 0,
+        "skipped_claim": 0,
+        "recovered_stale": 0,
+        "misfired": 0,
+        "retry_scheduled": 0,
     }
     now = datetime.now().replace(microsecond=0)
     published_dir = config.published_dir
@@ -73,75 +85,108 @@ def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[
     max_retries = max_retries_for(config)
 
     with db.connect(config.database_path) as conn:
-        jobs = conn.execute(
-            """
-            SELECT j.id AS job_id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                   j.publish_config_json,
-                   a.title, a.summary, a.body, a.source_path, a.cover_path,
-                   a.content_hash
-            FROM publish_jobs j
-            JOIN articles a ON a.id = j.article_id
-            WHERE j.status = 'pending'
-              AND (a.deleted_at IS NULL OR a.deleted_at = '')
-            ORDER BY j.scheduled_at ASC
-            """
-        ).fetchall()
+        locked_ok, holder = acquire_run_lock(conn, config)
+        if not locked_ok:
+            stats["skipped_locked"] = 1
+            logger.warning("run-once 跳过：调度锁被 %s 持有", holder)
+            conn.commit()
+            return stats
+        try:
+            stats["recovered_stale"] = recover_stale_running_jobs(conn, config)
+            if stats["recovered_stale"]:
+                conn.commit()
 
-        for job in jobs:
-            if not _job_is_due(job["scheduled_at"], now=now):
-                stats["skipped_future"] += 1
-                continue
+            jobs = conn.execute(
+                """
+                SELECT j.id AS job_id, j.article_id, j.scheduled_at, j.status, j.retry_count,
+                       j.publish_config_json, j.next_retry_at,
+                       a.title, a.summary, a.body, a.source_path, a.cover_path,
+                       a.content_hash
+                FROM publish_jobs j
+                JOIN articles a ON a.id = j.article_id
+                WHERE j.status = 'pending'
+                  AND (a.deleted_at IS NULL OR a.deleted_at = '')
+                  AND (j.next_retry_at IS NULL OR j.next_retry_at <= datetime('now'))
+                ORDER BY j.scheduled_at ASC
+                """
+            ).fetchall()
 
-            job_id = int(job["job_id"])
-            pub_cfg = parse_publish_config(
-                job["publish_config_json"] if "publish_config_json" in job.keys() else None,
-                defaults=defaults_from_rules(config),
-            )
-            if only_auto_execute and not pub_cfg.auto_execute:
-                stats["skipped_manual"] += 1
-                continue
+            for job in jobs:
+                if not _job_is_due(job["scheduled_at"], now=now):
+                    stats["skipped_future"] += 1
+                    continue
 
-            retry_count = int(job["retry_count"] or 0)
-            if should_skip_max_retries(retry_count, max_retries):
-                stats["skipped_max_retries"] += 1
-                logger.warning(
-                    "任务 %s 已达最大重试 %s/%s，跳过",
-                    job_id,
-                    retry_count,
-                    max_retries,
-                )
-                continue
-
-            if config.dry_run:
-                record_dry_run_job(conn, job, stats=stats)
-                continue
-
-            block_reason = content_block_reason(job["title"] or "", job["body"] or "")
-            will_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
-            if block_reason and config.wechat_mode == "real" and will_publish:
-                stats["skipped_content"] += 1
-                logger.warning("任务 %s 因内容质量跳过: %s", job_id, block_reason)
-                db.log_event(
+                job_id = int(job["job_id"])
+                article_id = int(job["article_id"])
+                if log_misfire_if_needed(
                     conn,
-                    entity_type="publish_job",
-                    entity_id=job_id,
-                    event_type="publish_blocked_content",
-                    payload=json.dumps({"reason": block_reason}),
-                )
-                continue
+                    job_id=job_id,
+                    article_id=article_id,
+                    scheduled_at=job["scheduled_at"],
+                    config=config,
+                ):
+                    stats["misfired"] += 1
 
-            execute_due_job(
-                conn,
-                job,
-                config=config,
-                adapter_mode=config.wechat_mode,
-                published_dir=published_dir,
-                stats=stats,
-            )
+                pub_cfg = parse_publish_config(
+                    job["publish_config_json"] if "publish_config_json" in job.keys() else None,
+                    defaults=defaults_from_rules(config),
+                )
+                if only_auto_execute and not pub_cfg.auto_execute:
+                    stats["skipped_manual"] += 1
+                    continue
+
+                retry_count = int(job["retry_count"] or 0)
+                if should_skip_max_retries(retry_count, max_retries):
+                    stats["skipped_max_retries"] += 1
+                    logger.warning(
+                        "任务 %s 已达最大重试 %s/%s，跳过",
+                        job_id,
+                        retry_count,
+                        max_retries,
+                    )
+                    continue
+
+                if config.dry_run:
+                    record_dry_run_job(conn, job, stats=stats)
+                    continue
+
+                block_reason = content_block_reason(job["title"] or "", job["body"] or "")
+                will_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
+                if block_reason and config.wechat_mode == "real" and will_publish:
+                    stats["skipped_content"] += 1
+                    logger.warning("任务 %s 因内容质量跳过: %s", job_id, block_reason)
+                    db.log_event(
+                        conn,
+                        entity_type="publish_job",
+                        entity_id=job_id,
+                        event_type="publish_blocked_content",
+                        payload=json.dumps({"reason": block_reason}),
+                    )
+                    continue
+
+                token = new_claim_token()
+                if not try_claim_job(conn, job_id, token):
+                    stats["skipped_claim"] += 1
+                    logger.info("任务 %s 已被其他执行者 claim，跳过", job_id)
+                    continue
+                conn.commit()
+
+                execute_due_job(
+                    conn,
+                    job,
+                    config=config,
+                    adapter_mode=config.wechat_mode,
+                    published_dir=published_dir,
+                    stats=stats,
+                )
+                conn.commit()
+        finally:
+            release_run_lock(conn, config)
             conn.commit()
 
     if config.dry_run and stats["dry_run"]:
         write_dry_run_report(config, stats)
+    logger.info("run-once 完成: %s", stats)
     return stats
 
 
@@ -155,7 +200,17 @@ def scheduler_loop(config: AppConfig) -> None:
         try:
             stats = run_due_jobs(config)
             consecutive_errors = 0
-            if any(stats.get(k) for k in ("processed", "failed", "dry_run")):
+            if any(
+                stats.get(k)
+                for k in (
+                    "processed",
+                    "failed",
+                    "dry_run",
+                    "recovered_stale",
+                    "retry_scheduled",
+                    "skipped_locked",
+                )
+            ):
                 print(f"run-once: {stats}")
                 logger.info("调度轮次结果: %s", stats)
         except Exception:  # noqa: BLE001 — 保持调度循环存活

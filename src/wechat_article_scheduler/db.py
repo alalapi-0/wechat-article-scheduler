@@ -111,6 +111,24 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE publish_jobs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0"
         )
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(publish_jobs)").fetchall()}
+    for col, ddl in (
+        ("claim_token", "ALTER TABLE publish_jobs ADD COLUMN claim_token TEXT"),
+        ("claimed_at", "ALTER TABLE publish_jobs ADD COLUMN claimed_at TEXT"),
+        ("next_retry_at", "ALTER TABLE publish_jobs ADD COLUMN next_retry_at TEXT"),
+    ):
+        if col not in cols:
+            conn.execute(ddl)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS scheduler_locks (
+            lock_name TEXT PRIMARY KEY,
+            owner TEXT NOT NULL,
+            acquired_at TEXT NOT NULL DEFAULT (datetime('now')),
+            expires_at TEXT NOT NULL
+        )
+        """
+    )
 
 
 def init_db(db_path: Path) -> None:

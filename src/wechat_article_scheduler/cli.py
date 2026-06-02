@@ -13,6 +13,7 @@ from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.content_cli import print_content_library
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.scheduler import run_due_jobs, scheduler_loop
+from wechat_article_scheduler.scheduler.health import print_scheduler_health
 from wechat_article_scheduler.workflow import reject_article, retry_failed_jobs
 
 
@@ -25,6 +26,7 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("plan", help="为已导入文章生成发布计划")
     sub.add_parser("run-once", help="执行所有已到期的发布任务")
     sub.add_parser("scheduler", help="后台轮询调度（阻塞）")
+    sub.add_parser("scheduler-health", help="调度器健康检查（队列/锁/卡住任务）")
 
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
     reject_p.add_argument("--article-id", type=int, required=True)
@@ -80,6 +82,10 @@ def main(argv: list[str] | None = None) -> int:
             scheduler_loop(config)
         except KeyboardInterrupt:
             print("\n调度器已停止")
+        return 0
+
+    if args.command == "scheduler-health":
+        print_scheduler_health(config)
         return 0
 
     if args.command == "reject":

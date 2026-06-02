@@ -40,6 +40,9 @@ class AppConfig:
     log_level: str
     dry_run: bool
     max_job_retries: int
+    scheduler_claim_timeout_seconds: int
+    scheduler_lock_ttl_seconds: int
+    scheduler_misfire_grace_minutes: int
     wechat_app_id: str
     wechat_app_secret: str
     wechat_default_thumb_path: str
@@ -124,6 +127,13 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
         dry_run=_env_bool("DRY_RUN", False),
         max_job_retries=int(os.getenv("MAX_JOB_RETRIES", "3")),
+        scheduler_claim_timeout_seconds=int(
+            os.getenv("SCHEDULER_CLAIM_TIMEOUT_SECONDS", "900")
+        ),
+        scheduler_lock_ttl_seconds=int(os.getenv("SCHEDULER_LOCK_TTL_SECONDS", "300")),
+        scheduler_misfire_grace_minutes=int(
+            os.getenv("SCHEDULER_MISFIRE_GRACE_MINUTES", "60")
+        ),
         wechat_app_id=os.getenv("WECHAT_APP_ID", "").strip(),
         wechat_app_secret=os.getenv("WECHAT_APP_SECRET", "").strip(),
         wechat_default_thumb_path=os.getenv("WECHAT_DEFAULT_THUMB_PATH", "").strip(),

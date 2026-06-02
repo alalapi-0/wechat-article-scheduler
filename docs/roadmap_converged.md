@@ -152,7 +152,7 @@ Status: Current execution roadmap after Round 56
 - 风险边界：media_id 不等同公开链接；不得泄露敏感响应。
 - 下一轮衔接：进入本地 scheduler 稳定化。
 
-### Round 14：本地 scheduler 稳定化
+### Round 14：本地 scheduler 稳定化（已完成 — agent `round_069`）
 
 - 本轮目标：让本地 scheduler 到点执行更可靠。
 - 具体任务：处理 claim、重试、misfire、最大重试次数、失败记录和事件日志。

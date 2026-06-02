@@ -122,6 +122,7 @@ ROUND_ORDER = [
     "round_066",
     "round_067",
     "round_068",
+    "round_069",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -796,6 +797,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "按 docs/roadmap_converged.md 继续 Round 14：本地 scheduler 稳定化",
         ],
     },
+    "round_069": {
+        "name": "Round 69 - 本地 scheduler 稳定化",
+        "acceptance_criteria": [
+            "run-once 原子 claim 与单实例锁",
+            "失败退避重试、stale running 恢复、misfire 事件",
+            "scheduler-health CLI 与稳定性测试",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续 Round 15：scheduler 常驻运行文档",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1297,6 +1309,20 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest wechat drafts page",
+            ),
+        ]
+    elif round_id == "round_069":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_scheduler_stability.py",
+                    "tests/test_scheduler_hardening.py",
+                    "-q",
+                ],
+                "pytest scheduler stability",
             ),
         ]
     else:
