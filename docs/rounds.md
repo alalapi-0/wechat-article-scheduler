@@ -2448,6 +2448,23 @@
   - [x] POST export-outbox 按平台
   - [x] agent_gate round_126 冒烟
 
+### Round 127 - 统一 export-outbox 成功 toast
+
+- 目标：导出成功 toast 统一展示平台中文名、outbox 路径、醒目「未自动发布/需人工」文案；作品卡与详情共用。
+- 范围：`export_outbox_ui.js`、`/assets/export-outbox-ui.js`、工作台 alertBox、详情 `#exportToast`。
+- 非目标：改 export-outbox 后端逻辑。
+- 输入：round_125/126 导出下拉。
+- 输出：共用 `ExportOutboxUi.buildSuccessHtml`。
+- 验收标准：`test_round_127_wechat_p0`；mock@8080 作品卡与详情各点一种平台见 toast。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_round_127_wechat_p0.py -q`。
+- 退出标准：gate round_127。
+- 风险：无。
+- 回滚点：移除共用脚本与各页回退 alert。
+- 交付项：
+  - [x] export-outbox-ui.js 共用模块
+  - [x] 工作台与详情统一 toast
+  - [x] agent_gate round_127 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

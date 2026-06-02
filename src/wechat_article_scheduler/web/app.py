@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters import get_adapter
@@ -145,6 +145,7 @@ _TEMPLATE_PATH = Path(__file__).parent / "admin_template.html"
 _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exists() else "<html><body>模板缺失</body></html>"
 _DETAIL_TEMPLATE_PATH = Path(__file__).parent / "article_detail_template.html"
 _DRAFTS_PAGE_TEMPLATE_PATH = Path(__file__).parent / "drafts_page_template.html"
+_EXPORT_OUTBOX_UI_JS = Path(__file__).parent / "export_outbox_ui.js"
 logger = logging.getLogger(__name__)
 
 
@@ -341,6 +342,17 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     def debug_page() -> str:
         """高级排错页：展示原始 JSON 与内部字段。"""
         return _DEBUG_HTML
+
+    @app.get("/assets/export-outbox-ui.js")
+    def export_outbox_ui_js() -> Response:
+        """作品卡与详情页共用的 export-outbox 成功 toast 脚本。"""
+        if not _EXPORT_OUTBOX_UI_JS.is_file():
+            raise HTTPException(status_code=404, detail="export-outbox-ui.js missing")
+        return Response(
+            content=_EXPORT_OUTBOX_UI_JS.read_bytes(),
+            media_type="application/javascript",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     @app.get("/articles/{article_id}", response_class=HTMLResponse)
     def article_detail_page(article_id: int) -> str:
