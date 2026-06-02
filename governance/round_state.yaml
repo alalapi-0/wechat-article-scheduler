@@ -1,14 +1,15 @@
 current_round:
   id: round_120
   name: Round 120 - 详情返回保留工作台上下文
-  status: in_progress
+  status: completed
   updated_at: '2026-06-02T22:30:00+00:00'
+  completed_at: '2026-06-02'
 last_completed_round:
-  id: round_119
-  completed_at: '2026-06-02T19:32:00+00:00'
+  id: round_120
+  completed_at: '2026-06-02T19:36:40.635756+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 返回工作台链接保留 #queue/#works
+- 返回工作台链接保留
 - 与 queue/collection localStorage 协同
 - mock@8080 队列→详情→返回
 next_actions:
