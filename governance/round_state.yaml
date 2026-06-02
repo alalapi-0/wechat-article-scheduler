@@ -1,15 +1,14 @@
 current_round:
-  id: round_048
-  name: Round 48 - 微信草稿正文规范化与标题去重
+  id: round_049
+  name: Round 49 - 公众号效果预览修正
   status: active
-  updated_at: '2026-06-02T13:35:00+08:00'
+  updated_at: '2026-06-02T05:29:56.838874+00:00'
 last_completed_round:
-  id: round_047
-  completed_at: '2026-06-02T13:30:00+08:00'
+  id: round_048
+  completed_at: '2026-06-02T05:29:56.838874+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- 草稿 payload title 正确，content 不含重复首标题
-- Markdown / frontmatter / HTML 标题去重有测试覆盖
+- 预览弹窗展示可读正文，不显示 HTML 标签源码
+- Web 预览与真实 draft 共用同源渲染入口
 next_actions:
-- 实现 publish_body 标题去重与 real/mock 回归测试
-- 收敛路线图 Round 2 已完成：见 tests/test_wechat_chain_stability.py
+- 推进 Round 50：作品回收站与可逆删除

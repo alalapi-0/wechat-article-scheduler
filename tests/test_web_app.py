@@ -81,6 +81,22 @@ def test_render_preview_endpoint(app_config: AppConfig) -> None:
     assert data["render_error"] is None
 
 
+def test_render_preview_no_raw_html_entities(app_config: AppConfig) -> None:
+    """Round 49：预览为渲染后正文，不展示转义源码。"""
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            "INSERT INTO articles (source_path, title, summary, body, content_hash, status) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            ("/tmp/esc.md", "标题", "", "&lt;p&gt;段落&lt;/p&gt;", "eschash", "imported"),
+        )
+        conn.commit()
+        article_id = conn.execute("SELECT id FROM articles").fetchone()[0]
+    data = client.get(f"/api/articles/{article_id}/render-preview").json()
+    assert "&lt;p&gt;" not in data["html_body"]
+    assert "段落" in data["html_body"]
+
+
 def test_render_preview_strips_duplicate_title(app_config: AppConfig) -> None:
     """Round 48：预览与草稿同源，正文不重复首标题。"""
     client = TestClient(create_app(app_config))
