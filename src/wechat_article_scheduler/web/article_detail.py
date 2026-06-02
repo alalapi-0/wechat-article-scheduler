@@ -247,4 +247,6 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
         "workbench": suggest_detail_actions(row=row, job=job, checks=checks, config=config),
         "mode_label": label_mode(mode),
         "preview_url": f"/api/articles/{article_id}/render-preview",
+        "can_export_outbox": True,
+        "outbox_hint": "导出 outbox 包后可手动复制到其他平台，并在本页提交发布证明",
     }

@@ -53,6 +53,10 @@ def _build_parser() -> argparse.ArgumentParser:
     submit_proof.add_argument("--confirmed-by", type=str, default=None)
     submit_proof.add_argument("--note", type=str, default=None)
 
+    export_ob = sub.add_parser("export-outbox", help="导出作品为 manual_export outbox 包")
+    export_ob.add_argument("--article-id", type=int, required=True)
+    export_ob.add_argument("--platform", type=str, default="generic")
+
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
     reject_p.add_argument("--article-id", type=int, required=True)
 
@@ -188,6 +192,21 @@ def main(argv: list[str] | None = None) -> int:
                     confirmed_by=args.confirmed_by,
                     note=args.note,
                 ),
+            )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("ok") else 1
+
+    if args.command == "export-outbox":
+        import json
+
+        from wechat_article_scheduler.adapters.manual_export import export_article_to_outbox
+
+        with db.connect(config.database_path) as conn:
+            result = export_article_to_outbox(
+                config,
+                conn,
+                args.article_id,
+                platform=args.platform or "generic",
             )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if result.get("ok") else 1

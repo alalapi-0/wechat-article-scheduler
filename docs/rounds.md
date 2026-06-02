@@ -1595,6 +1595,40 @@
   - [x] MVP 验收文档
   - [x] agent_gate round_076 冒烟
 
+### Round 77 - manual_export 通用 outbox
+
+- 目标：为文本平台扩展提供低风险 manual_export 导出包。
+- 范围：`adapters/manual_export/outbox.py`、CLI/Web API、作品详情按钮、`manual_export_runbook.md`。
+- 非目标：联网登录第三方平台；自动标记已发布。
+- 输入：Phase 1 作品库与预览渲染。
+- 输出：`outbox/` 目录下的 md/html/manifest/说明。
+- 验收标准：导出后文章状态不变；含 proof_required 提示。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_manual_export.py -q`。
+- 退出标准：gate round_077 通过；详情页可导出。
+- 风险：用户误以为导出等于发布。
+- 回滚点：移除 export API，保留微信主线。
+- 交付项：
+  - [x] outbox 导出实现
+  - [x] CLI export-outbox 与 Web API
+  - [x] agent_gate round_077 冒烟
+
+### Round 78 - Phase 2 平台提示包
+
+- 目标：启动 Phase 2 文本平台扩展；知乎/豆瓣 copy 提示与 outbox 索引。
+- 范围：`phase2_text_platforms.md`、`--platform zhihu|douban`、`/api/outbox-packages`。
+- 非目标：知乎/豆瓣 browser_assist 实现。
+- 输入：Round 77 outbox 骨架。
+- 输出：平台提示 md、`/debug` outbox 列表。
+- 验收标准：`zhihu_copy.md` 随 platform=zhihu 生成；Phase 2 文档可读。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_manual_export_platform.py -q`。
+- 退出标准：gate round_078 通过。
+- 风险：范围蔓延到多平台 adapter。
+- 回滚点：仅保留 generic 导出。
+- 交付项：
+  - [x] 平台提示包与 Phase 2 说明
+  - [x] outbox 列表 API
+  - [x] agent_gate round_078 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -255,7 +255,7 @@ Phase 2 暂不开发。只有 Phase 1 验收通过后，才允许启动。
 - 风险边界：不得把 P1 反向塞进 P0。
 - 下一轮衔接：若通过，进入 manual_export。
 
-### Round 23：manual_export 通用导出
+### Round 23：manual_export 通用导出（已完成 — agent `round_077`）
 
 - 本轮目标：为文本平台提供低风险导出包。
 - 具体任务：导出 Markdown、HTML、封面和复制说明。

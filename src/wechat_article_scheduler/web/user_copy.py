@@ -44,6 +44,7 @@ EVENT_TYPE: dict[str, str] = {
     "waiting_confirmation": "进入待人工确认",
     "proof_submitted": "已提交发布证明",
     "publish_skipped_draft_only": "正式发布已跳过（草稿-only）",
+    "outbox_exported": "已导出 outbox 包",
     "draft_created": "微信草稿已创建",
     "job_failed": "发布失败",
     "digest_warning": "摘要提醒",

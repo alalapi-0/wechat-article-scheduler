@@ -68,6 +68,10 @@ from wechat_article_scheduler.wechat_field_matrix import (
 from wechat_article_scheduler.adapters.browser_assist.workflow import (
     build_dry_run_plan,
 )
+from wechat_article_scheduler.adapters.manual_export import (
+    export_article_to_outbox,
+    list_outbox_packages,
+)
 from wechat_article_scheduler.review.proof import (
     ProofInput,
     get_proof_for_job,
@@ -346,6 +350,22 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail=result.get("error", "更新失败"))
         result.setdefault("human", humanize_update_result(result))
         return result
+
+    @app.post("/api/articles/{article_id}/export-outbox")
+    def article_export_outbox(article_id: int, platform: str = "generic") -> dict[str, Any]:
+        """导出 manual_export outbox 包（不联网、不标记已发布）。"""
+        with db.connect(cfg.database_path) as conn:
+            result = export_article_to_outbox(
+                cfg, conn, article_id, platform=(platform or "generic").strip()
+            )
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error", "导出失败"))
+        return result
+
+    @app.get("/api/outbox-packages")
+    def api_outbox_packages(limit: int = 30) -> dict[str, Any]:
+        items = list_outbox_packages(cfg, limit=min(max(limit, 1), 100))
+        return {"count": len(items), "items": items}
 
     @app.get("/api/wechat-field-matrix")
     def api_wechat_field_matrix() -> dict[str, Any]:
@@ -1132,6 +1152,7 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>微信字段能力矩阵</h2><pre id="fields">加载中…</pre>
 <h2>browser_assist 干跑计划</h2><pre id="browser-assist">加载中…</pre>
 <h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
+<h2>outbox 导出包</h2><pre id="outbox">加载中…</pre>
 <script>
 Promise.all([
   fetch('/api/status'),
@@ -1139,11 +1160,13 @@ Promise.all([
   fetch('/api/wechat-field-matrix'),
   fetch('/api/browser-assist-plan'),
   fetch('/api/waiting-confirmation'),
-]).then(async ([a,b,c,d,e])=>{
+  fetch('/api/outbox-packages'),
+]).then(async ([a,b,c,d,e,f])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
   document.getElementById('browser-assist').textContent = JSON.stringify(await d.json(), null, 2);
   document.getElementById('waiting').textContent = JSON.stringify(await e.json(), null, 2);
+  document.getElementById('outbox').textContent = JSON.stringify(await f.json(), null, 2);
 });
 </script></body></html>"""

@@ -57,6 +57,7 @@
       <div class="actions">
         <button type="button" class="btn-primary" id="btnPreview">刷新正文预览</button>
         <button type="button" class="btn" id="btnUpdateDraft" hidden>更新微信草稿</button>
+        <button type="button" class="btn" id="btnExportOutbox">导出 outbox 包</button>
         <a class="btn" id="btnWorkbench" href="/#works">去工作台安排发布</a>
       </div>
     </section>
@@ -132,6 +133,13 @@ async function boot(){
     document.body.classList.toggle('show-advanced', e.target.checked);
   });
   document.getElementById('btnPreview').addEventListener('click', loadPreview);
+  document.getElementById('btnExportOutbox').addEventListener('click', async () => {
+    if (!window.confirm('将导出 Markdown/HTML/封面到本地 outbox 目录，不会自动发布。继续？')) return;
+    try {
+      const r = await (await fetch(`/api/articles/${ARTICLE_ID}/export-outbox`, { method:'POST' })).json();
+      alert((r.human||['已导出']).join('\n') + (r.relative_path ? '\n\n路径：'+r.relative_path : ''));
+    } catch(e) { alert('导出失败：'+e); }
+  });
   const btnUpd = document.getElementById('btnUpdateDraft');
   if (btnUpd) btnUpd.addEventListener('click', async () => {
     if (!window.confirm('将当前作品内容同步到已有微信草稿？演练模式不会改动公众号后台。')) return;

@@ -130,6 +130,8 @@ ROUND_ORDER = [
     "round_074",
     "round_075",
     "round_076",
+    "round_077",
+    "round_078",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -892,6 +894,28 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "Phase 1 完成后按 backlog 评估 Phase 2",
         ],
     },
+    "round_077": {
+        "name": "Round 77 - manual_export 通用 outbox",
+        "acceptance_criteria": [
+            "export-outbox 生成 md/html/manifest/说明",
+            "不联网、不标记已发布",
+            "Web/CLI/API 与作品详情导出入口",
+        ],
+        "next_actions": [
+            "按 docs/roadmap_converged.md 继续文本平台模板与 outbox 索引",
+        ],
+    },
+    "round_078": {
+        "name": "Round 78 - Phase 2 平台提示包",
+        "acceptance_criteria": [
+            "zhihu/douban 平台 copy 提示文件",
+            "phase2_text_platforms.md 启动说明",
+            "outbox 列表 API 可在 /debug 查看",
+        ],
+        "next_actions": [
+            "评估知乎/豆瓣 browser_assist（backlog）",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -1502,6 +1526,32 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest wechat mvp acceptance",
+            ),
+        ]
+    elif round_id == "round_077":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_manual_export.py",
+                    "-q",
+                ],
+                "pytest manual export",
+            ),
+        ]
+    elif round_id == "round_078":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_manual_export_platform.py",
+                    "-q",
+                ],
+                "pytest manual export platform",
             ),
         ]
     else:

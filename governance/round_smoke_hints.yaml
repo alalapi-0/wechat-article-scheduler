@@ -89,3 +89,9 @@ round_075:
 
 round_076:
   - python3 -m pytest tests/test_wechat_mvp_acceptance.py tests/test_wechat_chain_stability.py -q
+
+round_077:
+  - python3 -m pytest tests/test_manual_export.py -q
+
+round_078:
+  - python3 -m pytest tests/test_manual_export_platform.py -q
