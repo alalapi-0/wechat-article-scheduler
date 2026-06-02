@@ -39,6 +39,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     ba_plan.add_argument("--article-id", type=str, default=None)
     ba_plan.add_argument("--media-id", type=str, default=None)
+    ba_plan.add_argument(
+        "--platform",
+        type=str,
+        default="wechat_official",
+        help="wechat_official | zhihu（知乎评估 dry-run）",
+    )
 
     mark_wc = sub.add_parser(
         "mark-waiting-confirmation",
@@ -151,20 +157,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "browser-assist-plan":
         import json
 
-        from wechat_article_scheduler.adapters.browser_assist.workflow import (
-            build_dry_run_plan,
-        )
+        from wechat_article_scheduler.adapters.browser_assist import build_dry_run_plan
 
-        print(
-            json.dumps(
-                build_dry_run_plan(
-                    article_id=args.article_id,
-                    media_id=args.media_id,
-                ),
-                ensure_ascii=False,
-                indent=2,
+        try:
+            plan = build_dry_run_plan(
+                platform=args.platform,
+                article_id=args.article_id,
+                media_id=args.media_id,
+                config=config,
             )
-        )
+        except ValueError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "mark-waiting-confirmation":

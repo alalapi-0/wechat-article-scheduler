@@ -1662,6 +1662,39 @@
   - [x] 豆瓣发布包文件集
   - [x] agent_gate round_080 冒烟
 
+### Round 81 - 知乎 browser_assist 评估
+
+- 目标：评估知乎是否适合本地 browser_assist（dry-run，不真发）。
+- 范围：`zhihu_workflow.py`、`zhihu_browser_assist.md`、CLI/Web `--platform zhihu`。
+- 非目标：登录知乎、自动填表、自动发布。
+- 输入：Round 79 知乎发布包。
+- 输出：评估结论、checkpoints、guardrails、步骤清单。
+- 验收标准：计划含 assessment；不绕过验证码。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_zhihu_browser_assist.py -q`。
+- 退出标准：gate round_081；`/debug` 可见知乎评估 JSON。
+- 风险：误实现为自动发布工具。
+- 回滚点：移除 zhihu platform 分支。
+- 交付项：
+  - [x] 知乎 dry-run 计划
+  - [x] /debug 与 API 入口
+  - [x] agent_gate round_081 冒烟
+
+### Round 82 - browser_assist 多平台入口
+
+- 目标：微信主线 browser_assist API 与多平台列表兼容。
+- 范围：`plans.py`、`/api/browser-assist/platforms`、测试与 README。
+- 非目标：豆瓣 browser_assist 实现。
+- 输入：Round 81 多平台 plans 入口。
+- 输出：平台列表 API；微信默认 plan 回归通过。
+- 验收标准：`test_browser_assist_workflow` 仍通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_browser_assist_platforms.py tests/test_browser_assist_workflow.py -q`。
+- 退出标准：gate round_082 通过。
+- 风险：破坏微信 browser_assist 默认行为。
+- 回滚点：恢复单一 workflow 导出。
+- 交付项：
+  - [x] browser-assist/platforms API
+  - [x] agent_gate round_082 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -4,11 +4,13 @@ Browser assist adapters must be human-in-the-loop and must not bypass captcha, Q
 
 Current P0 scope is WeChat Official Account fallback only. Other platform browser_assist work is backlog and must not be implemented before the WeChat loop is stable.
 
-## Round 18 交付
+## Round 18 / 25 交付
 
-- 流程文档：`docs/browser_assist_runbook.md`、`docs/wechat_browser_assist_strategy.md`
-- 干跑骨架：`workflow.build_dry_run_plan()` — 操作清单、人工确认点、guardrails
-- CLI：`browser-assist-plan`；Web：`/api/browser-assist-plan`
+- 微信：`workflow.py` — `docs/browser_assist_runbook.md`
+- 知乎评估（dry-run）：`zhihu_workflow.py` — `docs/zhihu_browser_assist.md`
+- 统一入口：`plans.build_dry_run_plan(platform=...)`
+- CLI：`browser-assist-plan --platform wechat_official|zhihu`
+- Web：`/api/browser-assist-plan`、`/api/browser-assist/platforms`；`/debug` 含知乎评估 JSON
 
 ## 安全边界
 

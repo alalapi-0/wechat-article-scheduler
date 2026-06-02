@@ -277,7 +277,7 @@ Phase 2 暂不开发。只有 Phase 1 验收通过后，才允许启动。
 - 风险边界：不得声称 API 已支持。
 - 下一轮衔接：进入知乎 browser_assist 评估。
 
-### Round 25：知乎 browser_assist
+### Round 25：知乎 browser_assist（已完成 — agent `round_081`）
 
 - 本轮目标：评估知乎是否适合本地辅助填表。
 - 具体任务：定义安全边界、人工确认和 proof。

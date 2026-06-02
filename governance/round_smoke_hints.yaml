@@ -101,3 +101,9 @@ round_079:
 
 round_080:
   - python3 -m pytest tests/test_douban_publish_pack.py -q
+
+round_081:
+  - python3 -m pytest tests/test_zhihu_browser_assist.py -q
+
+round_082:
+  - python3 -m pytest tests/test_browser_assist_platforms.py tests/test_browser_assist_workflow.py -q
