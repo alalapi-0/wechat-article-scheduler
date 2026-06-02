@@ -45,7 +45,7 @@ def validate_manifest(data: dict[str, Any]) -> ManifestValidationResult:
     content_type = data.get("content_type")
     if not content_type:
         warnings.append("未设置 content_type，将按 article 处理")
-    elif content_type not in ("article", "chapter", "note", "video", "audio"):
+    elif content_type not in ("article", "chapter", "note", "video", "audio", "podcast", "music"):
         warnings.append(f"非常见 content_type: {content_type}")
 
     ctype = (data.get("content_type") or "article").strip().lower()
@@ -56,6 +56,15 @@ def validate_manifest(data: dict[str, Any]) -> ManifestValidationResult:
             isinstance(m, dict) and m.get("role") == "cover" for m in (data.get("media_refs") or [])
         ):
             warnings.append("视频 manifest 建议提供 cover_path 或 media_refs.cover")
+    elif ctype in ("audio", "podcast", "music"):
+        if not data.get("audio_path") and not any(
+            isinstance(m, dict) and m.get("role") == "audio" for m in (data.get("media_refs") or [])
+        ):
+            errors.append(f"content_type={ctype} 时必须提供 audio_path 或 media_refs.audio")
+        if not data.get("copyright_notice"):
+            warnings.append("音频/播客 manifest 建议提供 copyright_notice")
+        if ctype == "podcast" and not data.get("show_notes_md"):
+            warnings.append("podcast 建议提供 show_notes_md")
     elif not data.get("body_md") and not data.get("body_html"):
         errors.append("必须提供 body_md 或 body_html 之一")
 

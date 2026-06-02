@@ -433,16 +433,22 @@ Phase 3 暂不开发。短视频和图文平台风控更高，当前仅保留 ba
 
 Phase 4 暂不开发。音频、版权和审核复杂度高，仅保留长期 backlog。
 
-### Round 36：音频内容包抽象
+### Round 36：音频内容包抽象（已完成 — agent `round_100`）
 
 - 本轮目标：预研音频内容包。
-- 具体任务：定义音频、封面、歌词、节目说明和版权字段。
-- 交付物：预研文档。
+- 具体任务：audio/podcast manifest 校验、`audio-package-plan`、registry 占位。
+- 交付物：`docs/phase4_audio_content_package.md`；示例 manifest。
 - 验收标准：不改当前数据库主线。
 - 不做什么：不上传音频。
-- 允许改动范围：docs only。
+- 允许改动范围：预研模块、docs、tests。
 - 风险边界：版权和审核必须显式记录。
-- 下一轮衔接：进入网易云音乐预研。
+- 下一轮衔接：工作台增强（`round_101`）或网易云细化。
+
+### Round 36b：微信工作台链路提示（已完成 — agent `round_101`）
+
+- 本轮目标：普通用户视图展示与 CLI 一致的下一步建议。
+- 交付物：`workbench.recommended_cli`；空库 scan 提示。
+- 下一轮衔接：round_102 维护或 Phase 5 预研。
 
 ### Round 37：网易云音乐发布包预研
 

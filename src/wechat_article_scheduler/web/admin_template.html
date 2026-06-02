@@ -1216,9 +1216,10 @@ function renderNextSteps(wb){
   box.hidden = false;
   el('nextStepsHeadline').innerHTML = `<b>下一步</b> · ${esc(wb.headline)}`;
   const hints = wb.hints || [];
-  el('nextStepsList').innerHTML = hints.length
+  const cli = wb.recommended_cli ? `<li class="muted"><code>${esc(wb.recommended_cli)}</code></li>` : '';
+  el('nextStepsList').innerHTML = (hints.length
     ? hints.map(h => `<li>${esc(h)}</li>`).join('')
-    : '<li>按右侧主操作继续即可</li>';
+    : '<li>按右侧主操作继续即可</li>') + cli;
 }
 
 function renderDraftsSummary(dsum){

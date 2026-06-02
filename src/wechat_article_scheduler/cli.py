@@ -96,6 +96,15 @@ def _build_parser() -> argparse.ArgumentParser:
     svp.add_argument("--platform", type=str, default="douyin", help="douyin | kuaishou | ks")
     svp.add_argument("--article-id", type=str, default=None)
 
+    ap = sub.add_parser(
+        "audio-package-plan",
+        help="Phase4 音频/播客预研 dry-run（不上传）",
+    )
+    ap.add_argument("--platform", type=str, default="podcast")
+    ap.add_argument("--package-id", type=str, default=None)
+    ap.add_argument("--title", type=str, default=None)
+    ap.add_argument("--audio-path", type=str, default=None)
+
     sub.add_parser("wechat-chain-summary", help="微信公众号闭环链路摘要 JSON")
 
     mark_wc = sub.add_parser(
@@ -337,6 +346,26 @@ def main(argv: list[str] | None = None) -> int:
             plan = build_short_video_deferred_plan(
                 platform=args.platform,
                 article_id=args.article_id,
+            )
+        except ValueError as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
+            return 1
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "audio-package-plan":
+        import json
+
+        from wechat_article_scheduler.content_packages.audio_presearch import (
+            build_audio_package_dry_run,
+        )
+
+        try:
+            plan = build_audio_package_dry_run(
+                platform=args.platform,
+                package_id=args.package_id,
+                title=args.title,
+                audio_path=args.audio_path,
             )
         except ValueError as exc:
             print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))

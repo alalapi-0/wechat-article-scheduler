@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "project_id": "demo-podcast",
+  "package_id": "ep-042",
+  "content_type": "podcast",
+  "title": "示例播客节目",
+  "summary": "Show notes 摘要。",
+  "audio_path": "media/podcast.mp3",
+  "show_notes_md": "content/show_notes.md",
+  "rss_feed_url": "https://example.com/feed.xml",
+  "media_refs": [
+    {"path": "media/podcast.mp3", "role": "audio"},
+    {"path": "media/cover.png", "role": "cover"}
+  ],
+  "targets": [
+    {
+      "platform_account_id": "podcast_rss_main",
+      "adapter_type": "manual_export",
+      "scheduled_at": "2026-06-02T12:00:00+08:00"
+    }
+  ]
+}

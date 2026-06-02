@@ -158,3 +158,9 @@ round_098:
 
 round_099:
   - python3 -m pytest tests/test_short_video_deferred.py -q
+
+round_100:
+  - python3 -m pytest tests/test_audio_presearch.py -q
+
+round_101:
+  - python3 -m pytest tests/test_workbench_chain_hints.py tests/test_web_console_mvp.py -q

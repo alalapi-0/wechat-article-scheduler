@@ -47,6 +47,9 @@ def test_overview_includes_workbench(app_config: AppConfig) -> None:
     data = client.get("/api/overview").json()
     assert "workbench" in data
     assert data["workbench"]["headline"]
+    assert "wechat_chain_summary" in data
+    assert data["workbench"].get("chain_recommended_action") == "scan"
+    assert "scan" in (data["workbench"].get("recommended_cli") or "")
 
 
 def test_index_mvp_controls(app_config: AppConfig) -> None:

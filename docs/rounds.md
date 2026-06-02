@@ -1968,6 +1968,38 @@
   - [x] deferred 评估
   - [x] agent_gate round_099 冒烟
 
+### Round 100 - Phase4 音频/播客预研
+
+- 目标：路线图 Round 36+ — 音频/播客 manifest 与 dry-run（不上传）。
+- 范围：`audio_presearch.py`、示例 manifest、registry、`/debug`。
+- 非目标：上传音频；改 articles 表；网易云真发。
+- 输入：Phase3 视频预研经验、manifest 框架。
+- 输出：podcast/audio/netease_music 评估；`audio-package-plan`。
+- 验收标准：sample_audio/podcast manifest 校验通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_audio_presearch.py -q`。
+- 退出标准：gate round_100。
+- 风险：版权缺失。
+- 回滚点：移除 audio API。
+- 交付项：
+  - [x] 音频预研与 manifest
+  - [x] agent_gate round_100 冒烟
+
+### Round 101 - 微信工作台链路提示增强
+
+- 目标：首页「下一步」与 `wechat-chain-summary` 对齐（真实功能）。
+- 范围：`workbench_mvp.py`、`admin_template.html` overview。
+- 非目标：自动执行 CLI；Phase4 实现。
+- 输入：round_091 链路摘要。
+- 输出：`recommended_cli` 展示；空库建议 scan。
+- 验收标准：`test_workbench_chain_hints` 与 MVP 测试通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_workbench_chain_hints.py tests/test_web_console_mvp.py -q`。
+- 退出标准：gate round_101。
+- 风险：无。
+- 回滚点：恢复旧 workbench 逻辑。
+- 交付项：
+  - [x] 工作台增强
+  - [x] agent_gate round_101 冒烟
+
 ## 历史说明
 
 历史实现细节见提交记录；逐轮完成报告已在 Round 43 精简移除，避免仓库堆积冗余文档。

@@ -153,6 +153,8 @@ ROUND_ORDER = [
     "round_097",
     "round_098",
     "round_099",
+    "round_100",
+    "round_101",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1165,7 +1167,29 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "/debug 可见抖音/快手 JSON",
         ],
         "next_actions": [
-            "注册 round_100 或微信修复轮",
+            "Phase4 音频预研 round_100",
+        ],
+    },
+    "round_100": {
+        "name": "Round 100 - Phase4 音频/播客预研",
+        "acceptance_criteria": [
+            "audio/podcast manifest 校验",
+            "audio-package-plan dry-run",
+            "registry podcast/netease 占位",
+        ],
+        "next_actions": [
+            "工作台链路提示 round_101",
+        ],
+    },
+    "round_101": {
+        "name": "Round 101 - 微信工作台链路提示增强",
+        "acceptance_criteria": [
+            "overview.workbench 含 recommended_cli",
+            "空库时 primary_action=scan",
+            "test_workbench_chain_hints 通过",
+        ],
+        "next_actions": [
+            "注册 round_102 或维护轮",
         ],
     },
 }
@@ -1995,6 +2019,27 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
             (
                 [py, "-m", "pytest", "tests/test_short_video_deferred.py", "-q"],
                 "pytest short video deferred",
+            ),
+        ]
+    elif round_id == "round_100":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_audio_presearch.py", "-q"],
+                "pytest audio presearch",
+            ),
+        ]
+    elif round_id == "round_101":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_workbench_chain_hints.py",
+                    "tests/test_web_console_mvp.py",
+                    "-q",
+                ],
+                "pytest workbench chain hints",
             ),
         ]
     else:

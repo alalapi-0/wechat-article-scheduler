@@ -213,6 +213,26 @@ BUILTIN_CAPABILITIES: tuple[AdapterCapability, ...] = (
         risk_level="high",
         notes="快手发布包骨架（deferred）；export-outbox --platform kuaishou。",
     ),
+    AdapterCapability(
+        platform="podcast",
+        adapter_type="manual_export",
+        content_types=("podcast", "audio"),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="medium",
+        notes="播客 RSS/托管预研占位；不上传音频。",
+    ),
+    AdapterCapability(
+        platform="netease_music",
+        adapter_type="manual_export",
+        content_types=("music", "audio"),
+        supports_dry_run=True,
+        supports_automated_publish=False,
+        requires_human_proof=True,
+        risk_level="high",
+        notes="网易云音乐预研占位（deferred）；版权须人工确认。",
+    ),
 )
 
 
@@ -278,4 +298,8 @@ def infer_platform_from_account_id(platform_account_id: str) -> str | None:
         return "douyin"
     if "kuaishou" in lower or "ks_" in lower or lower == "ks":
         return "kuaishou"
+    if "podcast" in lower or "rss" in lower:
+        return "podcast"
+    if "netease" in lower or "cloudmusic" in lower:
+        return "netease_music"
     return None

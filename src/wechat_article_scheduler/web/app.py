@@ -481,6 +481,36 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.get("/api/audio-package/platforms")
+    def api_audio_package_platforms() -> dict[str, Any]:
+        from wechat_article_scheduler.content_packages.audio_presearch import (
+            list_audio_platforms,
+        )
+
+        items = list_audio_platforms()
+        return {"count": len(items), "platforms": items}
+
+    @app.get("/api/audio-package-plan")
+    def api_audio_package_plan(
+        platform: str = "podcast",
+        package_id: str | None = None,
+        title: str | None = None,
+        audio_path: str | None = None,
+    ) -> dict[str, Any]:
+        from wechat_article_scheduler.content_packages.audio_presearch import (
+            build_audio_package_dry_run,
+        )
+
+        try:
+            return build_audio_package_dry_run(
+                platform=platform,
+                package_id=package_id,
+                title=title,
+                audio_path=audio_path,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.get("/api/short-video/platforms")
     def api_short_video_platforms() -> dict[str, Any]:
         from wechat_article_scheduler.content_packages.short_video_deferred import (
@@ -643,6 +673,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             article_counts=article_counts,
             job_counts=job_counts,
             schedule_summary=schedule,
+            chain_summary=chain_summary,
         )
         return {
             "status": status(),
@@ -1337,6 +1368,8 @@ pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</st
 <h2>微信闭环链路摘要</h2><pre id="wechat-chain">加载中…</pre>
 <h2>抖音 deferred 评估</h2><pre id="short-video-douyin">加载中…</pre>
 <h2>快手 deferred 评估</h2><pre id="short-video-kuaishou">加载中…</pre>
+<h2>Phase4 播客音频预研</h2><pre id="audio-package-podcast">加载中…</pre>
+<h2>Phase4 网易云 deferred</h2><pre id="audio-package-netease">加载中…</pre>
 <h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
 <h2>outbox 导出包</h2><pre id="outbox">加载中…</pre>
 <script>
@@ -1359,9 +1392,11 @@ Promise.all([
   fetch('/api/wechat-chain-summary'),
   fetch('/api/short-video-plan?platform=douyin'),
   fetch('/api/short-video-plan?platform=kuaishou'),
+  fetch('/api/audio-package-plan?platform=podcast'),
+  fetch('/api/audio-package-plan?platform=netease_music'),
   fetch('/api/waiting-confirmation'),
   fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t])=>{
+]).then(async ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v])=>{
   document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
   document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
   document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
@@ -1380,7 +1415,9 @@ Promise.all([
   document.getElementById('wechat-chain').textContent = JSON.stringify(await p.json(), null, 2);
   document.getElementById('short-video-douyin').textContent = JSON.stringify(await q.json(), null, 2);
   document.getElementById('short-video-kuaishou').textContent = JSON.stringify(await r.json(), null, 2);
-  document.getElementById('waiting').textContent = JSON.stringify(await s.json(), null, 2);
-  document.getElementById('outbox').textContent = JSON.stringify(await t.json(), null, 2);
+  document.getElementById('audio-package-podcast').textContent = JSON.stringify(await s.json(), null, 2);
+  document.getElementById('audio-package-netease').textContent = JSON.stringify(await t.json(), null, 2);
+  document.getElementById('waiting').textContent = JSON.stringify(await u.json(), null, 2);
+  document.getElementById('outbox').textContent = JSON.stringify(await v.json(), null, 2);
 });
 </script></body></html>"""

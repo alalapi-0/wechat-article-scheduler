@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "project_id": "demo-audio",
+  "package_id": "ep-001",
+  "content_type": "audio",
+  "title": "示例音频单集",
+  "summary": "Phase4 音频 manifest 校验示例。",
+  "audio_path": "media/episode.mp3",
+  "cover_path": "media/cover.jpg",
+  "lyrics_path": "media/lyrics.lrc",
+  "copyright_notice": "仅供测试；请替换为真实版权说明",
+  "targets": [
+    {
+      "platform_account_id": "podcast_host_main",
+      "adapter_type": "manual_export",
+      "review_required": true
+    }
+  ]
+}
