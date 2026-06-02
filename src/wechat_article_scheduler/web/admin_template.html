@@ -1057,7 +1057,7 @@ async function boot(){
   if (btnOrphanCovers) btnOrphanCovers.addEventListener('click', cleanupOrphanCovers);
   el('modalClose').addEventListener('click', () => el('modalBack').classList.remove('open'));
   el('modalBack').addEventListener('click', e => { if(e.target===el('modalBack')) el('modalBack').classList.remove('open'); });
-  setupQueueFilters();
+  initQueueFilter();
   setupDraftFilters();
   const btnRetryAll = el('btnRetryAllFailed');
   if (btnRetryAll) btnRetryAll.addEventListener('click', () => bulkRetryFailed());
@@ -1072,15 +1072,44 @@ let queueFilterKey = 'wait';
 const QUEUE_FILTER_API = {
   wait: 'pending', active: 'running', ok: 'done', err: 'failed', confirm: 'waiting_confirmation', all: '',
 };
+const QUEUE_FILTER_STORAGE_KEY = 'wechat_workbench_queue_filter';
 
-function setupQueueFilters(){
+function loadQueueFilterFromStorage(){
+  const allowed = Object.keys(QUEUE_FILTER_API);
+  try {
+    const v = localStorage.getItem(QUEUE_FILTER_STORAGE_KEY);
+    return (v && allowed.includes(v)) ? v : 'wait';
+  } catch (e) { return 'wait'; }
+}
+
+function persistQueueFilter(key){
+  try { localStorage.setItem(QUEUE_FILTER_STORAGE_KEY, key); } catch (e) {}
+}
+
+function applyQueueFilterUI(key){
+  const allowed = Object.keys(QUEUE_FILTER_API);
+  queueFilterKey = (key && allowed.includes(key)) ? key : 'wait';
+  const box = el('queueFilters');
+  if (!box) return;
+  box.querySelectorAll('button[data-qf]').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-qf') === queueFilterKey);
+  });
+}
+
+async function setQueueFilterKey(key, opts){
+  const o = opts || {};
+  applyQueueFilterUI(key);
+  if (o.persist !== false) persistQueueFilter(queueFilterKey);
+  if (o.refresh !== false) await refreshAll();
+}
+
+function initQueueFilter(){
+  applyQueueFilterUI(loadQueueFilterFromStorage());
   const box = el('queueFilters');
   if (!box) return;
   box.querySelectorAll('button[data-qf]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      queueFilterKey = btn.getAttribute('data-qf') || 'wait';
-      box.querySelectorAll('button[data-qf]').forEach(b => b.classList.toggle('active', b === btn));
-      await refreshAll();
+      await setQueueFilterKey(btn.getAttribute('data-qf') || 'wait');
     });
   });
 }
@@ -1567,14 +1596,9 @@ function renderSafety(status, preflight){
   }
 }
 
-function goWaitingConfirmQueue(){
-  queueFilterKey = 'confirm';
-  const box = el('queueFilters');
-  if (box) box.querySelectorAll('button[data-qf]').forEach(b => {
-    b.classList.toggle('active', b.getAttribute('data-qf') === 'confirm');
-  });
+async function goWaitingConfirmQueue(){
+  await setQueueFilterKey('confirm');
   document.getElementById('queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  refreshAll();
 }
 
 function renderWaitingConfirmationEntry(wc){
@@ -1624,13 +1648,8 @@ function renderStats(ov){
   el('statCards').querySelectorAll('[data-goto-queue]').forEach(card => {
     card.addEventListener('click', async () => {
       const key = card.getAttribute('data-goto-queue') || 'err';
-      queueFilterKey = key;
-      const box = el('queueFilters');
-      if (box) box.querySelectorAll('button[data-qf]').forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-qf') === key);
-      });
+      await setQueueFilterKey(key);
       document.getElementById('queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      await refreshAll();
     });
   });
 }

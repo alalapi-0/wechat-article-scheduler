@@ -172,6 +172,7 @@ ROUND_ORDER = [
     "round_115",
     "round_116",
     "round_117",
+    "round_118",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1387,6 +1388,17 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "mock@8080 筛选与无横向溢出",
         ],
         "next_actions": [
+            "推进 round_118 队列 Tab 筛选持久化",
+        ],
+    },
+    "round_118": {
+        "name": "Round 118 - 队列 Tab 筛选持久化",
+        "acceptance_criteria": [
+            "发布队列 Tab localStorage 持久化",
+            "刷新后恢复 Tab 状态",
+            "mock@8080 切换失败/待发布 Tab",
+        ],
+        "next_actions": [
             "在 docs/rounds.md 规划后续轮次并扩展 ROUND_ORDER",
         ],
     },
@@ -2490,6 +2502,23 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest desktop overflow regression",
+            ),
+        ]
+    elif round_id == "round_118":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_round_118_wechat_p0.py", "-q"],
+                "pytest wechat p0 round_118",
+            ),
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_ui_e2e.py::test_ordinary_view_e2e_baseline",
+                    "-q",
+                ],
+                "pytest ordinary view regression",
             ),
         ]
     else:
