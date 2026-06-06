@@ -4,6 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>作品详情 · 发布工作台</title>
+<link rel="icon" href="/favicon.ico" type="image/png" />
 <style>
   :root {
     --bg: #f4f5f7; --surface: #fff; --text: #1a1a1a; --muted: #6b7280;
@@ -172,6 +173,7 @@ function applyWorkbenchReturnLinks(){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 let manualExportPlatforms = [{ id: 'generic', label: '通用', description: '' }];
+let manualExportOutboxDir = 'outbox';
 
 async function loadManualExportPlatforms(){
   try {
@@ -189,6 +191,7 @@ async function loadManualExportPlatforms(){
       });
       manualExportPlatforms = list;
     }
+    if (d.outbox_dir) manualExportOutboxDir = d.outbox_dir;
   } catch (e) { /* 非阻塞 */ }
 }
 
@@ -208,7 +211,8 @@ function detailExportMenuHtml(){
 async function doExportOutbox(platform, label){
   const plat = platform || 'generic';
   const platLabel = label || plat;
-  if (!window.confirm(`将导出「${platLabel}」到本地 outbox，不会联网或自动发布。继续？`)) return;
+  const dirHint = manualExportOutboxDir ? `\n\n导出目录：${manualExportOutboxDir}/（由 MANUAL_EXPORT_OUTBOX 配置）` : '';
+  if (!window.confirm(`将导出「${platLabel}」到本地 outbox，不会联网或自动发布。${dirHint}\n\n继续？`)) return;
   document.querySelectorAll('.export-drop[open]').forEach(el => el.removeAttribute('open'));
   try {
     const url = `/api/articles/${ARTICLE_ID}/export-outbox?platform=${encodeURIComponent(plat)}`;

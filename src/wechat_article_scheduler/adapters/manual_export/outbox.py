@@ -22,7 +22,9 @@ OUTBOX_VERSION = 2
 
 
 def outbox_root(config: AppConfig) -> Path:
-    root = config.root / "outbox"
+    root = config.manual_export_outbox
+    if not root.is_absolute():
+        root = config.root / root
     root.mkdir(parents=True, exist_ok=True)
     return root
 

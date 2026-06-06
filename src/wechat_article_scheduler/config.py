@@ -52,6 +52,18 @@ class AppConfig:
     web_host: str
     web_port: int
     rules: dict[str, Any]
+    manual_export_outbox: Path = Path("outbox")
+    external_agent_task_export_enabled: bool = True
+    external_agent_task_outbox: Path = Path("outbox/wechat_agent_tasks")
+    external_agent_include_article_preview: bool = True
+    external_agent_include_article_source: bool = True
+    external_agent_include_cover: bool = True
+    external_agent_include_prompt: bool = True
+    external_agent_include_checklist: bool = True
+    external_agent_include_proof_template: bool = True
+    external_agent_redact_sensitive_values: bool = True
+    internal_browser_agent_enabled: bool = False
+    internal_llm_agent_enabled: bool = False
 
     @property
     def articles_dir(self) -> Path:
@@ -105,9 +117,42 @@ def load_config(env_file: Path | None = None) -> AppConfig:
 
     rules = load_rules(rules_path)
     schedule_rules = rules.get("schedule", {}) if isinstance(rules.get("schedule"), dict) else {}
+    manual_export_rules = (
+        rules.get("manual_export", {}) if isinstance(rules.get("manual_export"), dict) else {}
+    )
+    external_agent_rules = (
+        rules.get("external_agent", {}) if isinstance(rules.get("external_agent"), dict) else {}
+    )
+    internal_browser_rules = (
+        rules.get("internal_browser_agent", {})
+        if isinstance(rules.get("internal_browser_agent"), dict)
+        else {}
+    )
+    internal_llm_rules = (
+        rules.get("internal_llm_agent", {})
+        if isinstance(rules.get("internal_llm_agent"), dict)
+        else {}
+    )
 
     wechat_mode = os.getenv("WECHAT_MODE", "mock").strip().lower()
     real_api_mode = wechat_mode == "real"
+    manual_outbox = Path(
+        os.getenv(
+            "MANUAL_EXPORT_OUTBOX",
+            str(manual_export_rules.get("outbox_dir", "outbox")),
+        )
+    )
+    if not manual_outbox.is_absolute():
+        manual_outbox = ROOT / manual_outbox
+
+    agent_outbox = Path(
+        os.getenv(
+            "EXTERNAL_AGENT_TASK_OUTBOX",
+            str(external_agent_rules.get("outbox_dir", "outbox/wechat_agent_tasks")),
+        )
+    )
+    if not agent_outbox.is_absolute():
+        agent_outbox = ROOT / agent_outbox
 
     return AppConfig(
         root=ROOT,
@@ -143,6 +188,44 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         web_host=os.getenv("WEB_HOST", "127.0.0.1").strip(),
         web_port=int(os.getenv("WEB_PORT", "8080")),
         rules=rules,
+        manual_export_outbox=manual_outbox,
+        external_agent_task_export_enabled=_env_bool(
+            "EXTERNAL_AGENT_TASK_EXPORT_ENABLED",
+            bool(external_agent_rules.get("enabled", True)),
+        ),
+        external_agent_task_outbox=agent_outbox,
+        external_agent_include_article_preview=_env_bool(
+            "EXTERNAL_AGENT_INCLUDE_ARTICLE_PREVIEW",
+            bool(external_agent_rules.get("include_article_preview", True)),
+        ),
+        external_agent_include_article_source=bool(
+            external_agent_rules.get("include_article_source", True)
+        ),
+        external_agent_include_cover=_env_bool(
+            "EXTERNAL_AGENT_INCLUDE_COVER",
+            bool(external_agent_rules.get("include_cover", True)),
+        ),
+        external_agent_include_prompt=_env_bool(
+            "EXTERNAL_AGENT_INCLUDE_PROMPT",
+            bool(external_agent_rules.get("include_prompt", True)),
+        ),
+        external_agent_include_checklist=bool(
+            external_agent_rules.get("include_checklist", True)
+        ),
+        external_agent_include_proof_template=bool(
+            external_agent_rules.get("include_proof_template", True)
+        ),
+        external_agent_redact_sensitive_values=bool(
+            external_agent_rules.get("redact_sensitive_values", True)
+        ),
+        internal_browser_agent_enabled=_env_bool(
+            "INTERNAL_BROWSER_AGENT_ENABLED",
+            bool(internal_browser_rules.get("enabled", False)),
+        ),
+        internal_llm_agent_enabled=_env_bool(
+            "INTERNAL_LLM_AGENT_ENABLED",
+            bool(internal_llm_rules.get("enabled", False)),
+        ),
     )
 
 

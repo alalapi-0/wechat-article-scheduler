@@ -56,6 +56,14 @@ MODE_LABELS: dict[str, str] = {
     "real": "真实 API 测试（按任务设置创建草稿或正式发布）",
 }
 
+RESTORE_SCHEDULE_HINT = "恢复作品不等于恢复排期；删除时已取消的待发布任务不会自动恢复，请重新安排发布时间"
+
+
+def humanize_restore_result(*, count: int = 1) -> list[str]:
+    if count <= 1:
+        return ["作品已从回收站恢复", RESTORE_SCHEDULE_HINT]
+    return [f"已恢复 {count} 篇作品", RESTORE_SCHEDULE_HINT]
+
 PUBLISH_SWITCH: dict[bool, str] = {
     False: "不会真的发布",
     True: "已允许真实发布（请谨慎）",

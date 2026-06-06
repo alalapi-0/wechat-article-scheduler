@@ -23,7 +23,11 @@ def global_publish_policy(config: AppConfig) -> dict[str, Any]:
     elif not pub_on:
         headline = "真实 API · 全局草稿-only（WECHAT_ENABLE_PUBLISH=false）"
         badge = "real_draft_only"
-        env_hint = "需要正式发布时设置 WECHAT_ENABLE_PUBLISH=true 且任务选「正式发布」"
+        env_hint = (
+            "需要正式发布时设置 WECHAT_ENABLE_PUBLISH=true 且任务选「正式发布」；"
+            "草稿-only 测试后请在公众号后台手动删除测试草稿，"
+            "本地记录见「微信草稿」区与 reports/real_api_runs/"
+        )
     else:
         headline = "真实 API · 正式发布已开启（任务选「正式发布」时会 freepublish/submit）"
         badge = "real_publish_enabled"

@@ -52,6 +52,7 @@ from wechat_article_scheduler.preview_snapshot import (
 )
 from wechat_article_scheduler.scheduler import run_due_jobs
 from wechat_article_scheduler.web.user_copy import (
+    humanize_restore_result,
     article_workflow_hint,
     export_labels_json,
     humanize_plan_result,
@@ -343,6 +344,18 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         """高级排错页：展示原始 JSON 与内部字段。"""
         return _DEBUG_HTML
 
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> Response:
+        """避免首屏请求 /favicon.ico 产生 404 控制台噪音。"""
+        # 16×16 绿色方块 PNG（浏览器可接受为 favicon）
+        png = bytes.fromhex(
+            "89504e470d0a1a0a0000000d49484452000000100000001008060000001ff3ff62"
+            "000000017352474200aece1ce90000000467414d410000b18f0ffb51ca000000097"
+            "0485973000000e1000000e201006fc7c8f00000001a49444154789c63f8cf80"
+            "80000003000300a9c4e0e20000000049454e44ae426082"
+        )
+        return Response(content=png, media_type="image/png")
+
     @app.get("/assets/export-outbox-ui.js")
     def export_outbox_ui_js() -> Response:
         """作品卡与详情页共用的 export-outbox 成功 toast 脚本。"""
@@ -412,13 +425,27 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         items = list_outbox_packages(cfg, limit=min(max(limit, 1), 100))
         return {"count": len(items), "items": items}
 
+    def _relative_project_path(path: Path) -> str:
+        try:
+            return str(path.relative_to(cfg.root))
+        except ValueError:
+            return str(path)
+
     @app.get("/api/manual-export/platforms")
     def api_manual_export_platforms() -> dict[str, Any]:
         """manual_export 支持的平台列表（不联网）。"""
+        manual_dir = _relative_project_path(cfg.manual_export_outbox)
+        agent_dir = _relative_project_path(cfg.external_agent_task_outbox)
         return {
             "platforms": [
                 {"id": k, **v} for k, v in SUPPORTED_PLATFORMS.items()
-            ]
+            ],
+            "outbox_dir": manual_dir,
+            "external_agent_outbox_dir": agent_dir,
+            "outbox_note": (
+                f"通用 outbox 导出写入 {manual_dir}（MANUAL_EXPORT_OUTBOX）；"
+                f"外部 Agent 任务包写入 {agent_dir}（EXTERNAL_AGENT_TASK_OUTBOX）"
+            ),
         }
 
     @app.get("/api/wechat-field-matrix")
@@ -1015,7 +1042,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             if not restore_article(conn, article_id):
                 raise HTTPException(status_code=404, detail="回收站中未找到该作品")
             conn.commit()
-        return {"ok": True, "article_id": article_id, "human": ["作品已从回收站恢复"]}
+        return {
+            "ok": True,
+            "article_id": article_id,
+            "human": humanize_restore_result(),
+        }
 
     @app.post("/api/articles/bulk-trash")
     async def bulk_trash_articles(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
@@ -1032,7 +1063,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         with db.connect(cfg.database_path) as conn:
             stats = bulk_restore(conn, ids)
             conn.commit()
-        return {"ok": True, **stats, "human": [f"已恢复 {stats['restored']} 篇"]}
+        return {
+            "ok": True,
+            **stats,
+            "human": humanize_restore_result(count=int(stats["restored"])),
+        }
 
     @app.post("/api/trash/purge")
     async def purge_trash_bin() -> dict[str, Any]:

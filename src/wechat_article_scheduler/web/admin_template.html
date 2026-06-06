@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>微信公众号文章发布工作台</title>
+<link rel="icon" href="/favicon.ico" type="image/png" />
 <script>
 try {
   if (localStorage.getItem('wechat_workbench_show_advanced') === '1') {
@@ -340,6 +341,10 @@ try {
   .modal h3 { margin: 0 0 8px; }
   .modal .close { float: right; }
   .preview-hint { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+  .drafts-cleanup-banner {
+    margin: 0 0 10px; padding: 10px 12px; border-radius: 8px;
+    background: var(--warn); color: #5c4a12; border: 1px solid #f0d78c;
+  }
   .preview-body {
     border: 1px solid var(--line);
     border-radius: 9px;
@@ -566,7 +571,7 @@ try {
           <section class="section" id="trash">
             <div class="section-head">
               <h2>回收站</h2>
-              <span class="hint">可恢复或彻底删除</span>
+              <span class="hint">可恢复或彻底删除 · 恢复作品不等于恢复排期</span>
             </div>
             <div class="upload-actions">
               <button class="btn-ghost btn-sm" id="btnBulkRestore" type="button">恢复选中</button>
@@ -630,6 +635,7 @@ try {
           <section id="drafts" class="section">
             <div class="section-head"><h2>微信草稿</h2><span class="hint" id="draftsHint">本地记录</span></div>
             <div class="card queue-box pad">
+              <p class="preview-hint drafts-cleanup-banner" id="draftsCleanupBanner" hidden></p>
               <p class="preview-hint" id="draftsModeNote" hidden></p>
               <p class="preview-hint" style="margin-top:0;">仅显示本工具创建并写入数据库的草稿，不代表公众号后台全部草稿。</p>
               <div class="queue-filters" id="draftFilters" role="tablist" aria-label="草稿筛选">
@@ -653,6 +659,7 @@ try {
               <p><b>怎么用？</b> ① 上传文章和封面 → ② 安排发布时间 → ③ 到时间后执行到点发布。</p>
               <div class="advanced-only">
                 <p><b>真实 API（高级）</b> 在 <code>.env</code> 设 <code>WECHAT_MODE=real</code> 与公众号凭证；推荐 <code>WECHAT_ENABLE_PUBLISH=false</code> 仅测草稿。命令行验证：<code>python3 scripts/real_api_check.py --samples 3</code>（报告在 <code>reports/real_api_runs/</code>）。</p>
+                <p><b>草稿-only 测试清理</b> 真实草稿会留在公众号后台；测试后请登录后台手动删除测试草稿，并对照「微信草稿」区的 <code>media_id</code> 核对，避免残留占用草稿箱配额。</p>
                 <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
               </div>
             </div>
@@ -814,6 +821,7 @@ let scheduleSingleArticleId = null;
 let fpSingle = null;
 let fpBatch = null;
 let manualExportPlatforms = [{ id: 'generic', label: '通用 outbox', description: '' }];
+let manualExportOutboxDir = 'outbox';
 
 function defaultScheduleMoment(){
   const d = new Date();
@@ -1360,6 +1368,7 @@ async function loadManualExportPlatforms(){
       });
       manualExportPlatforms = list;
     }
+    if (d.outbox_dir) manualExportOutboxDir = d.outbox_dir;
   } catch (e) { /* 非阻塞，回退 generic */ }
 }
 
@@ -1383,7 +1392,8 @@ function workExportMenuHtml(articleId){
 async function exportOutboxArticle(articleId, platform){
   const plat = platform || 'generic';
   const label = manualExportPlatformLabel(plat);
-  if (!window.confirm(`导出「${label}」outbox 包到本地目录？不会联网或自动发布。`)) return;
+  const dirHint = manualExportOutboxDir ? `\n\n导出目录：${manualExportOutboxDir}/（由 MANUAL_EXPORT_OUTBOX 配置）` : '';
+  if (!window.confirm(`导出「${label}」outbox 包到本地目录？不会联网或自动发布。${dirHint}`)) return;
   document.querySelectorAll('.export-drop[open]').forEach(el => el.removeAttribute('open'));
   try {
     const d = await (await fetch(
@@ -1875,11 +1885,22 @@ function renderNextSteps(wb){
 function renderDraftsSummary(dsum){
   const hint = el('draftsHint');
   const note = el('draftsModeNote');
+  const cleanup = el('draftsCleanupBanner');
   if (hint && dsum && dsum.summary_label) hint.textContent = dsum.summary_label;
   if (note && dsum && dsum.mode_note) {
     note.textContent = dsum.mode_note;
     note.hidden = false;
   } else if (note) note.hidden = true;
+  if (cleanup) {
+    if (dsum && dsum.cleanup_hint) {
+      const cli = dsum.cleanup_cli ? `<div style="margin-top:6px;font-size:12px;"><code>${esc(dsum.cleanup_cli)}</code></div>` : '';
+      cleanup.innerHTML = `<b>⚠ 测试后请清理公众号后台草稿</b><div style="margin-top:4px;">${esc(dsum.cleanup_hint)}</div>${cli}`;
+      cleanup.hidden = false;
+    } else {
+      cleanup.hidden = true;
+      cleanup.innerHTML = '';
+    }
+  }
 }
 
 function renderDrafts(drafts){
@@ -2730,7 +2751,10 @@ async function trashArticle(id){
   } catch(e){ setAlert('err', '删除失败：'+e); }
 }
 
+const RESTORE_SCHEDULE_HINT = '恢复作品不等于恢复排期；删除时已取消的待发布任务不会自动恢复，请重新安排发布时间。';
+
 async function restoreArticle(id){
+  if (!window.confirm(`恢复后作品回到作品库。\n\n注意：${RESTORE_SCHEDULE_HINT}\n\n确定恢复？`)) return;
   try {
     const d = await (await fetch(`/api/articles/${id}/restore`, { method:'POST' })).json();
     selectedTrashIds.delete(id);
@@ -2798,6 +2822,7 @@ async function bulkTrashSelected(){
 async function bulkRestoreSelected(){
   const ids = [...selectedTrashIds];
   if (!ids.length) { setAlert('warn', '请先勾选要恢复的作品'); return; }
+  if (!window.confirm(`将恢复 ${ids.length} 篇作品。\n\n注意：${RESTORE_SCHEDULE_HINT}\n\n确定恢复？`)) return;
   try {
     const d = await (await fetch('/api/articles/bulk-restore', {
       method:'POST', headers:{'Content-Type':'application/json'},

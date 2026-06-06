@@ -140,15 +140,28 @@ def drafts_summary(conn: Any, config: AppConfig) -> dict[str, Any]:
     ).fetchall()
     counts = {str(r["status"]): int(r["cnt"]) for r in by_status}
     mode = (config.wechat_mode or "mock").strip().lower()
+    draft_only = mode == "real" and not bool(config.wechat_enable_publish)
     note = (
         "当前为演练模式：列表中的 media_id 均为本地记录，不代表公众号后台真实草稿。"
         if mode == "mock"
         else "列表仅包含通过本工具创建并写入数据库的草稿记录。"
     )
+    cleanup_hint = None
+    cleanup_cli = None
+    if draft_only:
+        cleanup_hint = (
+            "真实草稿-only 测试会在公众号后台留下草稿。"
+            "测试后请登录公众号后台手动删除测试草稿；"
+            "本页 media_id 可对照核对，避免残留占用草稿箱配额。"
+        )
+        cleanup_cli = "python scripts/real_api_check.py --samples 3  # 报告见 reports/real_api_runs/"
     return {
         "total": int(total),
         "counts": counts,
         "mode": mode,
+        "draft_only": draft_only,
         "summary_label": f"共 {total} 条本地草稿记录",
         "mode_note": note,
+        "cleanup_hint": cleanup_hint,
+        "cleanup_cli": cleanup_cli,
     }

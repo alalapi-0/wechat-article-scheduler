@@ -73,5 +73,17 @@ def test_api_export_outbox(tmp_path: Path) -> None:
     assert lst["count"] >= 1
 
 
+def test_manual_export_outbox_respects_config(tmp_path: Path) -> None:
+    custom = tmp_path / "outbox" / "user_view_test_manual"
+    cfg, aid = _seed_article(tmp_path)
+    cfg = make_test_config(tmp_path, cfg.database_path, manual_export_outbox=custom)
+    with db.connect(cfg.database_path) as conn:
+        result = export_article_to_outbox(cfg, conn, aid)
+    assert result["ok"]
+    out_dir = Path(result["outbox_path"])
+    assert out_dir.is_relative_to(custom)
+    assert not str(out_dir).startswith(str(tmp_path / "outbox" / "outbox_"))
+
+
 def test_runbook_doc() -> None:
     assert "export-outbox" in DOC.read_text(encoding="utf-8")

@@ -31,3 +31,26 @@ publish:
   only_fans_can_comment: false
   author: ""
   content_source_url: ""
+
+manual_export:
+  # 通用 outbox 导出根目录（可用 MANUAL_EXPORT_OUTBOX 覆盖；测试隔离时建议单独子目录）
+  outbox_dir: "outbox"
+
+external_agent:
+  enabled: true
+  outbox_dir: "outbox/wechat_agent_tasks"
+  include_article_preview: true
+  include_article_source: true
+  include_cover: true
+  include_prompt: true
+  include_checklist: true
+  include_proof_template: true
+  redact_sensitive_values: true
+
+internal_browser_agent:
+  enabled: false
+  note: "This project does not implement internal browser automation by default."
+
+internal_llm_agent:
+  enabled: false
+  note: "This project does not require LLM for normal WeChat draft workflow."
