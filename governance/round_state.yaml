@@ -1,13 +1,13 @@
 current_round:
-  id: round_133
-  name: Round 133 - 远端草稿排期与每周续排状态机
+  id: round_134
+  name: Round 134 - 固定字段模型与 Web 批量工作台
   status: active
-  updated_at: '2026-06-06T05:50:44.995664+00:00'
+  updated_at: '2026-06-06T05:51:28.376651+00:00'
 last_completed_round:
-  id: round_132
-  completed_at: '2026-06-06T05:50:44.995664+00:00'
+  id: round_133
+  completed_at: '2026-06-06T05:51:28.376651+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- test_user_view_rounds_abcd 三周零重复与 remote_draft 执行
+- test_user_view_rounds_abcd 字段模型与 fixed_collection 持久化
 next_actions:
-- 推进 Round 134：固定字段模型与批量工作台
+- 推进 Round 135：远端删除与 draft-only 语义修复
