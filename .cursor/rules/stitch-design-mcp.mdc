@@ -1,0 +1,15 @@
+---
+description: "Stitch 只作为 UI 设计输入；实现必须遵守项目技术栈并完成浏览器验证"
+alwaysApply: true
+---
+
+# Stitch Design MCP
+
+- UI、新页面、审核台、预览页、管理后台、debug 面板任务优先阅读 `docs/design/`。
+- 新页面设计优先使用名为 `stitch` 的 MCP；不可用时记录原因，并用仓库模板继续。
+- Stitch 只提供设计输入，不是未经审查的代码覆盖源。
+- HTML、screenshot、`DESIGN.md` 和评审记录必须保存到 `docs/design/stitch/` 对应目录。
+- 页面实现必须遵守当前 `FastAPI + 原生 HTML/CSS/JS` 技术栈和普通用户优先、桌面优先原则。
+- 实现后必须用 Browser、Playwright 或 chrome-devtools 检查页面、console、network 和核心流程。
+- 禁止提交 `STITCH_API_KEY`，禁止在 `.cursor/mcp.json`、代码、文档或日志中写真实 key。
+- 修改 MCP 配置后运行 `npm run check:mcp && npm run check:stitch`，并提醒重新加载 Cursor。

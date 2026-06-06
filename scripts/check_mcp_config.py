@@ -18,6 +18,7 @@ REQUIRED_SERVERS = (
     "filesystem",
     "github",
     "playwright",
+    "stitch",
 )
 
 SECRET_KEY_PATTERN = re.compile(
@@ -63,10 +64,13 @@ def _check_filesystem_args(args: list[Any]) -> list[str]:
 
 
 def _summarize_server(name: str, cfg: dict[str, Any]) -> str:
-    cmd = cfg.get("command", "?")
     args = cfg.get("args", [])
     env = cfg.get("env", {})
-    parts = [f"{name}: command={cmd!r}"]
+    headers = cfg.get("headers", {})
+    if cfg.get("url"):
+        parts = [f"{name}: url={cfg['url']!r}"]
+    else:
+        parts = [f"{name}: command={cfg.get('command', '?')!r}"]
     if args:
         safe_args = []
         for a in args:
@@ -77,6 +81,8 @@ def _summarize_server(name: str, cfg: dict[str, Any]) -> str:
         parts.append(f"args={safe_args!r}")
     if env:
         parts.append(f"env={_redact_env(env)!r}")
+    if headers:
+        parts.append(f"headers={sorted(headers)!r}")
     return ", ".join(parts)
 
 
@@ -116,6 +122,18 @@ def main() -> int:
             for key, value in env.items():
                 if isinstance(value, str) and SECRET_VALUE_PATTERN.match(value.strip()):
                     issues.append(f"{name}: env.{key} 含疑似硬编码密钥，应改用 ${{env:...}}")
+        headers = cfg.get("headers") or {}
+        if isinstance(headers, dict):
+            for key, value in headers.items():
+                if (
+                    SECRET_KEY_PATTERN.search(key)
+                    and isinstance(value, str)
+                    and not value.startswith("${env:")
+                    and not value.startswith("${input:")
+                ):
+                    issues.append(
+                        f"{name}: header {key} 疑似硬编码敏感值，应改用环境变量占位符"
+                    )
 
         if name == "filesystem":
             args = cfg.get("args") or []

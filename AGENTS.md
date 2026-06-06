@@ -48,6 +48,7 @@ Agent 循环：`status` → 实现任务 → `gate` → `advance --commit`。默
 - `filesystem`
 - `github`
 - `playwright`
+- `stitch`
 
 用途：
 
@@ -56,8 +57,9 @@ Agent 循环：`status` → 实现任务 → `gate` → `advance --commit`。默
 - **filesystem**：安全读取和检查当前项目文件（仅 `${workspaceFolder}`）。
 - **github**：仓库、提交、分支、issue、PR 等相关操作。
 - **playwright**：浏览器自动化、页面操作、E2E 检查。
+- **stitch**：生成 UI 设计方案、screen、截图和 HTML，作为页面实现前的设计输入。
 
-自动推进轮开始前，Agent 必须确认上述 MCP 已在 Cursor 中加载；并运行 `node scripts/check_mcp_config.js` 或 `npm run check:mcp`（亦可 `python scripts/check_mcp_config.py`）。修改 `mcp.json` 后通常需 **重启 Cursor** 或重新加载窗口。
+自动推进轮开始前，Agent 必须确认上述 MCP 已在 Cursor 中加载；并运行 `npm run check:mcp`，涉及设计任务时再运行 `npm run check:stitch`（亦可运行对应脚本）。修改 `mcp.json` 后通常需 **重启 Cursor** 或重新加载窗口。
 
 若某个 MCP 不可用，Agent 需记录原因，并按 `docs/agent_skills/mcp_usage_skill.md` 使用可用替代方案继续推进；不因单个非阻塞 MCP 停止整轮。
 
@@ -66,10 +68,24 @@ Agent 循环：`status` → 实现任务 → `gate` → `advance --commit`。默
 - GitHub 操作前必须 `git diff`；token 通过环境变量 `GITHUB_TOKEN`（或 `GITHUB_PERSONAL_ACCESS_TOKEN`）注入，禁止写入仓库或 MCP 配置。
 - 若缺少第三方 token/API Key 且任务可 mock/dry-run，不要卡死整体流程；仅当 token 为当前子任务唯一阻塞时才暂停该子任务。
 
+## Stitch Design MCP
+
+涉及 UI、新页面、审核台、预览页、管理后台或视觉检查页时，Agent 应先阅读：
+
+- `docs/design/DESIGN.md`
+- `docs/design/stitch/README.md`
+- `docs/design/stitch/UI_TASKS.md`
+- `docs/design/stitch/PROMPT_TEMPLATES.md`
+
+若 `stitch` MCP 可用，可生成 UI 原型、screen、screenshot、HTML、`DESIGN.md` 和多方案 variants。导出物只保存到 `docs/design/stitch/exports/`、`screenshots/`、`reviews/`；不得无审查地覆盖业务代码。
+
+实现前须把设计结果拆成符合当前 `FastAPI + 原生 HTML/CSS/JS` 技术栈的任务；实现后必须用 Playwright 或 chrome-devtools 检查页面、console、network 和核心流程。若 Stitch 不可用，记录原因，继续按设计模板推进，不阻塞可完成的工作。
+
 ## 常用命令
 
 ```bash
 npm run check:mcp                           # MCP 配置与安全检查（Node）
+npm run check:stitch                        # Stitch 配置、目录与密钥检查
 python scripts/check_mcp_config.py          # MCP 配置与安全检查（Python）
 python -m wechat_article_scheduler.cli init-db
 python -m wechat_article_scheduler.cli scan

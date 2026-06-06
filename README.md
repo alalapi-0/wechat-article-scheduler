@@ -248,3 +248,27 @@ npm run check:mcp
 ```
 
 GitHub token 必须通过环境变量注入，不得写入仓库或 `.cursor/mcp.json`。
+
+## Stitch Design MCP
+
+[Google Stitch](https://stitch.withgoogle.com/) 在本项目中负责 UI 设计输入：生成工作台、审核台、预览页和 debug 页面方案，以及 screen、variants、截图和 HTML。它不替代主开发 Agent，也不改变微信公众号 P0 业务边界。
+
+本仓库使用 Remote MCP。先在本机设置 key：
+
+```bash
+export STITCH_API_KEY="your-local-key"
+npm run check:mcp
+npm run check:stitch
+```
+
+然后重启 Cursor 或 Reload Window，在 Tools & MCP 确认 `stitch` enabled。设计任务从 `docs/design/DESIGN.md` 和 `docs/design/stitch/` 开始；HTML、截图、prompt 和评审分别保存到该目录下的 `exports/`、`screenshots/`、`prompts/`、`reviews/`。
+
+协作分工：Stitch 提供设计输入，Cursor/实现 Agent 按当前 `FastAPI + 原生 HTML/CSS/JS` 技术栈落地，Codex 可执行用户视角与浏览器测试。Stitch 导出代码不得无审查覆盖业务代码；实现后必须用 Playwright 或 chrome-devtools 检查页面、console、network 和核心流程。
+
+安全要求：
+
+- 不提交 `.env`，不把 `STITCH_API_KEY` 的真实值写进代码、文档、日志或 `.cursor/mcp.json`。
+- 静态检查通过但 MCP 未连接时，先确认 Cursor 进程能读取环境变量，再重载窗口。
+- 无 key、认证失败或服务不可用时，记录原因并用文档模板继续，不把失败结果描述为已生成。
+
+详细设置与常见问题见 [`docs/design/stitch/STITCH_MCP_SETUP.md`](docs/design/stitch/STITCH_MCP_SETUP.md)。

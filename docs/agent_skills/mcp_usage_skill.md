@@ -8,9 +8,11 @@
 |-----|------|----------------|
 | **playwright** | 浏览器自动化：打开页面、点击、填表、截图、基本 UI 交互与 E2E 验收 | 否 |
 | **chrome-devtools** | DevTools 级调试：console 日志、network 请求、性能分析 | 否 |
+| **wechat-chrome-session** | 经用户批准后连接已运行、已登录的 Chrome，用于公众号后台任务 | 否 |
 | **context7** | 查询第三方库/框架最新文档（prompt 中可写 `use context7`） | 否（可选 API Key 见下文） |
 | **filesystem** | 受控读写项目内文件，确认真实文件状态 | 否 |
 | **github** | 读取仓库、提交记录、issue、PR、CI 状态 | 是（`GITHUB_TOKEN`） |
+| **stitch** | UI 设计系统、原型、screen、截图与 HTML 导出 | 是（`STITCH_API_KEY`） |
 
 配置位置：`.cursor/mcp.json`。修改后通常需要 **重启 Cursor** 才会重新加载。
 
@@ -32,6 +34,29 @@
 5. 必要时保存 snapshot / screenshot 佐证 UI 变化
 
 涉及前端、Web 工作台、文件上传/删除、API 调用时，优先 **Playwright MCP**，需要深层 console/network 时用 **Chrome DevTools MCP**。详见 `.cursor/skills/browser-debug-check/SKILL.md` 与 `.cursor/rules/verification-gate.mdc`。
+
+### 已登录公众号 Chrome 会话
+
+`playwright` 当前使用 `--isolated`，不会继承日常 Chrome 登录态。`chrome-devtools` 默认也会使用自己的专用 profile。需要 Cursor Agent 操作用户已经登录的公众号后台时，使用单独的 `wechat-chrome-session`：
+
+1. 使用 Chrome 144 或更高版本打开 `chrome://inspect/#remote-debugging`。
+2. 开启远程调试。
+3. 保持要操作的 `mp.weixin.qq.com` 标签页打开。
+4. 重启或重新加载 Cursor MCP。
+5. Cursor 第一次连接时，用户在 Chrome 弹窗中选择允许。
+6. Agent 先执行 `list_pages` 和只读截图，确认账号与页面；不得直接开始批量写操作。
+
+该 MCP 使用 `--autoConnect`，可访问所选 Chrome profile 的所有窗口和标签页。操作前应关闭银行、邮箱、密码管理器等无关敏感页面；更稳妥的长期方案是使用只登录公众号的独立 Chrome profile。
+
+公众号后台操作必须遵守：
+
+- 同一时间只允许一个 Agent 控制该会话。
+- 第一次运行只做 1 篇草稿的 dry-run。
+- 批量运行前生成 manifest，用户确认标题、目标时间、合集和数量。
+- 只操作 manifest 中的草稿；页面结构、账号、数量或时间不一致时立即停止。
+- 不读取或导出 cookie、密码、二维码、Authorization 或请求头。
+- 每篇操作后截图或记录后台状态；无 proof 不得标记完成。
+- 最终定时确认属于真实发布副作用，必须有本批次用户确认。
 
 ## 文件系统 MCP 授权范围
 
@@ -81,6 +106,12 @@ export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxxxxxx
 - 无 API Key 时通常仍可用基础查询；若 server 启动失败，降级为阅读项目 `docs/`、`README.md` 与官方文档网页
 - **不要**在仓库中提交 Context7 API Key
 
+## Stitch（UI 设计输入）
+
+涉及新页面、审核台、预览页、管理后台或 debug 页面时，先读 `docs/design/DESIGN.md` 与 `docs/design/stitch/`。`stitch` 使用 Remote MCP，通过 `${env:STITCH_API_KEY}` 注入认证；导出物保存到 `docs/design/stitch/`。
+
+Stitch 只提供设计输入。Agent 必须评审并拆分设计，再按当前 `FastAPI + 原生 HTML/CSS/JS` 技术栈实现；不得无审查覆盖业务代码。实现后仍须 Playwright 或 chrome-devtools 验证。
+
 ## 没有 API Key / token 时的通用降级
 
 | 能力 | 降级方案 |
@@ -89,6 +120,7 @@ export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxxxxxx
 | filesystem | Cursor 内置 Read/Write/Grep 工具 + `git status` |
 | GitHub MCP | 本地 `git` / `gh` CLI |
 | Context7 | 项目文档 + 官方文档 URL |
+| Stitch | `docs/design/stitch/` 中的任务与 prompt 模板 |
 | 真实微信 API | 保持 `WECHAT_MODE=mock`，记录原因后继续 mock/dry-run |
 
 唯一阻塞：当前任务**必须**依赖某 token 且无任何替代路径时，才暂停该子任务并记录。
@@ -121,7 +153,7 @@ use context7 查询 FastAPI File Upload 最新用法
 2. **禁止**在 `mcp.json` 中写死 `ghp_`、`sk-` 等密钥；只用 `${env:...}`
 3. **禁止** filesystem MCP 授权系统根目录或用户主目录
 4. **禁止**日志打印 access token / secret / `.env` 内容
-5. **禁止**用 MCP 操作生产公众号后台或真实发布（默认 mock / draft-only）
+5. **禁止**在没有当前批次 manifest 和用户确认时操作真实公众号；已确认任务只能使用 `wechat-chrome-session`，且必须留 proof
 6. **禁止**仅凭代码静态阅读或单张截图判断 UI 任务完成
 
 ## 验证命令
@@ -129,6 +161,7 @@ use context7 查询 FastAPI File Upload 最新用法
 ```bash
 # MCP 配置检查
 npm run check:mcp
+npm run check:stitch
 # 或
 node scripts/check_mcp_config.js
 python scripts/check_mcp_config.py
@@ -148,4 +181,6 @@ python scripts/agent_gate.py gate
 - `AGENTS.md` — Agent 入口与 MCP Tools 节
 - `.cursor/rules/mcp-agent-tools.mdc` — MCP 使用规则
 - `.cursor/rules/verification-gate.mdc` — 浏览器验证门禁
+- `.cursor/rules/stitch-design-mcp.mdc` — Stitch 设计输入规则
+- `docs/design/stitch/` — Stitch 配置、工作流、模板与导出规范
 - `docs/agent-browser-verification.md` — 浏览器调试闭环（Python 验证入口）

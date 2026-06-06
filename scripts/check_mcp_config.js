@@ -16,6 +16,7 @@ const REQUIRED_SERVERS = [
   "filesystem",
   "github",
   "playwright",
+  "stitch",
 ];
 
 const SECRET_KEY_PATTERN = /(token|secret|password|api[_-]?key|authorization)/i;
@@ -65,10 +66,12 @@ function checkFilesystemArgs(args) {
 }
 
 function summarizeServer(name, cfg) {
-  const cmd = cfg.command ?? "?";
   const args = cfg.args ?? [];
   const env = cfg.env ?? {};
-  const parts = [`${name}: command=${JSON.stringify(cmd)}`];
+  const headers = cfg.headers ?? {};
+  const parts = cfg.url
+    ? [`${name}: url=${JSON.stringify(cfg.url)}`]
+    : [`${name}: command=${JSON.stringify(cfg.command ?? "?")}`];
   if (args.length) {
     const safeArgs = args.map((a) =>
       typeof a === "string" && SECRET_VALUE_PATTERN.test(a.trim()) ? "<redacted>" : a
@@ -77,6 +80,9 @@ function summarizeServer(name, cfg) {
   }
   if (Object.keys(env).length) {
     parts.push(`env=${JSON.stringify(redactEnv(env))}`);
+  }
+  if (Object.keys(headers).length) {
+    parts.push(`headers=${JSON.stringify(Object.keys(headers).sort())}`);
   }
   return parts.join(", ");
 }
@@ -124,6 +130,17 @@ function main() {
         issues.push(
           `${name}: env.${key} 含疑似硬编码密钥，应改用 \${env:...} 或 \${GITHUB_PERSONAL_ACCESS_TOKEN}`
         );
+      }
+    }
+    const headers = cfg.headers || {};
+    for (const [key, value] of Object.entries(headers)) {
+      if (
+        SECRET_KEY_PATTERN.test(key) &&
+        typeof value === "string" &&
+        !value.startsWith("${env:") &&
+        !value.startsWith("${input:")
+      ) {
+        issues.push(`${name}: header ${key} 疑似硬编码敏感值，应改用环境变量占位符`);
       }
     }
     if (name === "filesystem") {

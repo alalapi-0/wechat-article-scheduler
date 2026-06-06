@@ -7,11 +7,12 @@ alwaysApply: true
 
 ## 基本原则
 
-- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP（chrome-devtools、context7、filesystem、github、playwright）；自动推进轮开始前运行 `npm run check:mcp` 或 `python scripts/check_mcp_config.py` 并确认 Cursor 已加载 MCP。详见 `.cursor/rules/mcp-required.mdc`。
+- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP（chrome-devtools、context7、filesystem、github、playwright、stitch）；自动推进轮开始前运行 `npm run check:mcp`、`npm run check:stitch` 或对应 Python 检查并确认 Cursor 已加载 MCP。详见 `.cursor/rules/mcp-required.mdc`。
 - 若 MCP 未加载，记录原因并尝试按 `docs/agent_skills/mcp_usage_skill.md` 修复；不因单个 MCP 不可用而停止整轮，除非该 MCP 是当前任务唯一阻塞。
 
 ## 浏览器与 UI
 
+- 新页面或明显 UI 改版先阅读 `docs/design/`；Stitch 可用时优先生成设计输入，再拆成符合当前技术栈的实现任务。
 - 修改 UI、Web 工作台、文件上传/删除、API 交互时，**必须**使用 Playwright MCP 或 Chrome DevTools MCP 做浏览器检查。
 - **不得**只根据代码、静态阅读或单张截图判断页面成功。
 - 必须查看页面、走真实用户路径，并检查 **console** 与 **network**（核心 API 无失败）。
@@ -27,6 +28,7 @@ alwaysApply: true
 
 - GitHub 操作前必须 `git diff`，避免泄露 `.env`、密钥、token、cookie。
 - **不得**打印密钥；**不得**把真实 API Key / token 写入仓库或 MCP 配置。
+- `STITCH_API_KEY` 只能通过环境变量传给 Remote MCP；Stitch 导出物不得无审查覆盖业务代码。
 - 缺少 `GITHUB_TOKEN` 时降级为本地 `git` / `gh`，记录原因后继续推进。
 
 ## 提交前

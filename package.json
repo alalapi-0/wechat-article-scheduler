@@ -3,6 +3,7 @@
   "private": true,
   "description": "Workspace MCP config checks (no runtime Node app)",
   "scripts": {
-    "check:mcp": "node scripts/check_mcp_config.js"
+    "check:mcp": "node scripts/check_mcp_config.js",
+    "check:stitch": "node scripts/check_stitch_config.js"
   }
 }
