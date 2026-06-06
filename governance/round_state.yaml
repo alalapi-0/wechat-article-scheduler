@@ -1,13 +1,14 @@
 current_round:
-  id: round_134
-  name: Round 134 - 固定字段模型与 Web 批量工作台
+  id: round_135
+  name: Round 135 - 远端删除、审计与 draft-only 语义修复
   status: active
-  updated_at: '2026-06-06T05:51:28.376651+00:00'
+  updated_at: '2026-06-06T05:52:10.681726+00:00'
 last_completed_round:
-  id: round_133
-  completed_at: '2026-06-06T05:51:28.376651+00:00'
+  id: round_134
+  completed_at: '2026-06-06T05:52:10.681726+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- test_user_view_rounds_abcd 字段模型与 fixed_collection 持久化
+- test_user_view_rounds_abcd Round D/E 全通过
+- test_external_agent_task_package 回归
 next_actions:
-- 推进 Round 135：远端删除与 draft-only 语义修复
+- 用户走查：真实 API sync-remote 与远端删除（需权限）
