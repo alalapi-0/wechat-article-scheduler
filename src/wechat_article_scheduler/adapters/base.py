@@ -56,3 +56,15 @@ class WechatAdapter(ABC):
     @abstractmethod
     def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
         """提交发布（mock 仅返回成功结构）。force=True 只能由全局开关和任务级确认共同决定。"""
+
+    def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
+        """draft/batchget 分页列表（子类可覆盖）。"""
+        raise NotImplementedError("list_drafts_batchget not implemented")
+
+    def list_published_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
+        """freepublish/batchget 分页列表（子类可覆盖）。"""
+        raise NotImplementedError("list_published_batchget not implemented")
+
+    def delete_draft(self, media_id: str) -> dict:
+        """draft/delete 删除单篇草稿（子类可覆盖）。"""
+        raise NotImplementedError("delete_draft not implemented")

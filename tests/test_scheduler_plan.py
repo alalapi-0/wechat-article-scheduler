@@ -71,11 +71,13 @@ def test_run_once_processes_due_job(tmp_path: Path) -> None:
     cfg = _config(root, db_path)
     stats = run_due_jobs(cfg)
     assert stats["processed"] == 1
+    assert stats.get("drafted") == 1
 
     with db.connect(db_path) as conn:
         job = conn.execute("SELECT status FROM publish_jobs").fetchone()
-        art = conn.execute("SELECT status FROM articles").fetchone()
+        art = conn.execute("SELECT status, schedule_state FROM articles").fetchone()
         draft = conn.execute("SELECT media_id FROM wechat_drafts").fetchone()
         assert job["status"] == "done"
-        assert art["status"] == "published"
+        assert art["status"] == "imported"
+        assert art["schedule_state"] == "remote_draft_ready"
         assert draft["media_id"].startswith("mock_media_")

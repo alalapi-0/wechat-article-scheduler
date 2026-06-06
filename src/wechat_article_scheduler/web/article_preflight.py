@@ -76,9 +76,12 @@ def article_preflight_checks(row: dict[str, Any], config: AppConfig) -> list[dic
         )
 
     for c in checks:
-        c["required"] = (
-            c["id"] in ("cover", "body", "html") and will_publish and not c.get("ok")
-        )
+        if c["id"] == "body" and not c.get("ok"):
+            c["required"] = True
+        elif c["id"] in ("cover", "html") and will_publish and not c.get("ok"):
+            c["required"] = True
+        else:
+            c["required"] = False
     return checks
 
 

@@ -43,5 +43,6 @@ agent_policy:
 
   adapter_policy:
     official_api: "默认 mock 不联网；WECHAT_MODE=real 是显式真实 API 测试模式；需要草稿-only 时设置 WECHAT_ENABLE_PUBLISH=false"
-    browser_assist: "当前只允许作为微信公众号本地自用后备方案；只能辅助打开后台、填表、截图和等待人工确认；不得绕过验证码或自动点击最终发布"
+    external_agent_task_package: "当前项目不内置 Browser Agent 或 LLM Agent；只导出微信公众号后台辅助任务包，交给 Hermes/Cursor Agent/Playwright MCP/Browser Use 等外部工具；不得保存 cookie、绕过验证码或自动点击最终发布"
+    browser_assist: "仅保留历史后备概念；本阶段优先外部 Agent 任务包，不在项目内部实现完整浏览器自动化"
     manual_export: "只生成 outbox，必须通过 proof_of_publish 确认"

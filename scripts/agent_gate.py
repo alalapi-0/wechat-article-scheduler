@@ -185,6 +185,11 @@ ROUND_ORDER = [
     "round_128",
     "round_129",
     "round_130",
+    "round_131",
+    "round_132",
+    "round_133",
+    "round_134",
+    "round_135",
 ]
 
 # 与 docs/rounds.md 路线图对齐的轮次元数据（gate 冒烟 + advance 写入 round_state）
@@ -1570,6 +1575,60 @@ ROUND_META: dict[str, dict[str, Any]] = {
             "在 docs/rounds.md 规划 round_131 后续能力",
         ],
     },
+    "round_131": {
+        "name": "Round 131 - 外部 Browser Agent 任务包治理",
+        "summary": "不内置 Browser/LLM Agent；导出安全脱敏的外部 Agent 微信后台任务包",
+        "acceptance_criteria": [
+            "test_external_agent_task_package 文件生成、提示词、清单、proof 与脱敏",
+            "任务包明确禁止最终发布并要求人工确认",
+            "test_workflow / test_optional_real_publish 回归",
+        ],
+        "next_actions": [
+            "推进 Round 132：远端只读同步与 capability probe",
+        ],
+    },
+    "round_132": {
+        "name": "Round 132 - 远端只读同步与 capability probe",
+        "summary": "draft/batchget 镜像同步；freepublish/batchget 未授权显式提示",
+        "acceptance_criteria": [
+            "test_user_view_rounds_abcd 远端同步幂等与未授权 probe",
+            "CLI sync-remote 与 Web 远端草稿区",
+        ],
+        "next_actions": [
+            "推进 Round 133：远端草稿排期与每周续排",
+        ],
+    },
+    "round_133": {
+        "name": "Round 133 - 远端草稿排期与每周续排状态机",
+        "summary": "schedule_state 续排；remote_draft 跳过 draft/add",
+        "acceptance_criteria": [
+            "test_user_view_rounds_abcd 三周零重复与 remote_draft 执行",
+        ],
+        "next_actions": [
+            "推进 Round 134：固定字段模型与批量工作台",
+        ],
+    },
+    "round_134": {
+        "name": "Round 134 - 固定字段模型与 Web 批量工作台",
+        "summary": "后台字段能力；批量固定合集；收件箱路径高级化",
+        "acceptance_criteria": [
+            "test_user_view_rounds_abcd 字段模型与 fixed_collection 持久化",
+        ],
+        "next_actions": [
+            "推进 Round 135：远端删除与 draft-only 语义修复",
+        ],
+    },
+    "round_135": {
+        "name": "Round 135 - 远端删除、审计与 draft-only 语义修复",
+        "summary": "删除 manifest；空正文阻断；mock simulation；draft-only 不误标已发布",
+        "acceptance_criteria": [
+            "test_user_view_rounds_abcd Round D/E 全通过",
+            "test_external_agent_task_package 回归",
+        ],
+        "next_actions": [
+            "用户走查：真实 API sync-remote 与远端删除（需权限）",
+        ],
+    },
 }
 
 SECRET_BASENAMES = {
@@ -2827,6 +2886,53 @@ def round_smoke(round_id: str, py: str) -> tuple[bool, str]:
                     "-q",
                 ],
                 "pytest wechat p0 round_130",
+            ),
+        ]
+    elif round_id == "round_131":
+        steps = [
+            (
+                [
+                    py,
+                    "-m",
+                    "pytest",
+                    "tests/test_external_agent_task_package.py",
+                    "tests/test_workflow.py",
+                    "tests/test_optional_real_publish.py",
+                    "-q",
+                ],
+                "pytest external agent task package governance",
+            ),
+        ]
+    elif round_id == "round_132":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_user_view_rounds_abcd.py", "-k", "remote_sync or freepublish", "-q"],
+                "pytest round 132 remote sync and capability probe",
+            ),
+        ]
+    elif round_id == "round_133":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_user_view_rounds_abcd.py", "-k", "weekly or remote_draft", "-q"],
+                "pytest round 133 weekly plan and remote draft schedule",
+            ),
+        ]
+    elif round_id == "round_134":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_user_view_rounds_abcd.py", "-k", "field or fixed_collection", "-q"],
+                "pytest round 134 field capability and batch settings",
+            ),
+        ]
+    elif round_id == "round_135":
+        steps = [
+            (
+                [py, "-m", "pytest", "tests/test_user_view_rounds_abcd.py", "-q"],
+                "pytest round 135 delete audit and draft-only fix",
+            ),
+            (
+                [py, "-m", "pytest", "tests/test_external_agent_task_package.py", "-q"],
+                "pytest external agent task package regression",
             ),
         ]
     else:

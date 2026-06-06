@@ -21,6 +21,7 @@ class PublishConfig:
     only_fans_can_comment: bool = False
     author: str = ""
     content_source_url: str = ""
+    fixed_collection: str = ""
 
     def normalized(self) -> PublishConfig:
         action = (self.publish_action or "draft").strip().lower()
@@ -33,6 +34,7 @@ class PublishConfig:
             only_fans_can_comment=bool(self.only_fans_can_comment),
             author=(self.author or "").strip(),
             content_source_url=(self.content_source_url or "").strip(),
+            fixed_collection=(self.fixed_collection or "").strip(),
         )
 
 
@@ -79,6 +81,7 @@ def parse_publish_config(
         ),
         author=str(data.get("author", base.author) or ""),
         content_source_url=str(data.get("content_source_url", base.content_source_url) or ""),
+        fixed_collection=str(data.get("fixed_collection", base.fixed_collection) or ""),
     )
     return merged.normalized()
 
@@ -96,6 +99,7 @@ def publish_config_from_payload(payload: dict[str, Any]) -> PublishConfig:
         "only_fans_can_comment",
         "author",
         "content_source_url",
+        "fixed_collection",
     )
     subset = {k: payload[k] for k in keys if k in payload}
     return parse_publish_config(subset)
@@ -130,4 +134,6 @@ def human_publish_config_summary(config: PublishConfig) -> list[str]:
             lines.append("仅粉丝可评")
     if config.author:
         lines.append(f"作者：{config.author[:20]}")
+    if config.fixed_collection:
+        lines.append(f"固定合集：{config.fixed_collection[:24]}")
     return lines

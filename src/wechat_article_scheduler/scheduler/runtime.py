@@ -99,7 +99,7 @@ def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[
             jobs = conn.execute(
                 """
                 SELECT j.id AS job_id, j.article_id, j.scheduled_at, j.status, j.retry_count,
-                       j.publish_config_json, j.next_retry_at,
+                       j.publish_config_json, j.next_retry_at, j.source_kind, j.remote_media_id,
                        a.title, a.summary, a.body, a.source_path, a.cover_path,
                        a.content_hash
                 FROM publish_jobs j

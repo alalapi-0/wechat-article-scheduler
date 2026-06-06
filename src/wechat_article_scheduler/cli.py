@@ -25,6 +25,10 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("init-db", help="初始化 SQLite 表结构")
     sub.add_parser("scan", help="扫描 articles/inbox 并导入")
     sub.add_parser("plan", help="为已导入文章生成发布计划")
+    sync_remote = sub.add_parser("sync-remote", help="同步公众号远端草稿到本地镜像（只读）")
+    sync_remote.add_argument("--dry-run", action="store_true", help="仅演练不写库")
+    sync_remote.add_argument("--max-pages", type=int, default=50, help="最大分页数")
+    sync_remote.add_argument("--resume-run-id", type=str, default=None, help="续跑审计 run_id")
     sub.add_parser("run-once", help="执行所有已到期的发布任务")
     sub.add_parser("scheduler", help="后台轮询调度（阻塞）")
     sub.add_parser(
@@ -167,6 +171,24 @@ def _build_parser() -> argparse.ArgumentParser:
         help="generic | zhihu | douban | bilibili | xiaohongshu | wechat_channels | douyin | kuaishou",
     )
 
+    export_agent = sub.add_parser(
+        "export-agent-task",
+        help="为指定发布任务生成外部 Browser Agent 任务包（不启动浏览器、不发布）",
+    )
+    export_agent.add_argument("--job-id", type=int, required=True)
+
+    export_agents = sub.add_parser(
+        "export-agent-tasks",
+        help="按状态批量生成外部 Browser Agent 任务包（默认 draft_created）",
+    )
+    export_agents.add_argument(
+        "--status",
+        type=str,
+        default="draft_created",
+        help="draft_created | manual_settings_required | publish_jobs.status",
+    )
+    export_agents.add_argument("--limit", type=int, default=20)
+
     reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
     reject_p.add_argument("--article-id", type=int, required=True)
 
@@ -213,6 +235,18 @@ def main(argv: list[str] | None = None) -> int:
         stats = build_plan(config)
         print(f"计划完成: {stats}")
         return 0
+
+    if args.command == "sync-remote":
+        from wechat_article_scheduler.remote_sync import sync_remote_drafts
+
+        stats = sync_remote_drafts(
+            config,
+            max_pages=args.max_pages,
+            dry_run=args.dry_run,
+            run_id=args.resume_run_id,
+        )
+        print(f"远端同步完成: {stats}")
+        return 0 if not stats.get("blocked") else 1
 
     if args.command == "run-once":
         stats = run_due_jobs(config)
@@ -535,6 +569,33 @@ def main(argv: list[str] | None = None) -> int:
                 conn,
                 args.article_id,
                 platform=args.platform or "generic",
+            )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("ok") else 1
+
+    if args.command == "export-agent-task":
+        import json
+
+        from wechat_article_scheduler.external_agent import export_task_package
+
+        db.init_db(config.database_path)
+        with db.connect(config.database_path) as conn:
+            result = export_task_package(config, conn, args.job_id)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("ok") else 1
+
+    if args.command == "export-agent-tasks":
+        import json
+
+        from wechat_article_scheduler.external_agent import export_task_packages_by_status
+
+        db.init_db(config.database_path)
+        with db.connect(config.database_path) as conn:
+            result = export_task_packages_by_status(
+                config,
+                conn,
+                status=args.status,
+                limit=args.limit,
             )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if result.get("ok") else 1

@@ -29,6 +29,11 @@ from wechat_article_scheduler.draft_update import (
     draft_content_fingerprint,
 )
 from wechat_article_scheduler.scheduler.policies import safe_payload
+from wechat_article_scheduler.weekly_plan import (
+    STATE_REMOTE_DRAFT_READY,
+    STATE_SUBMITTED,
+    mark_article_schedule_state,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -84,12 +89,27 @@ def execute_due_job(
             author=pub_cfg.author,
             content_source_url=pub_cfg.content_source_url,
         )
+        source_kind = (_row_get(job, "source_kind") or "local").strip().lower()
+        remote_media_id = (_row_get(job, "remote_media_id") or "").strip()
         content_hash = _row_get(job, "content_hash")
         reused_media = find_reusable_draft_media_id(
             conn, article_id=article_id, content_hash=content_hash
         )
         draft: DraftResult
-        if reused_media:
+        if source_kind == "remote_draft" and remote_media_id:
+            draft = draft_result_from_reuse(remote_media_id)
+            db.log_event(
+                conn,
+                entity_type="publish_job",
+                entity_id=job_id,
+                event_type="remote_draft_reuse",
+                payload=json.dumps(
+                    {"article_id": article_id, "media_id": remote_media_id[:32]},
+                    ensure_ascii=False,
+                ),
+            )
+            stats["remote_draft_reused"] = stats.get("remote_draft_reused", 0) + 1
+        elif reused_media:
             draft = draft_result_from_reuse(reused_media)
             db.log_event(
                 conn,
@@ -152,12 +172,14 @@ def execute_due_job(
                 ),
             )
         if draft_only:
+            mark_article_schedule_state(conn, article_id, STATE_REMOTE_DRAFT_READY)
             conn.execute(
                 "UPDATE articles SET updated_at = datetime('now') WHERE id = ?",
                 (article_id,),
             )
             stats["drafted"] = stats.get("drafted", 0) + 1
         else:
+            mark_article_schedule_state(conn, article_id, STATE_SUBMITTED)
             conn.execute(
                 "UPDATE articles SET status = 'published', updated_at = datetime('now') WHERE id = ?",
                 (article_id,),

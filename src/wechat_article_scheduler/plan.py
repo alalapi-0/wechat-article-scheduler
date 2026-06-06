@@ -20,6 +20,7 @@ from wechat_article_scheduler.content_library.collection_schedule import (
     schedule_rules_for_collection,
     schedule_rules_from_config_json,
 )
+from wechat_article_scheduler.weekly_plan import advance_cursor
 
 
 def _next_slot(
@@ -94,6 +95,7 @@ def _fetch_plan_groups(conn: Any) -> list[dict[str, Any]]:
         FROM articles a
         LEFT JOIN collections c ON c.id = a.collection_id
         WHERE a.status = 'imported'
+          AND COALESCE(a.schedule_state, 'imported') = 'imported'
           AND (a.deleted_at IS NULL OR a.deleted_at = '')
           AND NOT EXISTS (
               SELECT 1 FROM publish_jobs j
@@ -189,10 +191,17 @@ def build_plan(config: AppConfig) -> dict[str, Any]:
 
                 conn.execute(
                     """
-                    INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
-                    VALUES (?, ?, 'pending', ?)
+                    INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode, source_kind)
+                    VALUES (?, ?, 'pending', ?, 'local')
                     """,
                     (article_id, slot.isoformat(timespec="seconds"), config.wechat_mode),
+                )
+                conn.execute(
+                    """
+                    UPDATE articles SET schedule_state = 'scheduled_local', updated_at = datetime('now')
+                    WHERE id = ?
+                    """,
+                    (article_id,),
                 )
                 key = day_count_key(slug, slot.strftime("%Y-%m-%d"))
                 day_counts[key] = day_counts.get(key, 0) + 1
@@ -208,6 +217,8 @@ def build_plan(config: AppConfig) -> dict[str, Any]:
                 coll_stats["planned"] += 1
                 stats["planned"] = int(stats["planned"]) + 1
 
+            if coll_stats["planned"]:
+                advance_cursor(conn, slug, delta=coll_stats["planned"])
             if coll_stats["planned"] or coll_stats["skipped_window"]:
                 stats["by_collection"][slug] = coll_stats
                 stats["hints"].append(

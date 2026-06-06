@@ -254,3 +254,27 @@ class RealWechatAdapter(WechatAdapter):
         url = f"{API_BASE}/cgi-bin/freepublish/submit?access_token={token}"
         logger.info("提交发布: media_id=%s", media_id[:16] + "...")
         return self._http_post_json(url, {"media_id": media_id})
+
+    def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
+        """调用 draft/batchget 分页获取草稿列表。"""
+        self._ensure_credentials()
+        token = self.get_access_token()
+        url = f"{API_BASE}/cgi-bin/draft/batchget?access_token={token}"
+        logger.info("拉取远端草稿列表 offset=%s count=%s", offset, count)
+        return self._http_post_json(url, {"offset": int(offset), "count": int(count), "no_content": 0})
+
+    def list_published_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
+        """调用 freepublish/batchget 分页获取已发布列表。"""
+        self._ensure_credentials()
+        token = self.get_access_token()
+        url = f"{API_BASE}/cgi-bin/freepublish/batchget?access_token={token}"
+        logger.info("拉取已发布列表 offset=%s count=%s", offset, count)
+        return self._http_post_json(url, {"offset": int(offset), "count": int(count), "no_content": 1})
+
+    def delete_draft(self, media_id: str) -> dict:
+        """调用 draft/delete 删除草稿（按稳定 media_id）。"""
+        self._ensure_credentials()
+        token = self.get_access_token()
+        url = f"{API_BASE}/cgi-bin/draft/delete?access_token={token}"
+        logger.info("删除远端草稿: media_id=%s", media_id[:16])
+        return self._http_post_json(url, {"media_id": media_id})

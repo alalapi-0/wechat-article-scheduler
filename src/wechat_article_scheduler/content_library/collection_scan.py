@@ -54,6 +54,17 @@ def _scan_directory(
         stats["scanned"] += 1
         try:
             parsed = parse_file(path, summary_max_chars=summary_max)
+            if not (parsed.body or "").strip():
+                stats["errors"] = int(stats.get("errors", 0)) + 1
+                stats["skipped_empty"] = int(stats.get("skipped_empty", 0)) + 1
+                db.log_event(
+                    conn,
+                    entity_type="article",
+                    entity_id=None,
+                    event_type="scan_skipped_empty",
+                    payload=path.name,
+                )
+                continue
             if coll_cfg and coll_cfg.title_template:
                 parsed = replace(
                     parsed,

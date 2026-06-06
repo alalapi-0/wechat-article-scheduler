@@ -105,6 +105,10 @@ from wechat_article_scheduler.web.drafts_display import (
     get_wechat_draft,
     list_wechat_drafts,
 )
+from wechat_article_scheduler.web.remote_display import (
+    list_remote_drafts_display,
+    remote_sync_summary,
+)
 from wechat_article_scheduler.workflow import retry_failed_jobs, retry_publish_job
 from wechat_article_scheduler.publish_config import (
     defaults_from_rules,
@@ -1180,6 +1184,69 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     def api_drafts_summary() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
             return drafts_summary(conn, cfg)
+
+    @app.get("/api/remote-drafts")
+    def api_remote_drafts(limit: int = 50) -> list[dict[str, Any]]:
+        with db.connect(cfg.database_path) as conn:
+            return list_remote_drafts_display(conn, cfg, limit=limit)
+
+    @app.get("/api/remote-sync-summary")
+    def api_remote_sync_summary() -> dict[str, Any]:
+        with db.connect(cfg.database_path) as conn:
+            return remote_sync_summary(conn, cfg)
+
+    @app.post("/api/sync-remote")
+    async def api_sync_remote() -> dict[str, Any]:
+        from wechat_article_scheduler.remote_sync import sync_remote_drafts
+
+        stats = sync_remote_drafts(cfg)
+        return {"ok": not stats.get("blocked"), "stats": stats}
+
+    @app.get("/api/field-capabilities")
+    def api_field_capabilities() -> list[dict[str, Any]]:
+        from wechat_article_scheduler.field_settings import list_backend_field_capabilities
+
+        return list_backend_field_capabilities()
+
+    @app.post("/api/remote-delete/preview")
+    async def api_remote_delete_preview(payload: dict[str, Any]) -> dict[str, Any]:
+        media_ids = payload.get("media_ids") or []
+        if not isinstance(media_ids, list):
+            raise HTTPException(status_code=400, detail="media_ids 须为数组")
+        from wechat_article_scheduler.remote_delete import build_delete_manifest
+
+        with db.connect(cfg.database_path) as conn:
+            manifest = build_delete_manifest(conn, [str(m) for m in media_ids])
+        return {"ok": True, "manifest": manifest}
+
+    @app.post("/api/remote-delete/execute")
+    async def api_remote_delete_execute(payload: dict[str, Any]) -> dict[str, Any]:
+        from wechat_article_scheduler.remote_delete import execute_remote_delete
+
+        media_ids = payload.get("media_ids") or []
+        if not isinstance(media_ids, list) or not media_ids:
+            raise HTTPException(status_code=400, detail="media_ids 不能为空")
+        result = execute_remote_delete(
+            cfg,
+            [str(m) for m in media_ids],
+            dry_run=bool(payload.get("dry_run")),
+            resume_run_id=payload.get("resume_run_id"),
+            max_items=payload.get("max_items"),
+            confirmed=bool(payload.get("confirmed")),
+        )
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error", "删除失败"))
+        return result
+
+    @app.get("/api/operation-runs/{run_id}")
+    def api_operation_run(run_id: str) -> dict[str, Any]:
+        from wechat_article_scheduler.operation_runs import get_operation_run
+
+        with db.connect(cfg.database_path) as conn:
+            row = get_operation_run(conn, run_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="运行记录不存在")
+        return row
 
     @app.get("/api/drafts/{draft_id}")
     def api_draft_detail(draft_id: int) -> dict[str, Any]:

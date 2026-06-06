@@ -407,7 +407,7 @@ def main() -> int:
     print(f"report: {out.with_suffix('.json')}")
     print(f"mode={report.wechat_mode} mock={report.mock_used} token_ok={report.token_ok}")
     print(f"success={report.success_count} failure={report.failure_count}")
-    if report.wechat_mode == "real" and not report.allow_publish:
+    if report.wechat_mode == "real" and not report.allow_publish and report.success_count > 0:
         print(
             "cleanup: 真实草稿-only 测试会在公众号后台留下草稿；"
             "测试后请登录后台手动删除测试草稿，并对照工作台「微信草稿」区的 media_id 核对"

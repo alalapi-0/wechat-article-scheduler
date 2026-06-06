@@ -11,6 +11,14 @@ from wechat_article_scheduler.publish_preview import render_for_publish
 class MockWechatAdapter(WechatAdapter):
     """本地模拟草稿与发布，便于开发与测试。"""
 
+    _MOCK_REMOTE_DRAFTS: tuple[dict, ...] = (
+        {"media_id": "mock_remote_draft_001", "title": "[演练] 远端草稿 1", "update_time": 1700000001},
+        {"media_id": "mock_remote_draft_002", "title": "[演练] 远端草稿 2", "update_time": 1700000002},
+        {"media_id": "mock_remote_draft_003", "title": "[演练] 远端草稿 3", "update_time": 1700000003},
+        {"media_id": "mock_remote_draft_004", "title": "[演练] 远端草稿 4", "update_time": 1700000004},
+        {"media_id": "mock_remote_draft_005", "title": "[演练] 远端草稿 5", "update_time": 1700000005},
+    )
+
     def create_draft(
         self,
         *,
@@ -69,6 +77,15 @@ class MockWechatAdapter(WechatAdapter):
         )
 
     def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
+        if not force:
+            return {
+                "errcode": 0,
+                "errmsg": "ok",
+                "skipped": True,
+                "reason": "draft_only",
+                "media_id": media_id,
+                "mode": "mock",
+            }
         return {
             "errcode": 0,
             "errmsg": "ok",
@@ -76,3 +93,34 @@ class MockWechatAdapter(WechatAdapter):
             "media_id": media_id,
             "mode": "mock",
         }
+
+    def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
+        items = []
+        for spec in self._MOCK_REMOTE_DRAFTS[offset : offset + count]:
+            items.append(
+                {
+                    "media_id": spec["media_id"],
+                    "update_time": spec["update_time"],
+                    "content": {
+                        "news_item": [{"title": spec["title"], "author": "", "digest": ""}],
+                    },
+                }
+            )
+        return {
+            "errcode": 0,
+            "errmsg": "ok",
+            "total_count": len(self._MOCK_REMOTE_DRAFTS),
+            "item_count": len(items),
+            "item": items,
+            "mode": "mock",
+        }
+
+    def list_published_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
+        return {
+            "errcode": 48001,
+            "errmsg": "api unauthorized",
+            "mode": "mock",
+        }
+
+    def delete_draft(self, media_id: str) -> dict:
+        return {"errcode": 0, "errmsg": "ok", "media_id": media_id, "mode": "mock"}

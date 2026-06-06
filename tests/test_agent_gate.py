@@ -38,10 +38,10 @@ def test_round_order_contains_governance_round(ag):
     assert ag.ROUND_META["round_001"]["next_actions"]
 
 
-def test_round_order_covers_round_0_through_67(ag):
-    assert len(ag.ROUND_ORDER) == 131
+def test_round_order_covers_round_0_through_135(ag):
+    assert len(ag.ROUND_ORDER) == 136
     assert ag.ROUND_ORDER[0] == "round_000"
-    assert ag.ROUND_ORDER[-1] == "round_130"
+    assert ag.ROUND_ORDER[-1] == "round_135"
     for round_id in ag.ROUND_ORDER:
         assert round_id in ag.ROUND_META
         assert ag.ROUND_META[round_id]["name"]
@@ -156,6 +156,11 @@ def test_round_meta_aligns_with_rounds_doc_themes(ag):
     assert "browser_assist" in ag.ROUND_META["round_082"]["name"].lower()
     assert "豆瓣" in ag.ROUND_META["round_083"]["name"]
     assert "Phase2" in ag.ROUND_META["round_084"]["name"] or "收口" in ag.ROUND_META["round_084"]["name"]
+    assert "外部 Browser Agent" in ag.ROUND_META["round_131"]["name"]
+    assert "远端只读同步" in ag.ROUND_META["round_132"]["name"]
+    assert "续排" in ag.ROUND_META["round_133"]["name"]
+    assert "固定字段" in ag.ROUND_META["round_134"]["name"]
+    assert "draft-only" in ag.ROUND_META["round_135"]["name"]
 
 
 def test_suggest_next_command_completed(ag):

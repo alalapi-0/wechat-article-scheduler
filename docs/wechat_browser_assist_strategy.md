@@ -1,6 +1,8 @@
 # 微信公众号 browser_assist 策略
 
-Status: Current P0 fallback strategy
+Status: Historical fallback strategy; Round 131 后优先使用外部 Agent 任务包
+
+> 当前项目不内置完整 Browser Agent，也不默认启用浏览器自动化。API 无法覆盖的后台辅助操作优先通过 `docs/external_agent_task_package_design.md` 中的外部 Agent 任务包交给 Hermes、Cursor Agent、Playwright MCP、Browser Use 或用户手动完成。
 
 ## 1. 为什么需要 browser_assist
 
@@ -73,7 +75,7 @@ browser_assist 任务应记录：
 
 详细步骤见 [`docs/browser_assist_runbook.md`](browser_assist_runbook.md)。
 
-代码入口：`wechat_article_scheduler.adapters.browser_assist.workflow.build_dry_run_plan()`。
+历史 dry-run 计划入口：`wechat_article_scheduler.adapters.browser_assist.workflow.build_dry_run_plan()`。当前新增任务包出口：`python3 -m wechat_article_scheduler.cli export-agent-task --job-id <job_id>`。
 
 | 阶段 | 执行方 | 说明 |
 |------|--------|------|

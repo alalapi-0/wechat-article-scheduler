@@ -1,9 +1,9 @@
-# 开发路线图（Round 0 ~ Round 59）
+# 开发路线图（Round 0 ~ Round 131）
 
 本文件是路线图**人类权威源**；机器可读状态见 `governance/round_state.yaml`，机器轮次注册表见 `scripts/agent_gate.py` 的 `ROUND_ORDER` / `ROUND_META`。
 任何轮次调整都必须同次同步 `tests/test_agent_gate.py` 与治理范围字段。
 
-> **产品定位（Round 56 路线收敛后的权威表述）**：本项目是个人本地微信公众号发布工作台，P0 只服务微信公众号闭环。知乎、豆瓣、小红书、视频号、Bilibili、抖音、快手、网易云音乐等平台全部进入后期 backlog，不抢占阶段一资源。真实 API 测试策略 = 默认 `WECHAT_MODE=mock` 不联网；显式切到 `WECHAT_MODE=real` 后用于真实草稿和真实发布接口测试；需要草稿-only 时设置 `WECHAT_ENABLE_PUBLISH=false`；执行到点前仍有二次确认 + 发布前预检清单。历史轮次（Round 0–42）中出现的"审核/review_status"叙事已在 Round 43 移除；参考仓吸收成果只保留可帮助微信公众号闭环的设计，其余按 `docs/backlog/` 管理。
+> **产品定位（Round 56 路线收敛，Round 131 外部 Agent 边界补强后的权威表述）**：本项目是个人本地微信公众号草稿箱辅助工作台，P0 只服务微信公众号草稿、排期、本地状态、proof 与外部 Agent 任务包。知乎、豆瓣、小红书、视频号、Bilibili、抖音、快手、网易云音乐等平台全部进入后期 backlog，不抢占阶段一资源。真实 API 测试策略 = 默认 `WECHAT_MODE=mock` 不联网；显式切到 `WECHAT_MODE=real` 后用于真实草稿和真实发布接口测试；需要草稿-only 时设置 `WECHAT_ENABLE_PUBLISH=false`；浏览器后台操作外置给 Hermes、Cursor Agent、Playwright MCP、Browser Use 等成熟工具；当前项目不内置 Browser Agent 或 LLM Agent，不保存 cookie，不绕过扫码/验证码/风控，不默认点击最终发布。历史轮次（Round 0–42）中出现的"审核/review_status"叙事已在 Round 43 移除；参考仓吸收成果只保留可帮助微信公众号闭环的设计，其余按 `docs/backlog/` 管理。
 
 > 当前执行路线入口：`docs/roadmap_converged.md`。历史 Round 0–56 仍保留在本文件供 gate 校验和追溯，长期多平台蓝图已降级为 backlog。
 
@@ -38,6 +38,7 @@
 | Phase 10 产品重定位：批量发布工作台 | Round 43 ~ Round 46 | 移除审核概念、网页批量上传作品与封面、工作台界面与配色重构、发布确认护栏收口 |
 | Phase 11 内容发布正确性与管理能力 | Round 47 ~ Round 53 | UI 细节修正、标题去重、公众号效果预览、回收站与彻底删除、批量管理、发布前内容质量检查 |
 | Phase 12 真实 API 与路线收敛 | Round 54 ~ Round 56 | 真实微信 API 验证、auto-approved pipeline、路线收敛治理 |
+| Phase 13 外部 Agent 任务包治理 | Round 57 ~ Round 131 | 微信主链路稳定、桌面工作台抛光、外部 Browser Agent 任务包边界 |
 
 ## Round 状态快照
 
@@ -2515,6 +2516,99 @@
   - [x] 详情页 dry-run 摘要块
   - [x] 高级开关与 localStorage 同步
   - [x] agent_gate round_130 冒烟
+
+### Round 131 - 外部 Browser Agent 任务包治理
+
+- 目标：明确项目不内置 Browser Agent / LLM Agent，只生成外部浏览器 Agent 可执行、可审计、安全脱敏的微信公众号后台辅助任务包。
+- 范围：外部 Agent 策略文档、任务包设计、安全策略、微信草稿流程、状态机文档、配置示例、轻量导出模块、CLI 导出命令、任务包生成测试。
+- 非目标：集成 Hermes SDK、Browser Use SDK、Playwright MCP 服务、内置 LLM、验证码处理、保存 cookie、保存密码、自动点击最终发布、扩展其他平台。
+- 输入：已创建的微信公众号草稿记录、`publish_jobs`、文章标题/摘要/正文/封面、发布设置。
+- 输出：`outbox/wechat_agent_tasks/job-xxxxxx/` 下的 `task.json`、`browser_agent_prompt.md`、`checklist.md`、`article_preview.html`、`article_source.md`、`metadata.json`、`proof_template.md` 和可选封面文件。
+- 验收标准：`test_external_agent_task_package` 文件生成与脱敏；任务包明确禁止最终发布并要求人工确认；`test_workflow` 与 `test_optional_real_publish` 回归，确保 scan / plan / run-once 与 `WECHAT_ENABLE_PUBLISH=false` 不被破坏。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_external_agent_task_package.py tests/test_workflow.py tests/test_optional_real_publish.py -q`。
+- 退出标准：任务包导出可用，README 与配置示例完成，当前项目边界明确为轻量微信公众号草稿箱辅助工作台。
+- 风险：后续若把外部 Agent 变成项目必需依赖，会破坏轻量边界；任务包若包含敏感值会造成凭据泄露。
+- 回滚点：移除 `external_agent` 包、CLI 导出命令和新增 external_agent 文档，保留现有微信公众号 API 草稿链路。
+- 交付项：
+  - [x] external_agent 策略、任务包设计、集成、安全、状态机和草稿流程文档
+  - [x] `external_agent` 任务包导出模块与模板
+  - [x] `export-agent-task` / `export-agent-tasks` CLI 命令
+  - [x] `.env.example` 与 `config/rules.example.yaml` 外部 Agent 配置
+  - [x] 任务包生成与脱敏测试
+  - [x] scan / plan / run-once 与真实发布默认关闭回归
+
+### Round 132 - 远端只读同步与 capability probe
+
+- 目标：同步公众号 `draft/batchget` 到本地镜像；探测 `freepublish/batchget` 区分未授权/空/失败。
+- 范围：`remote_sync`、`capability_probe`、adapter 扩展、CLI `sync-remote`、Web 远端草稿区。
+- 非目标：默认联网；写入 token；已发布删除。
+- 输入：Round 131 完成态；用户视角测试报告 P1-001/P1-002。
+- 输出：mirror 表、能力缓存、只读 Web 展示。
+- 验收标准：mock 同步 5 篇幂等；未授权显示「未授权」非「0 篇」；`test_user_view_rounds_abcd` Round A 用例通过。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_user_view_rounds_abcd.py -k "remote_sync or freepublish" -q`。
+- 退出标准：gate round_132。
+- 风险：真实 API 账号权限差异。
+- 回滚点：移除 migration 012 与 remote_sync 模块。
+- 交付项：
+  - [x] draft/batchget 分页同步与镜像表
+  - [x] freepublish/batchget capability probe
+  - [x] CLI sync-remote 与 Web 远端草稿区
+  - [x] 幂等与未授权文案测试
+
+### Round 133 - 远端草稿排期与每周续排状态机
+
+- 目标：draft-only 完成后下周不重复；远端草稿 `source_kind=remote_draft` 执行跳过 draft/add。
+- 范围：`schedule_state`、`weekly_plan_cursor`、`plan.py`、`scheduler/domain.py`。
+- 非目标：自动删除远端草稿；修改微信后台定时字段。
+- 输入：Round 132 完成态；P1-003。
+- 输出：`remote_media_id`/`source_kind` 字段、续排状态机。
+- 验收标准：100 篇 × 3 周模拟零重复；remote_draft 任务不插入 wechat_drafts。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_user_view_rounds_abcd.py -k "weekly or remote_draft" -q`。
+- 退出标准：gate round_133。
+- 风险：合集级游标与 schedule_state 双轨需保持一致。
+- 回滚点：移除 migration 013 排期字段。
+- 交付项：
+  - [x] publish_jobs remote 字段
+  - [x] schedule_state 与 plan 排除逻辑
+  - [x] remote_draft 执行路径
+  - [x] 三周零重复测试
+
+### Round 134 - 固定字段模型与 Web 批量工作台
+
+- 目标：后台字段能力模型；批量发布增加固定合集；收件箱路径进高级信息；flatpickr 回退。
+- 范围：`field_settings`、`publish_config.fixed_collection`、admin 批量弹窗、scan_preflight。
+- 非目标：真实写入微信合集 API。
+- 输入：Round 133；P1-006/P2-001/P2-004。
+- 输出：字段能力 API、批量合集字段、路径减法。
+- 验收标准：字段模型测试；fixed_collection 持久化；扫描 hint 不含绝对路径（普通视图）。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_user_view_rounds_abcd.py -k "field or fixed_collection" -q`。
+- 退出标准：gate round_134。
+- 风险：无。
+- 回滚点：移除 field_settings 与 UI 字段。
+- 交付项：
+  - [x] 后台字段能力模型
+  - [x] 批量固定合集与任务包 target_field_values
+  - [x] 收件箱路径高级化
+  - [x] datetime-local 回退
+
+### Round 135 - 远端删除、审计与 draft-only 语义修复
+
+- 目标：稳定 media_id 删除清单；空正文阻断；mock 任务包 simulation；dry-run 清理提示门控；draft-only 不误标已发布。
+- 范围：`remote_delete`、`operation_runs`、scan 空正文、`MockWechatAdapter.submit_publish`、task_package、real_api_check。
+- 非目标：无列表权限时开放已发布删除。
+- 输入：Round 134；P1-004–P1-008/P2-003。
+- 输出：删除 preview/execute API、运行记录表、语义对齐。
+- 验收标准：`test_user_view_rounds_abcd` Round D/E 全通过；已发布删除 UI 显示禁用原因。
+- 建议测试/冒烟命令：`.venv/bin/python -m pytest tests/test_user_view_rounds_abcd.py -q`。
+- 退出标准：gate round_135。
+- 风险：真实删除需人工确认。
+- 回滚点：移除 migration 014 与 remote_delete。
+- 交付项：
+  - [x] 删除 manifest 与 dry-run/续跑
+  - [x] 空正文 scan/preflight 阻断
+  - [x] mock 任务包 simulation 标记
+  - [x] draft-only stats.drafted 与 schedule_state
+  - [x] success_count 门控清理提示
 
 ## 历史说明
 

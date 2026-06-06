@@ -121,6 +121,8 @@ def article_workflow_hint(
             return "发布失败，可重新安排"
         if job == "waiting_confirmation":
             return "待人工确认 · 需回填发布证明"
+        if job == "done" and has_wechat_draft:
+            return "仅草稿已完成 · 未正式发布"
         if has_wechat_draft:
             return "已收录 · 微信草稿已创建"
         return "待安排发布"

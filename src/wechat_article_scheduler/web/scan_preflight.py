@@ -27,12 +27,13 @@ def build_scan_preflight(config: AppConfig) -> dict[str, Any]:
             file_count += len(list(inbox.glob(pattern)))
     hint = None
     if not blocked and file_count == 0:
-        hint = f"收件箱暂无文稿（{inbox}），可放入 .md/.txt 后重试"
+        hint = "收件箱暂无文稿，可放入 .md/.txt 后重试"
     return {
         "ready": not blocked,
         "blocked": blocked,
         "reason": reason,
         "inbox_path": str(inbox.resolve()),
+        "inbox_path_advanced": str(inbox.resolve()),
         "inbox_exists": inbox.exists(),
         "inbox_file_count": file_count,
         "hint": hint,

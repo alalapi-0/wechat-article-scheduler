@@ -643,6 +643,24 @@ try {
                 <button type="button" data-df="created">已创建</button>
               </div>
               <div id="draftsBox"></div>
+              <div class="section-head" style="margin-top:14px;">
+                <h3 style="margin:0;font-size:15px;">远端草稿镜像</h3>
+                <span class="hint" id="remoteDraftsHint">只读同步</span>
+              </div>
+              <p class="preview-hint" id="publishedCapabilityNote" hidden></p>
+              <div class="upload-actions">
+                <button class="btn-ghost btn-sm" id="btnSyncRemote" type="button">同步远端草稿</button>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:0;">
+                  <input type="checkbox" id="chkSelectAllRemote" /> 全选远端草稿
+                </label>
+                <button class="btn-ghost btn-sm" id="btnRemoteDeletePreview" type="button" disabled>删除影响预览</button>
+                <button class="btn-ghost btn-sm" id="btnRemoteDeleteExecute" type="button" disabled>删除选中远端草稿</button>
+                <button class="btn-ghost btn-sm" id="btnRemoteDeselectAll" type="button">取消选择</button>
+                <button class="btn-ghost btn-sm" id="btnPublishedDelete" type="button" disabled>删除已发布</button>
+              </div>
+              <p class="preview-hint" id="remoteDeletePolicy" style="margin-top:6px;">仅按稳定 media_id 删除，禁止按标题匹配；逐条执行（并发 1）。</p>
+              <div id="remoteDeletePreviewBox" class="preview-hint" hidden></div>
+              <div id="remoteDraftsBox"></div>
             </div>
           </section>
 
@@ -813,6 +831,9 @@ const pending = { articles: [], covers: [] };
 const selectedWorkIds = new Set();
 let selectedCollectionSlug = '';
 const selectedTrashIds = new Set();
+const selectedRemoteDraftIds = new Set();
+let remoteDraftsList = [];
+let lastRemoteSyncSummary = null;
 let workArticlesList = [];
 let lastClickedWorkId = null;
 let marqueeState = null;
@@ -870,6 +891,11 @@ function publishConfigHtml(prefix) {
     <label>
       <span>原文链接（可选）</span>
       <input type="text" id="${prefix}SourceUrl" placeholder="https://..." />
+    </label>
+    <label>
+      <span>固定合集（可选）</span>
+      <input type="text" id="${prefix}FixedCollection" placeholder="写入任务目标；后台设置需人工或外部 Agent" />
+      <span class="muted" style="font-size:12px;">能力：browser_required（API 不直接写入合集）</span>
     </label>`;
 }
 
@@ -881,6 +907,7 @@ function readPublishConfig(prefix) {
     only_fans_can_comment: el(prefix + 'FansOnlyComment').checked,
     author: (el(prefix + 'Author').value || '').trim(),
     content_source_url: (el(prefix + 'SourceUrl').value || '').trim(),
+    fixed_collection: (el(prefix + 'FixedCollection').value || '').trim(),
   };
 }
 
@@ -890,7 +917,18 @@ function mountPublishConfigForms() {
 }
 
 function initSchedulePickers(){
-  if (!window.flatpickr) return;
+  if (!window.flatpickr) {
+    ['scheduleSingleAt', 'scheduleBatchAnchor'].forEach(id => {
+      const inp = el(id);
+      if (inp && inp.type !== 'datetime-local') {
+        inp.type = 'datetime-local';
+        const d = defaultScheduleMoment();
+        const pad = n => String(n).padStart(2, '0');
+        inp.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+    });
+    return;
+  }
   const base = flatpickrDefaults();
   if (!fpSingle) {
     fpSingle = flatpickr('#scheduleSingleAt', {
@@ -1075,9 +1113,12 @@ async function boot(){
   setupWorkbenchReturnCapture();
   setupUpload();
   setupWorksSelection();
+  setupRemoteDraftSelection();
   setupCoverBatchModal();
   setupScheduleModal();
   el('btnScan').addEventListener('click', onScan);
+  const btnSyncRemote = el('btnSyncRemote');
+  if (btnSyncRemote) btnSyncRemote.addEventListener('click', onSyncRemote);
   el('btnPlan').addEventListener('click', onPlan);
   el('btnOpenSchedule').addEventListener('click', () => {
     if (selectedWorkIds.size > 0) openScheduleModal('batch');
@@ -1452,7 +1493,10 @@ function applyScanPreflightGate(pre){
   } else if (pre && pre.hint) {
     hint.hidden = false;
     hint.className = 'scan-hint';
-    hint.textContent = pre.hint;
+    const adv = document.documentElement.classList.contains('show-advanced');
+    hint.textContent = adv && pre.inbox_path_advanced
+      ? pre.hint + '（路径见高级信息）'
+      : pre.hint;
   } else {
     hint.hidden = true;
     hint.textContent = '';
@@ -1718,7 +1762,7 @@ async function refreshAll(){
     const drPromise = document.documentElement.classList.contains('show-advanced')
       ? fetchPublishDryRunForWorkbench()
       : Promise.resolve(null);
-    const [ov, arts, trash, jobs, qsum, drafts, dsum, wc, agStatus, dryRun] = await Promise.all([
+    const [ov, arts, trash, jobs, qsum, drafts, dsum, remoteDrafts, rsum, wc, agStatus, dryRun] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
@@ -1726,6 +1770,8 @@ async function refreshAll(){
       (await fetch('/api/queue-summary')).json(),
       (await fetch(draftsUrl)).json(),
       (await fetch('/api/drafts-summary')).json(),
+      (await fetch('/api/remote-drafts?limit=30')).json(),
+      (await fetch('/api/remote-sync-summary')).json(),
       wcPromise,
       agPromise,
       drPromise,
@@ -1737,6 +1783,7 @@ async function refreshAll(){
     renderQueueSummary(qsum);
     renderDraftsSummary(dsum);
     renderDrafts(drafts);
+    renderRemoteDrafts(remoteDrafts, rsum);
     await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
     applyPreflightGates(ov.publish_preflight);
@@ -1901,6 +1948,194 @@ function renderDraftsSummary(dsum){
       cleanup.innerHTML = '';
     }
   }
+}
+
+function syncRemoteDeleteSelectionUI(){
+  const n = selectedRemoteDraftIds.size;
+  const btnPreview = el('btnRemoteDeletePreview');
+  const btnExec = el('btnRemoteDeleteExecute');
+  const chkAll = el('chkSelectAllRemote');
+  if (btnPreview) btnPreview.disabled = n === 0;
+  if (btnExec) btnExec.disabled = n === 0;
+  if (chkAll && remoteDraftsList.length) {
+    chkAll.checked = n > 0 && n === remoteDraftsList.length;
+    chkAll.indeterminate = n > 0 && n < remoteDraftsList.length;
+  } else if (chkAll) {
+    chkAll.checked = false;
+    chkAll.indeterminate = false;
+  }
+}
+
+function updatePublishedDeleteButton(rsum){
+  const btn = el('btnPublishedDelete');
+  if (!btn) return;
+  const enabled = !!(rsum && rsum.published_delete_enabled);
+  btn.disabled = !enabled;
+  if (enabled) {
+    btn.title = '已发布删除需单独权限；当前账号已授权列表读取';
+  } else {
+    const reason = (rsum && rsum.published_delete_reason) || '账号无已发布列表权限，删除已禁用';
+    btn.title = reason;
+  }
+}
+
+function renderRemoteDrafts(rows, rsum){
+  const box = el('remoteDraftsBox');
+  const hint = el('remoteDraftsHint');
+  const pubNote = el('publishedCapabilityNote');
+  remoteDraftsList = rows || [];
+  lastRemoteSyncSummary = rsum || null;
+  if (hint && rsum) hint.textContent = rsum.remote_draft_label || '远端镜像';
+  if (pubNote && rsum) {
+    pubNote.textContent = '已发布列表：' + (rsum.published_list_label || '未探测');
+    pubNote.hidden = false;
+    if (!rsum.published_delete_enabled) {
+      pubNote.textContent += ' · ' + (rsum.published_delete_reason || '删除已禁用');
+    }
+  }
+  updatePublishedDeleteButton(rsum);
+  if (!box) return;
+  if (!rows || !rows.length) {
+    selectedRemoteDraftIds.clear();
+    syncRemoteDeleteSelectionUI();
+    box.innerHTML = '<div class="empty" style="padding:10px;">暂无远端镜像。点「同步远端草稿」拉取公众号草稿箱（只读）。</div>';
+    return;
+  }
+  const knownIds = new Set(rows.map(d => d.media_id).filter(Boolean));
+  for (const mid of [...selectedRemoteDraftIds]) {
+    if (!knownIds.has(mid)) selectedRemoteDraftIds.delete(mid);
+  }
+  const body = rows.map(d => {
+    const mid = d.media_id || '';
+    const checked = selectedRemoteDraftIds.has(mid) ? 'checked' : '';
+    return `<tr>
+    <td><label><input type="checkbox" data-sel-remote="${esc(mid)}" ${checked}/></label></td>
+    <td>${esc(d.title||'（无标题）')}</td>
+    <td>${esc(d.update_time_label)}</td>
+    <td title="${esc(mid)}">${esc(d.media_id_label)}</td>
+    <td>${esc(d.last_seen_label)}</td>
+  </tr>`;
+  }).join('');
+  box.innerHTML = `<table class="queue-table"><thead><tr><th></th><th>标题</th><th>远端更新</th><th>media_id</th><th>最近同步</th></tr></thead><tbody>${body}</tbody></table>`;
+  syncRemoteDeleteSelectionUI();
+}
+
+function setupRemoteDraftSelection(){
+  const box = el('remoteDraftsBox');
+  if (box) {
+    box.addEventListener('change', e => {
+      const inp = e.target;
+      if (!inp || !inp.matches || !inp.matches('input[data-sel-remote]')) return;
+      const mid = inp.getAttribute('data-sel-remote') || '';
+      if (!mid) return;
+      if (inp.checked) selectedRemoteDraftIds.add(mid);
+      else selectedRemoteDraftIds.delete(mid);
+      syncRemoteDeleteSelectionUI();
+    });
+  }
+  const chkAll = el('chkSelectAllRemote');
+  if (chkAll) {
+    chkAll.addEventListener('change', e => {
+      if (e.target.checked) remoteDraftsList.forEach(d => { if (d.media_id) selectedRemoteDraftIds.add(d.media_id); });
+      else selectedRemoteDraftIds.clear();
+      renderRemoteDrafts(remoteDraftsList, lastRemoteSyncSummary);
+    });
+  }
+  const btnDeselect = el('btnRemoteDeselectAll');
+  if (btnDeselect) {
+    btnDeselect.addEventListener('click', () => {
+      selectedRemoteDraftIds.clear();
+      el('remoteDeletePreviewBox').hidden = true;
+      el('remoteDeletePreviewBox').innerHTML = '';
+      renderRemoteDrafts(remoteDraftsList, lastRemoteSyncSummary);
+    });
+  }
+  const btnPreview = el('btnRemoteDeletePreview');
+  if (btnPreview) btnPreview.addEventListener('click', onRemoteDeletePreview);
+  const btnExec = el('btnRemoteDeleteExecute');
+  if (btnExec) btnExec.addEventListener('click', onRemoteDeleteExecute);
+  const btnPub = el('btnPublishedDelete');
+  if (btnPub) {
+    btnPub.addEventListener('click', () => {
+      const reason = (lastRemoteSyncSummary && lastRemoteSyncSummary.published_delete_reason)
+        || '账号无已发布列表权限';
+      setAlert('warn', '已发布删除未启用：' + reason);
+    });
+  }
+}
+
+async function onRemoteDeletePreview(){
+  const ids = [...selectedRemoteDraftIds];
+  if (!ids.length) { setAlert('warn', '请先勾选要删除的远端草稿'); return; }
+  setAlert('info', '正在生成删除影响预览…');
+  try {
+    const r = await (await fetch('/api/remote-delete/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ media_ids: ids }),
+    })).json();
+    if (!r.ok) { setAlert('err', '预览失败'); return; }
+    const m = r.manifest || {};
+    const items = m.items || [];
+    const lines = items.map(it => {
+      const title = it.found ? (it.title || '（无标题）') : '镜像未找到';
+      const warn = it.warning ? ` · ${it.warning}` : '';
+      return `<li><code>${esc(it.media_id)}</code> — ${esc(title)}${esc(warn)}</li>`;
+    }).join('');
+    const box = el('remoteDeletePreviewBox');
+    box.innerHTML = `<b>删除影响预览（${items.length} 项）</b><ul style="margin:6px 0 0;padding-left:18px;">${lines}</ul><div class="muted" style="margin-top:6px;">${esc(m.policy || '')} · 并发 ${m.concurrency || 1}</div>`;
+    box.hidden = false;
+    setAlert('ok', `已生成 ${items.length} 项删除预览，确认后再执行`);
+  } catch (e) { setAlert('err', '预览失败：' + e.message); }
+}
+
+async function onRemoteDeleteExecute(){
+  const ids = [...selectedRemoteDraftIds];
+  if (!ids.length) { setAlert('warn', '请先勾选要删除的远端草稿'); return; }
+  let manifest = null;
+  try {
+    const prev = await (await fetch('/api/remote-delete/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ media_ids: ids }),
+    })).json();
+    manifest = prev.manifest;
+  } catch (e) { /* 降级 */ }
+  const titles = (manifest && manifest.items ? manifest.items : [])
+    .map(it => `${it.media_id}: ${it.title || '（无标题）'}`).join('\n');
+  const msg = titles
+    ? `将按 media_id 逐条删除以下 ${ids.length} 篇远端草稿（不可撤销）：\n\n${titles}\n\n确定执行？`
+    : `将按 media_id 逐条删除 ${ids.length} 篇远端草稿（不可撤销）。确定执行？`;
+  if (!window.confirm(msg)) return;
+  setAlert('info', '正在删除远端草稿…');
+  try {
+    const r = await (await fetch('/api/remote-delete/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ media_ids: ids, confirmed: true }),
+    })).json();
+    selectedRemoteDraftIds.clear();
+    el('remoteDeletePreviewBox').hidden = true;
+    el('remoteDeletePreviewBox').innerHTML = '';
+    const ok = r.success_count || 0;
+    const fail = r.failure_count || 0;
+    const skipped = r.skipped_prior || 0;
+    let detail = `成功 ${ok}，失败 ${fail}`;
+    if (skipped) detail += `，跳过 ${skipped}`;
+    if (r.run_id) detail += ` · run_id=${r.run_id}`;
+    setAlert(fail ? 'warn' : 'ok', '远端草稿删除完成：' + detail);
+    await refreshAll();
+  } catch (e) { setAlert('err', '删除失败：' + e.message); }
+}
+
+async function onSyncRemote(){
+  setAlert('info', '正在同步远端草稿…');
+  try {
+    const r = await (await fetch('/api/sync-remote', { method: 'POST' })).json();
+    if (!r.ok) { setAlert('err', (r.stats && r.stats.reason) || '同步被阻断'); return; }
+    setAlert('ok', `已同步 ${(r.stats && r.stats.synced) || 0} 篇远端草稿`);
+    await refresh();
+  } catch(e) { setAlert('err', '同步失败：' + e.message); }
 }
 
 function renderDrafts(drafts){
