@@ -2134,7 +2134,7 @@ async function onSyncRemote(){
     const r = await (await fetch('/api/sync-remote', { method: 'POST' })).json();
     if (!r.ok) { setAlert('err', (r.stats && r.stats.reason) || '同步被阻断'); return; }
     setAlert('ok', `已同步 ${(r.stats && r.stats.synced) || 0} 篇远端草稿`);
-    await refresh();
+    await refreshAll();
   } catch(e) { setAlert('err', '同步失败：' + e.message); }
 }
 

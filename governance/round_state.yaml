@@ -1,16 +1,14 @@
 current_round:
-  id: round_131
-  name: Round 131 - 外部 Browser Agent 任务包治理
-  status: completed
-  updated_at: '2026-06-04T00:00:00+08:00'
-  completed_at: '2026-06-04'
+  id: round_132
+  name: Round 132 - 远端只读同步与 capability probe
+  status: active
+  updated_at: '2026-06-06T05:50:02.815178+00:00'
 last_completed_round:
   id: round_131
-  completed_at: '2026-06-04T00:00:00+08:00'
+  completed_at: '2026-06-06T05:50:02.815178+00:00'
 protocol_standard_sync_required: false
 acceptance_criteria:
-- test_external_agent_task_package 文件生成、提示词、清单、proof 与脱敏
-- 任务包明确禁止最终发布并要求人工确认
-- test_workflow / test_optional_real_publish 回归
+- test_user_view_rounds_abcd 远端同步幂等与未授权 probe
+- CLI sync-remote 与 Web 远端草稿区
 next_actions:
-- 下一轮建议：微信公众号 Web 控制台 MVP，或 external_agent_task 导出功能完善轮
+- 推进 Round 133：远端草稿排期与每周续排
