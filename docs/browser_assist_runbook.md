@@ -7,7 +7,7 @@ Status: Current — 与 `docs/wechat_browser_assist_strategy.md` 配套
 当 `wechat_field_matrix` 标记为 `unverified` / `partial` / `no`，且 `handling` 建议 **browser_assist + 人工确认** 时使用。典型字段：
 
 - `cover_crop` — 封面裁剪效果需后台目视
-- `wechat_backend_schedule` — 公众号后台定时群发（API 待核验）
+- `wechat_backend_schedule` — 公众号后台定时群发（官方发布接口没有定时时间参数）
 - `show_cover_pic` — 封面是否显示在正文（API 待核验）
 
 ## 标准流程
@@ -31,9 +31,14 @@ Status: Current — 与 `docs/wechat_browser_assist_strategy.md` 配套
 ```bash
 WECHAT_MODE=mock python -m wechat_article_scheduler.cli browser-assist-plan
 WECHAT_MODE=mock python -m wechat_article_scheduler.cli browser-assist-plan --article-id 1 --media-id MOCK_MEDIA_1
+WECHAT_MODE=mock python -m wechat_article_scheduler.cli browser-assist-session start --job-id 1
+WECHAT_MODE=mock python -m wechat_article_scheduler.cli browser-assist-session confirm-login --session-id <id>
 ```
 
 - Web：`GET /api/browser-assist-plan?article_id=&media_id=`
+- Web 手动登录门控：`POST /api/browser-assist/sessions/start` → `confirm-login` → `confirm-schedule-setup` → `confirm-final-schedule`
+- 作品详情页：**浏览器辅助（手动登录）** 卡片
+- Chrome 已登录会话：见 [`docs/wechat_chrome_session_runbook.md`](wechat_chrome_session_runbook.md)
 - 高级排错：`/debug` 加载 JSON
 
 ## dry-run 实现

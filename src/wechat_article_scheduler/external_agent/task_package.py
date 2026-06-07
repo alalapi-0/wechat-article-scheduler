@@ -31,18 +31,25 @@ from wechat_article_scheduler.publish_preview import render_for_publish
 TASK_PACKAGE_VERSION = 1
 
 REQUIRED_ACTIONS = [
+    "wait_for_manual_login",
     "open_backend",
     "locate_draft",
     "compare_title",
     "compare_digest",
     "compare_cover",
+    "check_cover_crop",
+    "check_cover_display_in_body",
     "compare_article_body",
     "check_comment_setting",
+    "check_recommend_notify",
+    "check_original_declaration",
+    "set_backend_schedule_time",
     "check_schedule_setting",
     "check_collection_setting",
     "fill_non_final_field",
     "take_screenshot",
     "generate_report",
+    "stop_before_final_schedule_confirm",
 ]
 
 FORBIDDEN_ACTIONS = [
@@ -54,7 +61,8 @@ FORBIDDEN_ACTIONS = [
     "change_account_security_settings",
     "delete_draft",
     "delete_article",
-    "mass_publish",
+    "operate_outside_approved_manifest",
+    "schedule_without_batch_confirmation",
     "click_final_publish_without_user_confirmation",
     "hide_browser_window",
     "ignore_platform_warning",
@@ -101,7 +109,7 @@ def _fetch_job(conn: Any, job_id: int) -> dict[str, Any] | None:
         SELECT j.id AS job_id, j.article_id, j.scheduled_at, j.status AS job_status,
                j.adapter_mode, j.publish_config_json,
                a.title, a.summary, a.body, a.source_path, a.cover_path,
-               a.status AS article_status,
+               a.cover_config_json, a.status AS article_status,
                COALESCE(c.name, '') AS collection_name
         FROM publish_jobs j
         JOIN articles a ON a.id = j.article_id
@@ -138,8 +146,39 @@ def _simulation_required_actions() -> list[str]:
     return [
         a
         for a in REQUIRED_ACTIONS
-        if a not in ("open_backend", "locate_draft")
+        if a not in ("wait_for_manual_login", "open_backend", "locate_draft")
     ]
+
+
+def _parse_cover_config(raw: str | None) -> dict[str, Any] | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        loaded = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def _backend_field_targets(
+    package: ExternalAgentTaskPackage,
+    pub_cfg: Any,
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    cover_cfg = _parse_cover_config(row.get("cover_config_json"))
+    return {
+        "fixed_collection": pub_cfg.fixed_collection or package.collection_name,
+        "need_open_comment": pub_cfg.need_open_comment,
+        "only_fans_can_comment": pub_cfg.only_fans_can_comment,
+        "wechat_backend_schedule": package.scheduled_at,
+        "backend_schedule_setup": "agent_may_assist_set_time_only",
+        "backend_schedule_final_confirm": "user_only_in_wechat_backend",
+        "recommend_notify": "browser_required",
+        "show_cover_pic": "browser_required_verify_in_backend",
+        "cover_crop": cover_cfg or "verify_crop_in_backend",
+        "original_declaration": "browser_required_if_applicable",
+    }
 
 
 def _comment_setting(need_open_comment: bool, only_fans_can_comment: bool) -> str:
@@ -204,7 +243,7 @@ def _build_package(
             pub_cfg.need_open_comment,
             pub_cfg.only_fans_can_comment,
         ),
-        collection_name=(row.get("collection_name") or None),
+        collection_name=(pub_cfg.fixed_collection or row.get("collection_name") or None),
         content_source_url=pub_cfg.content_source_url or None,
     )
     metadata = {
@@ -259,10 +298,12 @@ def export_task_package(config: AppConfig, conn: Any, job_id: int) -> dict[str, 
             else "wechat_official_draft_external_agent_assist",
             "simulation": simulation,
             "target_backend": "local_mock" if simulation else "wechat_official_account_admin",
-            "target_field_values": {
-                "fixed_collection": pub_cfg.fixed_collection or package.collection_name,
-                "need_open_comment": pub_cfg.need_open_comment,
-                "only_fans_can_comment": pub_cfg.only_fans_can_comment,
+            "target_field_values": _backend_field_targets(package, pub_cfg, row),
+            "human_confirmation_steps": {
+                "manual_login": "用户扫码登录后在本项目或 CLI 确认",
+                "schedule_setup": "Agent 可辅助设置后台定时时间，不得点击最终确认",
+                "final_schedule_confirm": "用户必须在公众号后台亲自点击最终定时群发确认",
+                "final_publish": "禁止 Agent 点击最终发布",
             },
             "local_files": {
                 "browser_agent_prompt": "browser_agent_prompt.md",

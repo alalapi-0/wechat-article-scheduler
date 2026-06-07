@@ -59,6 +59,7 @@ def _seed_job(tmp_path: Path) -> tuple[object, int]:
                         "publish_action": "draft",
                         "need_open_comment": True,
                         "author": "任务作者",
+                        "fixed_collection": "每周固定合集",
                     },
                     ensure_ascii=False,
                 ),
@@ -100,7 +101,18 @@ def test_export_task_package_creates_required_files(tmp_path: Path) -> None:
     assert task["manual_confirmation_required"] is True
     assert task["proof_required"] is True
     assert "click_final_publish_without_user_confirmation" in task["forbidden_actions"]
+    assert "operate_outside_approved_manifest" in task["forbidden_actions"]
+    assert "schedule_without_batch_confirmation" in task["forbidden_actions"]
     assert "fill_non_final_field" in task["required_actions"]
+    assert task["simulation"] is True
+    assert "wait_for_manual_login" not in task["required_actions"]
+    assert "check_cover_crop" in task["required_actions"]
+    assert "check_recommend_notify" in task["required_actions"]
+    assert task["collection_name"] == "每周固定合集"
+    assert task["target_field_values"]["fixed_collection"] == "每周固定合集"
+    assert task["target_field_values"]["wechat_backend_schedule"] == "2026-06-04T10:00:00"
+    assert task["target_field_values"]["backend_schedule_final_confirm"] == "user_only_in_wechat_backend"
+    assert task["human_confirmation_steps"]["final_schedule_confirm"]
 
     metadata = json.loads((out_dir / "metadata.json").read_text(encoding="utf-8"))
     assert metadata["task_package_status"] == "external_agent_task_ready"
@@ -119,8 +131,12 @@ def test_prompt_checklist_and_proof_include_safety_boundaries(tmp_path: Path) ->
     proof = (out_dir / "proof_template.md").read_text(encoding="utf-8")
 
     assert "不要点击最终发布按钮" in prompt
+    assert "等待用户在本浏览器窗口扫码登录" in prompt
+    assert "最终定时群发确认" in prompt
     assert "需要人工确认" in prompt
     assert "不要绕过登录、扫码、验证码" in prompt
+    assert "已等待用户扫码登录" in checklist
+    assert "未点击最终定时群发确认" in checklist
     assert "未点击最终发布" in checklist
     assert "已截图或记录 proof" in checklist
     assert "## 是否点击最终发布" in proof

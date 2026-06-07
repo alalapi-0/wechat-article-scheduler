@@ -8,7 +8,7 @@ import sys
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import load_config
 from wechat_article_scheduler.logging_setup import setup_logging
-from wechat_article_scheduler.plan import build_plan
+from wechat_article_scheduler.plan import build_plan as build_publish_plan
 from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.content_cli import print_content_library
 from wechat_article_scheduler.events_cli import list_events
@@ -48,6 +48,32 @@ def _build_parser() -> argparse.ArgumentParser:
         type=str,
         default="wechat_official",
         help="wechat_official | zhihu | douban | bilibili | xiaohongshu|xhs | wechat_channels|channels",
+    )
+
+    ba_sess = sub.add_parser(
+        "browser-assist-session",
+        help="browser_assist 手动登录门控会话（阻塞等待扫码，不自动发布）",
+    )
+    ba_sess.add_argument(
+        "action",
+        choices=[
+            "start",
+            "status",
+            "list",
+            "confirm-login",
+            "confirm-schedule-setup",
+            "confirm-final-schedule",
+            "cancel",
+        ],
+        help="start=打开登录门控 | confirm-login=用户确认已登录 | confirm-schedule-setup=已设后台定时 | confirm-final-schedule=用户已点最终确认",
+    )
+    ba_sess.add_argument("--job-id", type=int, default=None, help="start 时必填")
+    ba_sess.add_argument("--session-id", type=str, default=None)
+    ba_sess.add_argument("--note", type=str, default=None, help="用户 attestation 备注")
+    ba_sess.add_argument(
+        "--no-export-task",
+        action="store_true",
+        help="start 时不自动生成外部 Agent 任务包",
     )
 
     sub.add_parser("adapter-registry", help="列出 adapter registry 能力声明 JSON")
@@ -232,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "plan":
-        stats = build_plan(config)
+        stats = build_publish_plan(config)
         print(f"计划完成: {stats}")
         return 0
 
@@ -309,6 +335,69 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(json.dumps(plan, ensure_ascii=False, indent=2))
         return 0
+
+    if args.command == "browser-assist-session":
+        import json
+
+        from wechat_article_scheduler.adapters.browser_assist import (
+            cancel_browser_assist_session,
+            confirm_browser_login,
+            confirm_final_schedule,
+            confirm_schedule_setup,
+            get_browser_assist_session,
+            list_browser_assist_sessions,
+            start_browser_assist_session,
+        )
+
+        action = args.action
+        if action == "list":
+            result = list_browser_assist_sessions(config)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 1
+
+        if action in ("status", "confirm-login", "confirm-schedule-setup", "confirm-final-schedule", "cancel"):
+            if not args.session_id:
+                print(json.dumps({"ok": False, "error": "需要 --session-id"}, ensure_ascii=False))
+                return 1
+            db.init_db(config.database_path)
+            with db.connect(config.database_path) as conn:
+                if action == "status":
+                    result = get_browser_assist_session(config, args.session_id)
+                elif action == "confirm-login":
+                    result = confirm_browser_login(
+                        config, conn, args.session_id, attestation_note=args.note
+                    )
+                elif action == "confirm-schedule-setup":
+                    result = confirm_schedule_setup(
+                        config, conn, args.session_id, note=args.note
+                    )
+                elif action == "confirm-final-schedule":
+                    result = confirm_final_schedule(
+                        config, conn, args.session_id, attestation_note=args.note
+                    )
+                else:
+                    result = cancel_browser_assist_session(
+                        config, conn, args.session_id, reason=args.note
+                    )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 1
+
+        if action == "start":
+            if not args.job_id:
+                print(json.dumps({"ok": False, "error": "start 需要 --job-id"}, ensure_ascii=False))
+                return 1
+            db.init_db(config.database_path)
+            with db.connect(config.database_path) as conn:
+                result = start_browser_assist_session(
+                    config,
+                    conn,
+                    args.job_id,
+                    export_task_package=not args.no_export_task,
+                )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result.get("ok") else 1
+
+        return 1
 
     if args.command == "adapter-registry":
         import json
@@ -429,10 +518,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "local-blog-plan":
         import json
 
-        from wechat_article_scheduler.adapters.local_blog.plans import build_plan
+        from wechat_article_scheduler.adapters.local_blog.plans import build_plan as build_local_blog_plan
 
         try:
-            plan = build_plan(
+            plan = build_local_blog_plan(
                 destination=args.destination,
                 article_id=args.article_id,
                 output_dir=args.output_dir,
@@ -446,10 +535,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "webhook-plan":
         import json
 
-        from wechat_article_scheduler.adapters.webhook.plans import build_plan
+        from wechat_article_scheduler.adapters.webhook.plans import build_plan as build_webhook_plan
 
         try:
-            plan = build_plan(
+            plan = build_webhook_plan(
                 channel=args.channel,
                 article_id=args.article_id,
                 event_type=args.event_type,

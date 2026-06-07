@@ -30,8 +30,16 @@ def test_guardrails_forbid_secrets_and_auto_publish() -> None:
 
 def test_human_checkpoints_include_login_and_proof() -> None:
     ids = {c["id"] for c in HUMAN_CHECKPOINTS}
+    assert "login_gate" in ids
     assert "login" in ids
+    assert "final_schedule_confirm" in ids
     assert "proof_backfill" in ids
+
+
+def test_dry_run_plan_requires_login_gate() -> None:
+    plan = build_dry_run_plan(article_id="42", media_id="MOCK_1")
+    assert plan.get("login_gate_required") is True
+    assert plan.get("manual_trigger_only") is True
 
 
 def test_target_fields_from_matrix_gaps() -> None:

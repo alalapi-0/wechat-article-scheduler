@@ -16,6 +16,11 @@ GUARDRAILS: list[str] = [
 
 HUMAN_CHECKPOINTS: list[dict[str, str]] = [
     {
+        "id": "login_gate",
+        "label": "手动登录门控",
+        "instruction": "打开 mp.weixin.qq.com 或 wechat-chrome-session；等待用户扫码后点击「已登录，继续」",
+    },
+    {
         "id": "login",
         "label": "登录公众号后台",
         "instruction": "用户自行扫码/登录；Agent 不得代填账号密码",
@@ -29,6 +34,16 @@ HUMAN_CHECKPOINTS: list[dict[str, str]] = [
         "id": "fields_reviewed",
         "label": "核对 API 缺口字段",
         "instruction": "封面裁剪、后台定时、正文封面显示等需在后台目视确认",
+    },
+    {
+        "id": "schedule_setup",
+        "label": "设置后台定时（非最终确认）",
+        "instruction": "Agent 可辅助填写定时时间；不得点击最终定时群发确认",
+    },
+    {
+        "id": "final_schedule_confirm",
+        "label": "后台最终定时确认",
+        "instruction": "必须由用户本人在公众号后台点击；Agent 仅等待 attestation",
     },
     {
         "id": "save_only",
@@ -50,10 +65,16 @@ WORKFLOW_STEPS: list[dict[str, str]] = [
         "detail": "确认 API 草稿已创建/更新；记录 article_id 与 media_id",
     },
     {
+        "step_id": "login_gate",
+        "title": "等待用户扫码登录",
+        "actor": "user",
+        "detail": "打开 mp.weixin.qq.com 或连接 wechat-chrome-session；阻塞至用户确认已登录",
+    },
+    {
         "step_id": "open_mp",
         "title": "打开公众号后台",
         "actor": "browser_assist",
-        "detail": "打开 mp.weixin.qq.com 草稿箱（仅导航，不注入凭据）",
+        "detail": "在已登录会话中打开草稿箱（仅导航，不注入凭据）",
     },
     {
         "step_id": "assist_fields",
@@ -119,6 +140,9 @@ def build_dry_run_plan(
         "mode": "dry_run",
         "platform": "wechat_official",
         "status": "awaiting_human_confirmation",
+        "session_status_hint": "awaiting_browser_login",
+        "manual_trigger_only": True,
+        "login_gate_required": True,
         "terminal_policy": "不得自动到达 published",
         "article_id": article_id,
         "media_id": media_id,

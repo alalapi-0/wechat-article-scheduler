@@ -81,6 +81,13 @@ from wechat_article_scheduler.wechat_field_matrix import (
 from wechat_article_scheduler.adapters.browser_assist import (
     SUPPORTED_BROWSER_ASSIST,
     build_dry_run_plan,
+    cancel_browser_assist_session,
+    confirm_browser_login,
+    confirm_final_schedule,
+    confirm_schedule_setup,
+    get_browser_assist_session,
+    list_browser_assist_sessions,
+    start_browser_assist_session,
 )
 from wechat_article_scheduler.adapters.manual_export import (
     SUPPORTED_PLATFORMS,
@@ -483,6 +490,95 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return {
             "platforms": [{"id": k, **v} for k, v in SUPPORTED_BROWSER_ASSIST.items()],
         }
+
+    @app.get("/api/browser-assist/sessions")
+    def api_browser_assist_sessions(active_only: bool = True) -> dict[str, Any]:
+        return list_browser_assist_sessions(cfg, active_only=active_only)
+
+    @app.get("/api/browser-assist/sessions/{session_id}")
+    def api_browser_assist_session(session_id: str) -> dict[str, Any]:
+        result = get_browser_assist_session(cfg, session_id)
+        if not result.get("ok"):
+            raise HTTPException(status_code=404, detail=result.get("error") or "会话不存在")
+        return result
+
+    @app.post("/api/browser-assist/sessions/start")
+    def api_browser_assist_session_start(payload: dict[str, Any]) -> dict[str, Any]:
+        job_id = payload.get("job_id")
+        if job_id is None:
+            raise HTTPException(status_code=400, detail="需要 job_id")
+        try:
+            jid = int(job_id)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="job_id 无效") from exc
+        with db.connect(cfg.database_path) as conn:
+            result = start_browser_assist_session(
+                cfg,
+                conn,
+                jid,
+                export_task_package=not bool(payload.get("no_export_task")),
+            )
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error") or "启动失败")
+        return result
+
+    @app.post("/api/browser-assist/sessions/{session_id}/confirm-login")
+    def api_browser_assist_confirm_login(
+        session_id: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        body = payload or {}
+        with db.connect(cfg.database_path) as conn:
+            result = confirm_browser_login(
+                cfg,
+                conn,
+                session_id,
+                attestation_note=body.get("note"),
+            )
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error") or "确认失败")
+        return result
+
+    @app.post("/api/browser-assist/sessions/{session_id}/confirm-schedule-setup")
+    def api_browser_assist_confirm_schedule_setup(
+        session_id: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        body = payload or {}
+        with db.connect(cfg.database_path) as conn:
+            result = confirm_schedule_setup(cfg, conn, session_id, note=body.get("note"))
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error") or "确认失败")
+        return result
+
+    @app.post("/api/browser-assist/sessions/{session_id}/confirm-final-schedule")
+    def api_browser_assist_confirm_final_schedule(
+        session_id: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        body = payload or {}
+        with db.connect(cfg.database_path) as conn:
+            result = confirm_final_schedule(
+                cfg,
+                conn,
+                session_id,
+                attestation_note=body.get("note"),
+            )
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error") or "确认失败")
+        return result
+
+    @app.post("/api/browser-assist/sessions/{session_id}/cancel")
+    def api_browser_assist_cancel_session(
+        session_id: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        body = payload or {}
+        with db.connect(cfg.database_path) as conn:
+            result = cancel_browser_assist_session(cfg, conn, session_id, reason=body.get("note"))
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error") or "取消失败")
+        return result
 
     @app.get("/api/adapter-registry")
     def api_adapter_registry(

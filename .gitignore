@@ -30,6 +30,7 @@ config/rules.yaml
 .ui_review_tmp/
 storage/preview_snapshots/article_*.json
 storage/preview_snapshots/article_*.html
+storage/browser_assist_sessions/*.json
 # 本地 outbox 导出包（目录占位保留；勿提交测试/业务导出物）
 outbox/*
 !outbox/.gitkeep

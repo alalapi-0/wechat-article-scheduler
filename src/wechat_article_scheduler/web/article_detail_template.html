@@ -98,6 +98,15 @@
       <h2>发布状态</h2>
       <div id="statusBlock"></div>
     </section>
+    <section class="card" id="browserAssistCard" hidden>
+      <h2>浏览器辅助（手动登录）</h2>
+      <p style="margin:0 0 10px;font-size:13px;color:var(--muted);" id="browserAssistHint">
+        需用户在场扫码登录；Agent 不得在未经确认时继续后台操作。
+      </p>
+      <div id="browserAssistStatus" style="font-size:13px;margin-bottom:10px;"></div>
+      <div id="browserAssistActions" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      <pre id="browserAssistDetail" class="adv" style="margin-top:10px;display:none;font-size:12px;background:#f0f4f8;color:#333;max-height:240px;overflow:auto;"></pre>
+    </section>
     <section class="card" id="proof" hidden>
       <h2>发布证明（人工确认）</h2>
       <p style="margin:0 0 10px;font-size:13px;color:var(--muted);" id="proofHint"></p>
@@ -313,6 +322,111 @@ async function loadPreview(){
   } catch(e) { body.textContent = '预览加载失败：'+e; }
 }
 
+async function postBrowserAssist(path, body){
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {}),
+  });
+  return r.json();
+}
+
+function renderBrowserAssistSession(session, job){
+  const card = document.getElementById('browserAssistCard');
+  const statusEl = document.getElementById('browserAssistStatus');
+  const actionsEl = document.getElementById('browserAssistActions');
+  const detailEl = document.getElementById('browserAssistDetail');
+  if (!card || !job || !job.id) return;
+  card.hidden = false;
+  const sid = session && session.session_id;
+  const st = session && session.status;
+  if (!sid) {
+    statusEl.innerHTML = '<span class="pill wait">未启动</span> 点击开始后将打开登录门控，请在 Chrome 扫码登录。';
+    actionsEl.innerHTML = `<button type="button" class="btn-primary btn-sm" id="btnBaStart">开始浏览器辅助</button>`;
+    document.getElementById('btnBaStart').onclick = async () => {
+      if (!window.confirm('将启动手动登录门控。请在本机 Chrome 扫码登录后再点「已登录，继续」。')) return;
+      try {
+        const r = await postBrowserAssist('/api/browser-assist/sessions/start', { job_id: job.id });
+        if (!r.ok) { alert(r.detail || r.error || '启动失败'); return; }
+        window.open(r.login_gate && r.login_gate.login_url ? r.login_gate.login_url : 'https://mp.weixin.qq.com/', '_blank');
+        renderBrowserAssistSession(r, job);
+      } catch(e) { alert('启动失败：'+e); }
+    };
+    detailEl.style.display = 'none';
+    return;
+  }
+  const label = {
+    awaiting_browser_login: '等待扫码登录',
+    browser_session_ready: '已登录，可继续',
+    assist_in_progress: '辅助进行中',
+    awaiting_schedule_setup: '待设置后台定时',
+    awaiting_final_schedule_confirm: '待用户最终定时确认',
+    awaiting_proof: '待回填 proof',
+    completed: '已完成',
+    cancelled: '已取消',
+  }[st] || st;
+  statusEl.innerHTML = `<span class="pill ${st==='awaiting_browser_login'?'wait':'ok'}">${esc(label)}</span> 会话 <code>${esc(sid)}</code>`;
+  if ((session.human_steps||[]).length) {
+    statusEl.innerHTML += '<ul style="margin:8px 0 0 16px;font-size:12px;color:var(--muted);">' +
+      session.human_steps.map(h=>`<li>${esc(h)}</li>`).join('') + '</ul>';
+  }
+  let btns = '';
+  if (st === 'awaiting_browser_login') {
+    btns += `<button type="button" class="btn-primary btn-sm" id="btnBaLogin">已登录，继续</button>`;
+  } else if (st === 'assist_in_progress' || st === 'browser_session_ready') {
+    btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaSched">已设置后台定时，继续</button>`;
+  } else if (st === 'awaiting_final_schedule_confirm') {
+    btns += `<button type="button" class="btn-primary btn-sm" id="btnBaFinal">已完成后台最终确认</button>`;
+  }
+  btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaCancel">取消会话</button>`;
+  actionsEl.innerHTML = btns;
+  const bind = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
+  bind('btnBaLogin', async () => {
+    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-login`, {});
+    if (!r.ok) { alert(r.detail || r.error || '确认失败'); return; }
+    alert((r.human||['已确认登录']).join('\n'));
+    location.reload();
+  });
+  bind('btnBaSched', async () => {
+    if (!window.confirm('确认已在公众号后台设置定时时间？仍未点击最终群发确认。')) return;
+    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-schedule-setup`, {});
+    if (!r.ok) { alert(r.detail || r.error || '确认失败'); return; }
+    alert((r.human||['已记录']).join('\n'));
+    location.reload();
+  });
+  bind('btnBaFinal', async () => {
+    if (!window.confirm('确认您已在公众号后台亲自点击最终定时群发确认？')) return;
+    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-final-schedule`, {});
+    if (!r.ok) { alert(r.detail || r.error || '确认失败'); return; }
+    alert((r.human||['已记录']).join('\n'));
+    location.href = '#proof';
+    location.reload();
+  });
+  bind('btnBaCancel', async () => {
+    if (!window.confirm('取消当前 browser_assist 会话？')) return;
+    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/cancel`, {});
+    if (!r.ok) { alert(r.detail || r.error || '取消失败'); return; }
+    location.reload();
+  });
+  if (document.body.classList.contains('show-advanced')) {
+    detailEl.style.display = 'block';
+    detailEl.textContent = JSON.stringify(session, null, 2);
+  } else {
+    detailEl.style.display = 'none';
+  }
+}
+
+async function loadBrowserAssistForJob(job){
+  if (!job || !job.id) return;
+  try {
+    const list = await (await fetch('/api/browser-assist/sessions?active_only=true')).json();
+    const match = (list.sessions||[]).find(s => Number(s.job_id) === Number(job.id));
+    renderBrowserAssistSession(match || null, job);
+  } catch(e) {
+    renderBrowserAssistSession(null, job);
+  }
+}
+
 async function boot(){
   let detailCache = null;
   applyWorkbenchReturnLinks();
@@ -374,6 +488,7 @@ async function boot(){
     if (draft.mock_note) st += `<p class="warn" style="margin-top:6px;">${esc(draft.mock_note)}</p>`;
     if (draft.update_hint) st += `<p style="margin-top:6px;font-size:12px;color:var(--muted);">${esc(draft.update_hint)}</p>`;
     document.getElementById('statusBlock').innerHTML = st;
+    await loadBrowserAssistForJob(job);
     const proof = d.publish_proof;
     const proofCard = document.getElementById('proof');
     if (proof && proof.needs_proof) {
