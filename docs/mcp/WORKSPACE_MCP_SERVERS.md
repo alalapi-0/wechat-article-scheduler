@@ -8,7 +8,15 @@
 | `filesystem` | 读写当前项目文件 | 仅 `${workspaceFolder}` |
 | `github` | 仓库、issue、PR、分支与 CI | `GITHUB_TOKEN` 环境变量 |
 | `playwright` | 浏览器自动化与 E2E | 默认隔离会话 |
-| `stitch` | UI 设计系统、原型、screen、截图和 HTML | `STITCH_API_KEY` 环境变量；只作设计输入 |
+| `stitch` | UI 设计系统、原型、screen、截图和 HTML | `STITCH_API_KEY` 环境变量；本地 stdio proxy（`scripts/stitch_mcp_proxy.mjs`）；只作设计输入 |
+
+## Stitch 配置要点
+
+- **Remote MCP**（`url` + header）与 **Local stdio proxy**（`node scripts/stitch_mcp_proxy.mjs`）两种方式均指向 `https://stitch.googleapis.com/mcp`；本项目采用 **stdio proxy**，server 名称为 `stitch`。
+- Key 只通过 `${env:STITCH_API_KEY}` 注入，不得写入 `.cursor/mcp.json`。
+- 验证：`cursor-agent mcp list-tools stitch` 须返回非空 tools；`No tools/prompts/resources` 视为不可用。
+- 修改 MCP 后：**Cmd+Q 完全退出 Cursor** → 重开仓库 → Settings → Tools & MCP 检查 `stitch` → **新建普通前台 Agent**。
+- Stitch 不可用时：用 `docs/design/stitch/` 模板 + chrome-devtools / playwright 做 UI 验收。
 
 ## 任务映射
 

@@ -45,9 +45,11 @@
       }
     },
     "stitch": {
-      "url": "https://stitch.googleapis.com/mcp",
-      "headers": {
-        "X-Goog-Api-Key": "${env:STITCH_API_KEY}"
+      "type": "stdio",
+      "command": "node",
+      "args": ["scripts/stitch_mcp_proxy.mjs"],
+      "env": {
+        "STITCH_API_KEY": "${env:STITCH_API_KEY}"
       }
     }
   }

@@ -87,7 +87,7 @@ Cursor **Multitask** 模式启动的后台子 Agent 通常：
 | playwright 打开的是未登录页面 | Playwright 新开隔离浏览器（`--isolated`） | 微信任务改用 `wechat-chrome-session`；本地 Web 用 playwright 正常 |
 | chrome-devtools 不能接管现有页面 | Chrome 未开启 remote debugging 或线程没有工具 | 按 [`wechat_chrome_session_runbook.md`](wechat_chrome_session_runbook.md) 开启 remote debugging；重启 Cursor |
 | Agent 只能看到 `browser_tabs` / localhost 页面 | 使用了 Cursor 内置浏览器，非 Workspace MCP | 停止任务；确认 chrome-devtools / playwright MCP 已加载到新对话 |
-| Stitch 设计任务无 stitch 工具 | STITCH_API_KEY 未设置或线程未注册 | 设置 `STITCH_API_KEY` 环境变量；完全重启 Cursor；新建对话 |
+| Stitch 设计任务无 stitch 工具 | STITCH_API_KEY 未设置、stdio proxy 未批准或线程未注册 | 设置 `STITCH_API_KEY`；确认 `.cursor/mcp.json` 使用 `scripts/stitch_mcp_proxy.mjs`；完全重启 Cursor；新建对话；运行 `cursor-agent mcp list-tools stitch`（tools 为空则仍不可用） |
 | `npm run check:mcp` 通过但浏览器任务仍失败 | 只检查了配置层，未检查对话线程 | 运行 `npm run check:cursor-mcp` 作辅助；重点检查当前对话工具列表 |
 
 ---
@@ -140,7 +140,7 @@ BLOCKED: MISSING_FROM_THREAD_TOOL_REGISTRY
 | chrome-devtools | `.cursor/mcp.json` | 页面列表、console、network、截图 |
 | playwright | `.cursor/mcp.json` | `browser_navigate`、`browser_snapshot` 等 |
 | wechat-chrome-session | `.cursor/mcp.json` | `list_pages`、`select_page` 等 |
-| stitch | `.cursor/mcp.json`（Remote MCP） | 设计 screen / 导出相关工具 |
+| stitch | `.cursor/mcp.json`（stdio proxy → `scripts/stitch_mcp_proxy.mjs`） | 设计 screen / 项目 / 导出相关工具（`list-tools stitch` 非空） |
 | filesystem | `.cursor/mcp.json` | 读写 `${workspaceFolder}` 内文件 |
 | context7 | `.cursor/mcp.json` | 库文档查询 |
 | github | `.cursor/mcp.json` | 仓库 / PR / issue 操作 |

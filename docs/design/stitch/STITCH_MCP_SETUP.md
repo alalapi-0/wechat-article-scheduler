@@ -1,50 +1,95 @@
 # Stitch MCP 配置
 
-## 当前方案
+## 两种配置方式
 
-本仓库使用 Remote MCP，不安装本地 proxy：
+| 方式 | 说明 | 本项目 |
+|------|------|--------|
+| **Remote MCP** | 在 `.cursor/mcp.json` 中直接配置 `url: https://stitch.googleapis.com/mcp` + `X-Goog-Api-Key` header | 已弃用（Cursor 对 remote stitch 常出现未加载 / 0 tools） |
+| **Local stdio proxy** | 本地 `scripts/stitch_mcp_proxy.mjs`，经 `@google/stitch-sdk` 的 `StitchProxy` 转发到官方 endpoint | **当前默认** |
+
+本项目最终使用 **Local stdio proxy**，server 名称仍为 `stitch`。
+
+## 当前 `.cursor/mcp.json` 片段
 
 ```json
 {
   "mcpServers": {
     "stitch": {
-      "url": "https://stitch.googleapis.com/mcp",
-      "headers": {
-        "X-Goog-Api-Key": "${env:STITCH_API_KEY}"
+      "type": "stdio",
+      "command": "node",
+      "args": ["scripts/stitch_mcp_proxy.mjs"],
+      "env": {
+        "STITCH_API_KEY": "${env:STITCH_API_KEY}"
       }
     }
   }
 }
 ```
 
-Cursor 支持在 `headers` 中解析 `${env:NAME}`，因此无需把 key 写入仓库。Stitch SDK 的默认 MCP endpoint 也是 `https://stitch.googleapis.com/mcp`。
+proxy 从环境变量读取 `STITCH_API_KEY`，不打印 key；缺失时 stderr 报错并退出。
 
 ## 设置 Key
 
-从 Stitch Settings 的 API Keys 页面创建 key，然后只在本机设置：
+1. 打开 [Stitch Settings → API Keys](https://stitch.withgoogle.com/) 创建 key。
+2. 只在本机设置，**不要**写入仓库：
 
 ```bash
 export STITCH_API_KEY="your-local-key"
 ```
 
-`.env.example` 只有占位符。不要提交 `.env`，不要把 key 写进 `.cursor/mcp.json`、脚本、文档、截图或日志。若 Cursor 从图形界面启动后读取不到 shell 环境，请在启动 Cursor 的进程环境中设置变量，再重新打开工作区。
+或在项目根 `.env` 中设置（`.env` 已在 `.gitignore` 中）。`.env.example` 只有占位符。
+
+**注意：** 若 Cursor 从 Dock/Finder 启动，可能读不到 shell 的 `export`。请在 Cursor 能访问的环境设置变量，或在本机 shell profile / launchd 中注入后再启动 Cursor。
+
+### OAuth 说明（非本项目默认路径）
+
+Google 官方 MCP endpoint 在部分客户端上也可通过 **gcloud OAuth**（`@_davideast/stitch-mcp proxy` + `GOOGLE_CLOUD_PROJECT`）认证。该路径需要 `gcloud auth application-default login` 与启用 `stitch.googleapis.com` MCP API。本项目 **不** 采用 OAuth proxy，以避免与现有 `STITCH_API_KEY` 工作流冲突；若 API Key 路径不可用，再单独评估 OAuth 方案。
 
 ## 加载与验证
 
-1. 运行 `npm run check:mcp`。
-2. 运行 `npm run check:stitch`。
-3. 重启 Cursor 或 Reload Window。
-4. 打开 Cursor Settings -> Tools & MCP。
-5. 确认 `stitch` 已启用且没有认证错误。
-6. 让 Agent 列出 Stitch tools 或项目；不要在验证阶段生成大批页面。
+### 1. 静态检查
 
-静态检查通过不等于远端认证成功。当前环境没有 key 时，只能确认 JSON、endpoint、环境变量占位符和目录结构。
+```bash
+npm install          # 安装 @google/stitch-sdk（proxy 依赖）
+npm run check:mcp
+npm run check:stitch
+```
+
+### 2. Cursor 运行时验证（必需）
+
+修改 `.cursor/mcp.json` 后 **必须完全退出 Cursor**（Cmd+Q），再重新打开本仓库：
+
+1. Settings → Tools & MCP → 确认 `stitch` **Enabled**，且无认证错误。
+2. **新建普通前台 Agent 对话**（禁用 Multitask）。
+3. 运行：
+
+```bash
+cursor-agent mcp list
+cursor-agent mcp list-tools stitch
+```
+
+**验收标准：** `list-tools stitch` 返回真实 tools（非空）。若显示 `No tools/prompts/resources` 或 `needs approval` / `has not been approved`，**不能**判定 Stitch 可用。
+
+### 3. 当前 Agent 线程
+
+CLI 层 ready 不等于当前对话已注册工具。必须在 **新开的普通前台 Agent** 中确认 stitch 原生工具可见；否则见 [`docs/cursor_tool_registry_check.md`](../../cursor_tool_registry_check.md)。
 
 ## 故障排查
 
-- `STITCH_API_KEY` 缺失：在 Cursor 进程环境设置变量后重载。
-- 认证失败：重新创建或检查 key 权限；不要把 key 粘贴进 issue 或日志。
-- MCP 不显示：确认 `.cursor/mcp.json` JSON 有效并重启 Cursor。
-- 网络或配额错误：记录错误摘要，继续使用文档模板，不伪装成 Stitch 已成功。
+| 现象 | 可能原因 | 处理 |
+|------|----------|------|
+| `STITCH_API_KEY 未设置` | Cursor 进程无 key | 设置环境变量后 Cmd+Q 重启 Cursor |
+| `needs approval` / `has not been approved` | Settings 未批准 stitch | Tools & MCP 批准 → 完全重启 → 新对话 |
+| `MCP server does not exist: stitch` | 旧对话工具注册表 | 完全重启 Cursor，新建普通前台 Agent |
+| `list-tools` 成功但 tools 为空 | 认证失败或 transport 不兼容 | 检查 key；确认使用 stdio proxy 而非 remote |
+| Remote 配置 API Key 报 OAuth 错误 | 官方 endpoint 在该 transport 下不接受 API Key | 改用 stdio proxy（当前默认） |
 
-只有旧版 Cursor 无法在 Remote MCP header 中解析环境变量时，才考虑 `@google/stitch-sdk` 的 `StitchProxy` stdio 方案；引入前应单独评审依赖和安全边界。
+## Fallback
+
+Stitch 不可用时，UI 设计任务继续使用 `docs/design/stitch/` 模板；页面验收使用 **chrome-devtools** 或 **playwright**，不得假装 Stitch 已生成设计。
+
+## 参考
+
+- [@google/stitch-sdk StitchProxy](https://github.com/google-labs-code/stitch-sdk)
+- [`docs/mcp/WORKSPACE_MCP_SERVERS.md`](../../mcp/WORKSPACE_MCP_SERVERS.md)
+- [`docs/cursor_tool_registry_check.md`](../../cursor_tool_registry_check.md)

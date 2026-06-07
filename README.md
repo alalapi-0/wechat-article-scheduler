@@ -299,15 +299,31 @@ npm run check:stitch
 
 [Google Stitch](https://stitch.withgoogle.com/) 在本项目中负责 UI 设计输入：生成工作台、审核台、预览页和 debug 页面方案，以及 screen、variants、截图和 HTML。它不替代主开发 Agent，也不改变微信公众号 P0 业务边界。
 
-本仓库使用 Remote MCP。先在本机设置 key：
+### 配置方式
+
+| 方式 | 状态 |
+|------|------|
+| Remote MCP（`url` + `X-Goog-Api-Key` header） | 已弃用；Cursor 上常未加载或 0 tools |
+| **Local stdio proxy**（`scripts/stitch_mcp_proxy.mjs`） | **当前默认** |
+
+先在本机设置 key 并安装 proxy 依赖：
 
 ```bash
 export STITCH_API_KEY="your-local-key"
+npm install
 npm run check:mcp
 npm run check:stitch
 ```
 
-然后重启 Cursor 或 Reload Window，在 Tools & MCP 确认 `stitch` enabled。设计任务从 `docs/design/DESIGN.md` 和 `docs/design/stitch/` 开始；HTML、截图、prompt 和评审分别保存到该目录下的 `exports/`、`screenshots/`、`prompts/`、`reviews/`。
+然后 **Cmd+Q 完全退出 Cursor**，重新打开仓库，在 Settings → Tools & MCP 确认 `stitch` enabled，并 **新建普通前台 Agent**。验证：
+
+```bash
+cursor-agent mcp list-tools stitch
+```
+
+须返回非空 tools；若显示 `No tools/prompts/resources` 或 `needs approval`，不能判定 Stitch 可用。Stitch 不可用时，UI 任务用 `docs/design/stitch/` 模板，验收用 chrome-devtools / playwright。
+
+设计任务从 `docs/design/DESIGN.md` 和 `docs/design/stitch/` 开始；HTML、截图、prompt 和评审分别保存到该目录下的 `exports/`、`screenshots/`、`prompts/`、`reviews/`。
 
 协作分工：Stitch 提供设计输入，Cursor/实现 Agent 按当前 `FastAPI + 原生 HTML/CSS/JS` 技术栈落地，Codex 可执行用户视角与浏览器测试。Stitch 导出代码不得无审查覆盖业务代码；实现后必须用 Playwright 或 chrome-devtools 检查页面、console、network 和核心流程。
 

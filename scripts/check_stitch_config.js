@@ -8,10 +8,11 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
 const MCP_PATH = path.join(ROOT, ".cursor", "mcp.json");
+const PROXY_PATH = path.join(ROOT, "scripts", "stitch_mcp_proxy.mjs");
 const ENV_EXAMPLE_PATH = path.join(ROOT, ".env.example");
 const GITIGNORE_PATH = path.join(ROOT, ".gitignore");
-const EXPECTED_URL = "https://stitch.googleapis.com/mcp";
-const EXPECTED_HEADER_VALUE = "${env:STITCH_API_KEY}";
+const REMOTE_URL = "https://stitch.googleapis.com/mcp";
+const EXPECTED_ENV_PLACEHOLDER = "${env:STITCH_API_KEY}";
 
 const REQUIRED_PATHS = [
   "docs/design/DESIGN.md",
@@ -30,6 +31,7 @@ const REQUIRED_PATHS = [
 const TEXT_EXTENSIONS = new Set([
   ".json",
   ".js",
+  ".mjs",
   ".md",
   ".mdc",
   ".toml",
@@ -73,6 +75,37 @@ function walkTextFiles(dirPath, output) {
   }
 }
 
+function validateStitchConfig(stitch, issues) {
+  if (!stitch || typeof stitch !== "object") {
+    issues.push("缺少 mcpServers.stitch");
+    return null;
+  }
+
+  const isStdioProxy =
+    stitch.type === "stdio" &&
+    stitch.command === "node" &&
+    Array.isArray(stitch.args) &&
+    stitch.args.includes("scripts/stitch_mcp_proxy.mjs") &&
+    stitch.env?.STITCH_API_KEY === EXPECTED_ENV_PLACEHOLDER;
+
+  const isRemote =
+    stitch.url === REMOTE_URL &&
+    stitch.headers?.["X-Goog-Api-Key"] === EXPECTED_ENV_PLACEHOLDER;
+
+  if (isStdioProxy) {
+    return "stdio-proxy";
+  }
+  if (isRemote) {
+    return "remote";
+  }
+
+  issues.push(
+    "stitch 必须使用本地 stdio proxy（node scripts/stitch_mcp_proxy.mjs + STITCH_API_KEY 占位符），" +
+      "或已废弃的 remote url 配置（不推荐）"
+  );
+  return null;
+}
+
 function main() {
   const issues = [];
   const warnings = [];
@@ -88,19 +121,10 @@ function main() {
     }
   }
 
-  const stitch = mcp?.mcpServers?.stitch;
-  if (!stitch || typeof stitch !== "object") {
-    issues.push("缺少 mcpServers.stitch");
-  } else {
-    if (stitch.url !== EXPECTED_URL) {
-      issues.push("stitch.url 不是预期的 Google Stitch MCP endpoint");
-    }
-    const headerValue = stitch.headers?.["X-Goog-Api-Key"];
-    if (headerValue !== EXPECTED_HEADER_VALUE) {
-      issues.push(
-        "stitch 的 X-Goog-Api-Key 必须引用 ${env:STITCH_API_KEY}，不得硬编码"
-      );
-    }
+  const transport = validateStitchConfig(mcp?.mcpServers?.stitch, issues);
+
+  if (transport === "stdio-proxy" && !fs.existsSync(PROXY_PATH)) {
+    issues.push("缺少 scripts/stitch_mcp_proxy.mjs");
   }
 
   const envExample = fs.existsSync(ENV_EXAMPLE_PATH)
@@ -147,8 +171,13 @@ function main() {
   }
 
   console.log(issues.length ? "check_stitch_config: FAIL" : "check_stitch_config: PASS");
-  console.log(`  transport: remote (${EXPECTED_URL})`);
-  console.log("  auth: X-Goog-Api-Key from environment placeholder");
+  if (transport === "stdio-proxy") {
+    console.log("  transport: stdio proxy (scripts/stitch_mcp_proxy.mjs)");
+    console.log(`  upstream: ${REMOTE_URL}`);
+  } else if (transport === "remote") {
+    console.log(`  transport: remote (${REMOTE_URL}) [deprecated; prefer stdio proxy]`);
+  }
+  console.log("  auth: STITCH_API_KEY from environment placeholder");
   console.log(`  design paths: ${REQUIRED_PATHS.length}`);
   console.log(`  scanned text files: ${textFiles.length} (excluded .env)`);
   for (const warning of warnings) {
