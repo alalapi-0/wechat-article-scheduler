@@ -4,6 +4,7 @@
   "description": "Workspace MCP config checks (no runtime Node app)",
   "scripts": {
     "check:mcp": "node scripts/check_mcp_config.js",
-    "check:stitch": "node scripts/check_stitch_config.js"
+    "check:stitch": "node scripts/check_stitch_config.js",
+    "check:cursor-mcp": "bash scripts/check_cursor_mcp_status.sh"
   }
 }

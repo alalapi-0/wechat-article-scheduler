@@ -6,7 +6,7 @@
 
 ## 当前第一阶段目标
 
-阶段一目标是把本地文章稳定送入微信公众号草稿箱，并在用户显式确认后才允许正式发布。
+阶段一目标是按计划时间把本地文章稳定创建/更新到微信公众号草稿箱。后台发布或后台定时发布由用户自己在公众号后台完成。
 
 核心能力方向：
 
@@ -17,25 +17,25 @@
 - 微信公众号草稿创建和后续草稿更新
 - 本地 scheduler 和失败重试
 - Web 控制台：文章列表、详情、预览、草稿、队列、设置、事件日志
-- 人工确认和可选正式发布
-- 必要时导出外部 Browser Agent 任务包，交给 Hermes / Cursor Agent / Playwright MCP / Browser Use 或用户手动处理后台字段
+- 人工后台发布清单与 proof 记录
+- 必要时导出外部 Browser Agent 任务包，交给 Hermes / Cursor Agent / Playwright MCP / Browser Use 或用户手动定位草稿、核对字段和生成报告
 
 ## 已实现能力
 
 - CLI 闭环：`scan` / `plan` / `run-once` / `scheduler`
 - SQLite 状态记录：`articles`、`publish_jobs`、`wechat_drafts`、`events`
 - 默认 `WECHAT_MODE=mock`，不联网；显式切到 `WECHAT_MODE=real` 后进入真实 API 测试模式
-- 微信公众号 real adapter：token、封面素材上传、`draft/add`、受控 `freepublish/submit`
-- `WECHAT_ENABLE_PUBLISH=false` 时只创建草稿，不正式发布
+- 微信公众号 real adapter：token、封面素材上传、`draft/add`、`draft/update`
+- 调度器到点只创建/更新草稿，不自动提交正式发布
 - 摘要 120 字兜底截断和 warning 事件
 - Web 工作台基础能力：上传、文章列表、排期、预览、队列、预检、事件
 - 外部 Browser Agent 任务包骨架：`outbox/wechat_agent_tasks/job-xxxxxx/`
 - **里程碑（round_108–121）**：微信 P0 工作台抛光——预检门控、扫描/上传反馈、localStorage 持久化（高级信息/合集/队列 Tab/区块 hash）、详情返回上下文与深链 `#queue`
 - 真实微信公众号草稿创建已通过本地验证
+- 远端草稿列表同步、更新、删除与每周续排已实现
 
 ## 尚未完成
 
-- 微信草稿更新能力
 - 更稳定的 Markdown 到微信公众号 HTML 排版
 - 更接近公众号效果的发布前预览
 - 封面裁剪与方形/横向双比例预览
@@ -71,20 +71,26 @@ python3 -m wechat_article_scheduler.cli plan
 python3 -m wechat_article_scheduler.cli run-once
 ```
 
+复用当前已登录 Chrome 时，只使用 `.cursor/mcp.json` 中的
+`wechat-chrome-session --autoConnect`。不要启动项目内专用 CDP profile，也不要使用
+`playwright --isolated` 冒充登录会话。完整连接和排错步骤见
+[`docs/wechat_chrome_session_runbook.md`](docs/wechat_chrome_session_runbook.md)。
+
 仓库已纳入 `articles/imported/` 与 `articles/published/` 下的章节样稿，供 scan/plan 测试使用。不要提交 `.env` 或运行时数据库。
 
 ## 运行模式
 
 | 模式 | 行为 |
 |---|---|
-| `WECHAT_MODE=mock` | 默认模式，不联网，生成 mock 草稿/发布结果 |
+| `WECHAT_MODE=mock` | 默认模式，不联网，生成 mock 草稿结果 |
 | `WECHAT_MODE=real` | 真实 API 测试模式；`real_api_check` 与到点执行会联网 |
-| `WECHAT_MODE=real` + `WECHAT_ENABLE_PUBLISH=false` | 推荐：草稿-only，只创建真实微信草稿，不提交正式发布 |
-| `WECHAT_MODE=real` + 任务级正式发布 | 到点时允许调用 `freepublish/submit` |
+| `WECHAT_MODE=real` + 到点执行 | 创建/更新真实微信草稿，不提交正式发布 |
 
-默认不联网；`WECHAT_MODE=real` 本身就是显式真实 API 测试开关。需要只测草稿箱时，设置 `WECHAT_ENABLE_PUBLISH=false`。任务级“仅草稿”仍不会触发正式发布。
+默认不联网；`WECHAT_MODE=real` 本身就是显式真实 API 测试开关。当前项目目标是草稿创建排期，`WECHAT_ENABLE_PUBLISH` 即使存在也不应被理解为自动发布能力。
 
-当前定时发布实现是**本地 scheduler 到点调用 API**：先创建草稿，再在到点时按任务设置调用 `freepublish/submit`。它还不是“把定时时间写进微信后台草稿箱”的能力；如果微信官方 API 不支持该字段，后续应走外部 Browser Agent 任务包 + 人工确认路线。
+当前“排期”实现是**本地 scheduler 到点调用草稿 API**，按时创建或更新草稿。它不会把时间写入微信后台，也不会点击发布、群发或确认定时发布。
+
+微信官方草稿接口不能把发布时间写入微信后台。当前账号的实际路线是：API 批量准备草稿，外部 Browser Agent 任务包或人工只负责定位草稿、核对字段、记录后台发布/定时发布需要人工处理的清单，再回填 proof。详见 [`docs/draft_only_account_execution_plan.md`](docs/draft_only_account_execution_plan.md)。
 
 ## 外部 Browser Agent 协作模式
 
@@ -115,9 +121,9 @@ python3 -m wechat_article_scheduler.cli export-agent-task --job-id 1
 python3 -m wechat_article_scheduler.cli export-agent-tasks --status draft_created
 ```
 
-用户可以把 `browser_agent_prompt.md` 发给 Hermes / Cursor Agent / Playwright MCP / Browser Use。外部 Agent 只负责打开微信公众号后台、定位草稿、核对字段、辅助填写允许的非最终设置、截图或生成报告，并且必须停在人类确认阶段。
+用户可以把 `browser_agent_prompt.md` 发给 Hermes / Cursor Agent / Playwright MCP / Browser Use。外部 Agent 只负责打开微信公众号后台、定位草稿、核对字段、截图或生成报告，并且必须停在人类确认阶段。
 
-任务包不包含任何密钥；不会写入 access token、AppSecret、公众号后台 cookie、微信账号密码或 LLM API Key。外部 Agent 不能默认点击最终发布。任务完成后，用户需要将截图、后台状态描述、发布链接或草稿确认结果作为 proof 回填或记录到本项目。
+任务包不包含任何密钥；不会写入 access token、AppSecret、公众号后台 cookie、微信账号密码或 LLM API Key。外部 Agent 不能点击发布、群发或确认定时发布。任务完成后，用户需要将截图、后台状态描述、发布链接或草稿确认结果作为 proof 回填或记录到本项目。
 
 当前项目的核心能力仍然是微信公众号 API 草稿创建和本地任务管理。
 
@@ -125,22 +131,16 @@ python3 -m wechat_article_scheduler.cli export-agent-tasks --status draft_create
 
 样本见 `fixtures/real_api_samples/`；报告写入 `reports/real_api_runs/`。
 
-只验证 token、封面上传和草稿创建，不提交正式发布（推荐 `WECHAT_ENABLE_PUBLISH=false`）：
+只验证 token、封面上传和草稿创建，不提交正式发布：
 
 ```bash
-WECHAT_MODE=real WECHAT_ENABLE_PUBLISH=false python3 scripts/real_api_check.py --samples 3
+WECHAT_MODE=real python3 scripts/real_api_check.py --samples 3
 ```
 
 无本地凭证或仍为 mock 时，可 dry-run 并跳过硬失败（Agent 门控用）：
 
 ```bash
 python3 scripts/real_api_check.py --dry-run --skip-if-blocked
-```
-
-验证正式发布接口，会调用 `freepublish/submit`（慎用）：
-
-```bash
-WECHAT_MODE=real python3 scripts/real_api_check.py --samples 1 --publish
 ```
 
 Auto-Approved 端到端（真实草稿 + auto_approved 元数据 + 可选 scan/run-once 下游），报告见 `reports/auto_approve_pipeline/`：
@@ -155,7 +155,7 @@ WECHAT_MODE=real WECHAT_ENABLE_PUBLISH=false python3 scripts/auto_approve_pipeli
 python3 scripts/auto_approve_pipeline.py --round 1 --dry-run --skip-downstream --skip-if-blocked
 ```
 
-本地定时发布测试建议使用 Web 批量发布设置或 CLI 排期：把任务设为“正式发布”，并让本地 scheduler 到点执行。当前代码还没有把定时时间直接写入微信后台草稿箱。
+本地草稿排期测试建议使用 Web 批量草稿排期或 CLI 排期，并让本地 scheduler 到点执行。当前代码不会把定时时间直接写入微信后台草稿箱。
 
 ## Scheduler 常驻运行
 
@@ -241,13 +241,59 @@ bash scripts/run_scheduler_daemon.sh
 
 ## MCP 配置检查
 
-本项目在 Cursor 中要求启用 `chrome-devtools`、`context7`、`filesystem`、`github`、`playwright`。检查命令：
+本项目在 Cursor 中要求启用 `chrome-devtools`、`wechat-chrome-session`、`context7`、`filesystem`、`github`、`playwright`、`stitch`。检查命令：
 
 ```bash
 npm run check:mcp
+npm run check:stitch
+npm run check:cursor-mcp   # Cursor CLI 层；不代表当前 Agent 对话线程已暴露工具
+# 或
+bash scripts/check_cursor_mcp_status.sh
 ```
 
 GitHub token 必须通过环境变量注入，不得写入仓库或 `.cursor/mcp.json`。
+
+## Cursor Browser UI Workflow
+
+Cursor Agent 在本仓库做 UI 优化时，请使用 **普通前台 Agent**（禁用 Multitask），并遵循 [`docs/cursor_browser_ui_runbook.md`](docs/cursor_browser_ui_runbook.md)。
+
+### 如何检查 MCP
+
+```bash
+npm run check:cursor-mcp
+# 或
+bash scripts/check_cursor_mcp_status.sh
+npm run check:mcp
+npm run check:stitch
+```
+
+**注意：** 上述命令只验证 CLI / 配置层。当前 Agent 对话是否实际暴露 `chrome-devtools`、`playwright`、`stitch` 等工具，必须在对话中直接确认。详见 [`docs/cursor_tool_registry_check.md`](docs/cursor_tool_registry_check.md)。
+
+### 为什么需要重启 Cursor
+
+- 在 Settings → Tools & MCP **批准 MCP 后**，旧 Agent 对话可能仍停留在批准前的工具注册表；
+- **Multitask 子 Agent 通常不继承** Workspace MCP，浏览器任务会假失败；
+- **完全退出 Cursor 并新建普通前台 Agent 对话** 是最稳定的恢复方式。
+
+### UI 优化标准流程
+
+1. 启动项目：`python -m wechat_article_scheduler.cli serve`
+2. 用 chrome-devtools 或 playwright 打开页面
+3. 保存 before 截图；检查 console / network
+4. 读取 Stitch 设计或调用 Stitch MCP
+5. 每轮只改一个 UI 切片；修改代码
+6. 重新打开页面；检查 after 状态
+7. 运行 `python -m pytest` 或 `python scripts/agent_gate.py gate`
+8. 用户要求时 commit / push
+
+可直接复制的 Prompt 模板：[`docs/prompts/CURSOR_UI_IMPLEMENTATION_PROMPT.md`](docs/prompts/CURSOR_UI_IMPLEMENTATION_PROMPT.md)
+
+### 微信页面特殊说明
+
+- **已登录** `mp.weixin.qq.com` 操作 **必须** 使用 `wechat-chrome-session`（`--autoConnect`）
+- **不允许** 用 Playwright 新开隔离页面替代已登录 Chrome
+- 遇到扫码、验证码或风控：**停止并等待用户**人工处理
+- 详见 [`docs/wechat_chrome_session_runbook.md`](docs/wechat_chrome_session_runbook.md)
 
 ## Stitch Design MCP
 

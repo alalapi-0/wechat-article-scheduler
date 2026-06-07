@@ -1,0 +1,39 @@
+---
+description: "Cursor 浏览器 UI 优化任务：真实页面检查、before/after 验证与 BLOCKED 规则"
+alwaysApply: true
+---
+
+# Cursor Browser UI 规则
+
+适用于本仓库所有 **UI 优化、Web 工作台改版、审核台/预览页视觉调整** 任务。
+
+## 必须遵守
+
+1. **任何 UI 优化任务必须先打开真实页面检查。** 启动：`python -m wechat_article_scheduler.cli serve` → `http://127.0.0.1:8080/`。
+2. **不允许只凭代码判断 UI 已完成。** 必须走真实用户路径并观察渲染结果。
+3. **Stitch 只能作为设计输入**，导出物保存到 `docs/design/stitch/`；**不得**无审查覆盖 `src/` 业务代码。
+4. **实现后必须再次使用浏览器检查**（chrome-devtools 或 playwright）。
+5. **必须检查 console 和 network**（核心 API 无 4xx/5xx；error 需修复或记录）。
+6. **必须保存 before / after 观察记录**（截图或 DOM snapshot，建议 `docs/reports/ui_review/`）。
+7. **必须运行可用测试**（`python -m pytest` 或 `python scripts/agent_gate.py gate`）。
+8. **若浏览器工具没有暴露给当前对话线程**，必须停止并报告 `BLOCKED: MISSING_FROM_THREAD_TOOL_REGISTRY`；不得降级为静态阅读或 Cursor 内置 `browser_tabs`。
+9. **UI 改造每轮只改一个主要切片**，避免大范围混杂改动难以 review。
+10. **不允许为了美观破坏业务功能**（预检门控、排期、队列、上传等核心流程必须保持可用）。
+
+## 工具选择
+
+| 任务 | 使用 | 禁止 |
+|------|------|------|
+| 本地 Web UI | stitch、chrome-devtools、playwright | wechat-chrome-session |
+| 微信已登录后台 | wechat-chrome-session | chrome-devtools、playwright、browser_tabs |
+
+## 线程检查
+
+任务开始前确认当前对话暴露所需 MCP 原生工具。不要只依赖 `npm run check:mcp` 或 Settings ready 状态。
+
+## 参考
+
+- `docs/cursor_browser_ui_runbook.md`
+- `docs/cursor_tool_registry_check.md`
+- `.cursor/rules/no-multitask-for-browser.mdc`
+- `.cursor/skills/browser-debug-check/SKILL.md`

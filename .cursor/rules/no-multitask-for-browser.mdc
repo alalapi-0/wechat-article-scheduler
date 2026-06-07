@@ -1,0 +1,46 @@
+---
+description: "禁止 Multitask 执行浏览器控制；微信与本地 Web 工具隔离"
+alwaysApply: true
+---
+
+# 禁止 Multitask 执行浏览器任务
+
+## 规则
+
+1. **涉及 `browser` / `chrome-devtools` / `playwright` / `wechat-chrome-session` 的任务禁止使用 Multitask。**
+2. **浏览器控制任务必须使用普通前台 Agent 对话。**
+3. **若当前处于 Multitask 或后台子 Agent**，必须立即停止浏览器相关操作，并要求用户切换到普通前台 Agent 对话。
+4. **微信已登录页面操作必须只使用 `wechat-chrome-session`**（`--autoConnect`）。禁止使用普通 chrome-devtools、playwright、`browser_tabs` 或任何会新开未登录浏览器的工具。
+5. **普通本地 Web UI 优化不得使用 `wechat-chrome-session`**。本地工作台（`http://127.0.0.1:8080/`）使用 chrome-devtools 或 playwright。
+
+## 原因
+
+- Multitask 子 Agent **通常不继承** Workspace MCP 工具注册表。
+- 子 Agent 可能只能看到 Cursor 内置 `browser_tabs`，无法调用 chrome-devtools / playwright / wechat-chrome-session。
+- 在缺少工具的情况下继续执行会导致 **假验证**（仅凭代码或错误浏览器上下文判断成功）。
+
+## 检测到 Multitask 时的输出
+
+```text
+BLOCKED: MULTITASK_BROWSER_TASK
+
+浏览器控制任务不能在 Multitask / 后台子 Agent 中执行。
+请禁用 Multitask，新建普通前台 Agent 对话后重试。
+
+参考：docs/cursor_tool_registry_check.md
+```
+
+## 微信 vs 本地 Web
+
+| 场景 | 唯一正确 MCP |
+|------|-------------|
+| `mp.weixin.qq.com` 已登录后台 | wechat-chrome-session |
+| 本地 FastAPI 工作台 | chrome-devtools 或 playwright |
+
+遇到扫码、验证码、风控：**停止并等待用户人工处理**，不得绕过。
+
+## 参考
+
+- `docs/cursor_browser_ui_runbook.md`
+- `docs/wechat_chrome_session_runbook.md`
+- `AGENTS.md`（Cursor Browser UI Workflow）
