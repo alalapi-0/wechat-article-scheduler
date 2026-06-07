@@ -95,6 +95,50 @@ try {
   .hero h1 { margin: 0; font-size: 26px; line-height: 1.2; letter-spacing: -.035em; font-weight: 720; }
   .hero p { margin: 7px 0 0; color: var(--muted); font-size: 13.5px; }
   .hero-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+  .safety-dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr);
+    gap: 14px;
+    padding: 16px;
+    margin-bottom: 18px;
+    background: linear-gradient(135deg, #ffffff 0%, #faf7f0 100%);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow-soft);
+  }
+  .safety-main { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .safety-status-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .safety-dashboard h2 { margin: 0; font-size: 20px; line-height: 1.25; letter-spacing: -.025em; }
+  .safety-dashboard p { margin: 0; color: var(--muted); font-size: 13px; }
+  .safety-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .safety-actions .btn-primary, .safety-actions .btn-ghost { text-decoration: none; }
+  .safety-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .safety-metric {
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255,255,255,.78);
+  }
+  .safety-metric b { display: block; font-size: 20px; line-height: 1; letter-spacing: -.03em; }
+  .safety-metric span { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .flow-rail {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .flow-step {
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255,255,255,.72);
+  }
+  .flow-step .flow-kicker { font-size: 11px; color: var(--muted); }
+  .flow-step b { display: block; margin-top: 3px; font-size: 13px; }
+  .flow-step.current { border-color: var(--accent); background: var(--surface); box-shadow: inset 0 0 0 1px var(--accent); }
   .workspace {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 340px;
@@ -246,10 +290,12 @@ try {
     border: 1px solid var(--line);
     border-radius: 9px;
   }
+  .step.current { border-color: var(--accent); background: var(--surface-soft); }
   .step .n {
     width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center;
     background: var(--surface-soft); color: var(--muted); font-size: 12px; font-weight: 650;
   }
+  .step.current .n { background: var(--accent); color: #fff; }
   .step b { font-size: 13px; }
   .step p { margin: 1px 0 0; font-size: 12px; color: var(--muted); }
 
@@ -447,6 +493,7 @@ try {
   @media (max-width: 1050px) {
     .workspace { grid-template-columns: 1fr; }
     .right-stack { position: static; }
+    .safety-dashboard { grid-template-columns: 1fr; }
   }
   @media (max-width: 760px) {
     .topbar { grid-template-columns: 1fr; padding: 12px 16px; }
@@ -455,6 +502,8 @@ try {
     .hero { grid-template-columns: 1fr; align-items: start; }
     .hero-actions { justify-content: flex-start; }
     .hero h1 { font-size: 22px; }
+    .safety-dashboard { padding: 13px; }
+    .safety-metrics, .flow-rail { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, 1fr); }
     .stat { border-right: 0; border-bottom: 1px solid var(--line); }
     .stat:nth-last-child(-n+1) { border-bottom: 0; }
@@ -504,6 +553,31 @@ try {
             <input type="checkbox" id="advToggle" />
             显示高级信息
           </label>
+        </div>
+      </section>
+
+      <section class="safety-dashboard" aria-label="安全状态与下一步">
+        <div class="safety-main">
+          <div class="safety-status-row">
+            <span id="dashboardModePill" class="pill"><span class="dot"></span> 正在读取模式…</span>
+            <span id="dashboardAutoPill" class="pill">到点执行检查中…</span>
+          </div>
+          <div>
+            <h2 id="dashboardHeadline">读取当前工作台状态…</h2>
+            <p id="dashboardHint">会根据作品库、发布队列和发布前检查给出下一步建议。</p>
+          </div>
+          <div class="safety-actions">
+            <button class="btn-primary" id="dashboardPrimaryAction" type="button" disabled>读取中…</button>
+            <a class="btn-ghost" href="#works">查看作品库</a>
+            <a class="btn-ghost" href="#queue">查看队列</a>
+          </div>
+          <div class="flow-rail" id="dashboardFlow"></div>
+        </div>
+        <div class="safety-metrics" id="dashboardMetrics">
+          <div class="safety-metric"><b>…</b><span>已收录作品</span></div>
+          <div class="safety-metric"><b>…</b><span>待发布任务</span></div>
+          <div class="safety-metric"><b>…</b><span>失败任务</span></div>
+          <div class="safety-metric"><b>…</b><span>微信草稿</span></div>
         </div>
       </section>
 
@@ -837,6 +911,7 @@ let lastRemoteSyncSummary = null;
 let workArticlesList = [];
 let lastClickedWorkId = null;
 let marqueeState = null;
+let dashboardPrimaryAction = 'refresh';
 let scheduleMode = 'batch'; // 'single' | 'batch'
 let scheduleSingleArticleId = null;
 let fpSingle = null;
@@ -1329,15 +1404,23 @@ function applyInitialWorkbenchSection(){
   });
 }
 
-function renderSteps(){
+function stepKeyFromPrimary(primary){
+  if (primary === 'plan' || primary === 'wait') return 1;
+  if (primary === 'run' || primary === 'retry') return 2;
+  return 0;
+}
+
+function renderSteps(primary){
   const steps = (COPY.steps && COPY.steps.length===3) ? COPY.steps : [
     '1 上传作品：把文章和封面拖进来，自动收录',
     '2 安排时间：为作品设定发布时间',
     '3 执行到点：到时间后执行发布或演练'
   ];
+  const active = stepKeyFromPrimary(primary || dashboardPrimaryAction);
   el('stepCards').innerHTML = steps.map((s,i) => {
     const txt = s.replace(/^\d+\s*/, '');
-    return `<div class="step"><div class="n">${i+1}</div><div><b>${esc(txt.split('：')[0])}</b><p>${esc(txt.split('：')[1]||'')}</p></div></div>`;
+    const cls = i === active ? 'step current' : 'step';
+    return `<div class="${cls}"><div class="n">${i+1}</div><div><b>${esc(txt.split('：')[0])}</b><p>${esc(txt.split('：')[1]||'')}</p></div></div>`;
   }).join('');
 }
 
@@ -1786,6 +1869,7 @@ async function refreshAll(){
     renderRemoteDrafts(remoteDrafts, rsum);
     await loadCollectionFilterOptions();
     renderSafety(ov.status, ov.publish_preflight);
+    renderDashboard(ov, dsum);
     applyPreflightGates(ov.publish_preflight);
     let scanPre = null;
     try { scanPre = await (await fetch('/api/scan-preflight')).json(); } catch(e){}
@@ -1842,6 +1926,95 @@ function renderSafety(status, preflight){
   } else {
     pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 不会真的发到公众号' + auto + genBadge;
   }
+}
+
+function dashboardMode(status, preflight){
+  const mode = status ? status.wechat_mode : 'mock';
+  const pol = status && status.publish_policy ? status.publish_policy : null;
+  const blocked = preflight && preflight.ready === false;
+  if (pol && pol.headline) {
+    return {
+      label: pol.headline + (blocked ? ' · 内容质量未通过' : ''),
+      cls: pol.badge === 'real_publish_enabled' ? 'err' : (pol.badge === 'real_draft_only' ? 'warn' : 'ok'),
+    };
+  }
+  if (mode === 'real' && status && status.wechat_enable_publish) {
+    return { label: '真实 API 测试 · 正式发布任务会真的发' + (blocked ? ' · 内容质量未通过' : ''), cls: 'err' };
+  }
+  if (mode === 'real') return { label: '真实连接 · 仅创建草稿，不会发布', cls: 'warn' };
+  return { label: '演练模式 · 不会真的发到公众号', cls: 'ok' };
+}
+
+function dashboardPrimaryConfig(primary){
+  const map = {
+    scan: { label: '开始扫描收件箱', onClick: onScan, section: 'actions' },
+    upload: { label: '上传或选择作品', section: 'works' },
+    plan: { label: '生成排期', onClick: onPlan, section: 'actions' },
+    wait: { label: '查看发布队列', section: 'queue' },
+    run: { label: '执行到点发布', onClick: onRun, section: 'actions' },
+    retry: { label: '处理失败任务', section: 'queue' },
+    preflight: { label: '查看发布前检查', section: 'queue' },
+    idle: { label: '刷新工作台', onClick: refreshAll, section: 'overview' },
+  };
+  return map[primary] || map.idle;
+}
+
+function renderDashboard(ov, draftsSummary){
+  const wb = (ov && ov.workbench) || {};
+  const status = (ov && ov.status) || {};
+  const preflight = ov && ov.publish_preflight;
+  const mode = dashboardMode(status, preflight);
+  const modePill = el('dashboardModePill');
+  if (modePill) {
+    modePill.className = 'pill ' + mode.cls;
+    modePill.innerHTML = '<span class="dot"></span> ' + esc(mode.label);
+  }
+  const autoPill = el('dashboardAutoPill');
+  if (autoPill) {
+    const active = !!status.web_auto_runner_active;
+    autoPill.className = active ? 'pill ok' : 'pill';
+    autoPill.textContent = active ? '到点自动执行已开启' : '到点自动执行未开启';
+    autoPill.title = status.web_auto_runner_reason || '';
+  }
+  dashboardPrimaryAction = wb.primary_action || 'idle';
+  const headline = wb.headline || '欢迎使用本地发布工作台';
+  const hints = wb.hints || [];
+  el('dashboardHeadline').textContent = headline;
+  el('dashboardHint').textContent = hints[0] || '先看当前模式，再按三步完成上传、排期和到点执行。';
+
+  const primary = el('dashboardPrimaryAction');
+  const cfg = dashboardPrimaryConfig(dashboardPrimaryAction);
+  if (primary) {
+    primary.disabled = false;
+    primary.textContent = cfg.label;
+    primary.onclick = async () => {
+      if (cfg.onClick) await cfg.onClick();
+      else navigateWorkbenchSection(cfg.section || 'works', { smooth: true });
+    };
+  }
+
+  const ac = (ov && ov.article_counts) || {};
+  const jc = (ov && ov.job_counts) || {};
+  const dsum = draftsSummary || {};
+  const draftCount = int(dsum.total || dsum.created_count || dsum.count || 0);
+  el('dashboardMetrics').innerHTML = [
+    { n: ac.imported || 0, label: '已收录作品' },
+    { n: jc.pending || 0, label: '待发布任务' },
+    { n: jc.failed || 0, label: '失败任务' },
+    { n: draftCount, label: '微信草稿记录' },
+  ].map(m => `<div class="safety-metric"><b>${m.n}</b><span>${esc(m.label)}</span></div>`).join('');
+
+  const flow = [
+    { key: 'scan', title: '找文章', text: '上传或扫描本地收件箱' },
+    { key: 'plan', title: '安排时间', text: '自动推荐或自定义排期' },
+    { key: 'run', title: '执行到点', text: '演练或创建微信草稿' },
+  ];
+  const active = stepKeyFromPrimary(dashboardPrimaryAction);
+  el('dashboardFlow').innerHTML = flow.map((f, i) => {
+    const cls = i === active ? 'flow-step current' : 'flow-step';
+    return `<div class="${cls}"><div class="flow-kicker">第 ${i + 1} 步</div><b>${esc(f.title)}</b><p>${esc(f.text)}</p></div>`;
+  }).join('');
+  renderSteps(dashboardPrimaryAction);
 }
 
 async function goWaitingConfirmQueue(){

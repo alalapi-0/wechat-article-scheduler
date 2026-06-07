@@ -39,6 +39,8 @@ def test_index_html(app_config: AppConfig) -> None:
     r = client.get("/")
     assert r.status_code == 200
     assert "工作台" in r.text
+    assert "安全状态与下一步" in r.text
+    assert "dashboardModePill" in r.text
     assert "主操作" in r.text
     assert "发布队列" in r.text
     assert "操作记录" in r.text

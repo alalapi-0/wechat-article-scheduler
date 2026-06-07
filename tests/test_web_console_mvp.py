@@ -57,6 +57,9 @@ def test_index_mvp_controls(app_config: AppConfig) -> None:
     html = client.get("/").text
     assert "扫描本地收件箱" in html
     assert "nextSteps" in html
+    assert "safety-dashboard" in html
+    assert "dashboardPrimaryAction" in html
+    assert "安全状态与下一步" in html
     assert "queueFilters" in html
     assert "显示高级信息" in html
     assert "发布队列" in html
