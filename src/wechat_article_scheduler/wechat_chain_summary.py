@@ -35,6 +35,7 @@ def build_wechat_chain_summary(config: AppConfig, conn: Any) -> dict[str, Any]:
         SELECT COUNT(*) AS cnt FROM articles a
         WHERE (a.deleted_at IS NULL OR a.deleted_at = '')
           AND a.status = 'imported'
+          AND COALESCE(a.schedule_state, 'imported') = 'imported'
           AND NOT EXISTS (
             SELECT 1 FROM publish_jobs j
             WHERE j.article_id = a.id AND j.status IN ('pending', 'running')

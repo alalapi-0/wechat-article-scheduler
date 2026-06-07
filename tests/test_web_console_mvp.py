@@ -29,7 +29,7 @@ def test_workbench_hints_suggest_run_when_due() -> None:
         schedule_summary={"due_now_count": 2, "next_summary": "有 2 篇已到点"},
     )
     assert wb["primary_action"] == "run"
-    assert "已到发布时间" in wb["headline"]
+    assert "已到草稿创建时间" in wb["headline"]
 
 
 def test_workbench_hints_suggest_plan_when_unscheduled(app_config: AppConfig) -> None:
@@ -37,9 +37,13 @@ def test_workbench_hints_suggest_plan_when_unscheduled(app_config: AppConfig) ->
         article_counts={"imported": 3},
         job_counts={},
         schedule_summary={"due_now_count": 0, "next_summary": "暂无"},
+        chain_summary={
+            "recommended_next_action": "plan",
+            "imported_without_pending_job": 3,
+        },
     )
     assert wb["primary_action"] == "plan"
-    assert "待安排" in wb["headline"]
+    assert "待安排" in wb["headline"] or "待生成" in wb["headline"]
 
 
 def test_overview_includes_workbench(app_config: AppConfig) -> None:
@@ -62,7 +66,7 @@ def test_index_mvp_controls(app_config: AppConfig) -> None:
     assert "安全状态与下一步" in html
     assert "queueFilters" in html
     assert "显示高级信息" in html
-    assert "发布队列" in html
+    assert "草稿队列" in html
 
 
 def test_jobs_api_status_filter(app_config: AppConfig) -> None:

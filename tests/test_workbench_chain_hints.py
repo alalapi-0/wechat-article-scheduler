@@ -23,7 +23,10 @@ def test_chain_plan_when_imported_unscheduled():
         article_counts={"imported": 2},
         job_counts={},
         schedule_summary={"due_now_count": 0},
-        chain_summary={"recommended_next_action": "plan"},
+        chain_summary={
+            "recommended_next_action": "plan",
+            "imported_without_pending_job": 2,
+        },
     )
     assert wb["primary_action"] == "plan"
     assert "待生成" in wb["headline"] or "待安排" in wb["headline"]
