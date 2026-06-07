@@ -527,7 +527,7 @@ try {
     <nav class="nav">
       <a href="#works" class="active"><span class="ico">▦</span> 作品库</a>
       <a href="#actions"><span class="ico">▶</span> 主操作</a>
-      <a href="#queue"><span class="ico">⧗</span> 发布队列</a>
+      <a href="#queue"><span class="ico">⧗</span> 草稿队列</a>
       <a href="#drafts"><span class="ico">✎</span> 微信草稿</a>
       <a href="/drafts">草稿页</a>
       <a href="#trash"><span class="ico">⌫</span> 回收站</a>
@@ -544,8 +544,8 @@ try {
 
       <section class="hero">
         <div>
-          <h1>微信公众号文章发布工作台</h1>
-          <p>像整理文档一样管理作品：上传、排期、预览、到点发布。顶部状态条会标明演练 / 真实草稿 / 真实发布，请先看再操作。</p>
+          <h1>微信公众号草稿排期工作台</h1>
+          <p>像整理文档一样管理作品：上传、排期、预览、按时创建草稿。后台发布或定时发布需要用户在公众号后台人工确认。</p>
         </div>
         <div class="hero-actions">
           <span id="safetyTop" class="pill"><span class="dot"></span> 正在读取运行状态…</span>
@@ -564,7 +564,7 @@ try {
           </div>
           <div>
             <h2 id="dashboardHeadline">读取当前工作台状态…</h2>
-            <p id="dashboardHint">会根据作品库、发布队列和发布前检查给出下一步建议。</p>
+            <p id="dashboardHint">会根据作品库、草稿队列和草稿创建前检查给出下一步建议。</p>
           </div>
           <div class="safety-actions">
             <button class="btn-primary" id="dashboardPrimaryAction" type="button" disabled>读取中…</button>
@@ -575,7 +575,7 @@ try {
         </div>
         <div class="safety-metrics" id="dashboardMetrics">
           <div class="safety-metric"><b>…</b><span>已收录作品</span></div>
-          <div class="safety-metric"><b>…</b><span>待发布任务</span></div>
+          <div class="safety-metric"><b>…</b><span>待创建草稿</span></div>
           <div class="safety-metric"><b>…</b><span>失败任务</span></div>
           <div class="safety-metric"><b>…</b><span>微信草稿</span></div>
         </div>
@@ -602,7 +602,7 @@ try {
           <section class="section" id="works">
             <div class="section-head">
               <h2>作品库</h2>
-              <span class="hint">上传即待发布</span>
+              <span class="hint">上传后可排期创建草稿</span>
             </div>
             <div class="card pad">
               <div class="dropzone" id="dropzone">
@@ -631,7 +631,7 @@ try {
               <button class="btn-ghost btn-sm" id="btnDeselectAll" type="button">取消全选</button>
               <span class="sel-count" id="selectedWorkCount">已选 0 篇</span>
               <button class="btn-ghost btn-sm" id="btnBulkCover" type="button" disabled>批量设置封面</button>
-              <button class="btn-ghost btn-sm" id="btnBulkSchedule" type="button" disabled>批量发布设置</button>
+              <button class="btn-ghost btn-sm" id="btnBulkSchedule" type="button" disabled>批量草稿排期</button>
               <button class="btn-ghost btn-sm" id="btnBulkTrash" type="button" disabled>删除选中</button>
               <button class="btn-ghost btn-sm advanced-only" id="btnCoverScan" type="button" title="扫描素材库与绑定状态">扫描封面</button>
               <button class="btn-ghost btn-sm advanced-only" id="btnCleanupOrphanCovers" type="button" title="删除作品库未引用的封面文件">清理未引用封面</button>
@@ -658,22 +658,22 @@ try {
         <aside class="right-stack">
           <section class="section">
             <div class="section-head">
-              <h2>发布计划</h2>
+              <h2>草稿创建计划</h2>
               <span class="hint">下一步</span>
             </div>
             <div class="card pad">
               <div class="banner" id="scheduleBanner">读取计划中…</div>
               <div class="upload-actions">
                 <button class="btn-ghost" id="btnScan" type="button" title="扫描 articles/inbox 与合集收件箱">扫描本地收件箱</button>
-                <button class="btn-primary" id="btnPlan" type="button" title="按合集规则自动推荐发布时间">生成排期</button>
+                <button class="btn-primary" id="btnPlan" type="button" title="按合集规则自动推荐草稿创建时间">生成排期</button>
                 <button class="btn-ghost" id="btnOpenSchedule" type="button">自定义安排…</button>
-                <button class="btn-primary" id="btnRun" type="button">执行到点发布</button>
+                <button class="btn-primary" id="btnRun" type="button">执行到点草稿创建</button>
                 <button class="btn-ghost" id="btnRefresh">刷新</button>
               </div>
               <p class="scan-hint" id="scanBlockReason" hidden></p>
               <p class="plan-hint" id="planBlockReason" hidden></p>
               <p class="run-once-hint" id="runOnceBlockReason" hidden></p>
-              <p class="preview-hint" style="margin-top:8px;">在作品库可单篇或批量指定发布时间；「自动推荐」按配置偏好时段排期。</p>
+              <p class="preview-hint" style="margin-top:8px;">在作品库可单篇或批量指定草稿创建时间；「自动推荐」按配置偏好时段排期。</p>
               <div id="resultBox" style="margin-top:10px;"></div>
             </div>
           </section>
@@ -688,15 +688,15 @@ try {
           </section>
 
           <section id="queue" class="section">
-            <div class="section-head"><h2>发布队列</h2><span class="hint" id="queueHint">任务状态</span></div>
+            <div class="section-head"><h2>草稿队列</h2><span class="hint" id="queueHint">任务状态</span></div>
             <div class="card queue-box pad">
               <div class="queue-actions">
                 <button type="button" class="btn-primary btn-sm" id="btnRetryAllFailed" hidden>重试全部失败</button>
                 <button type="button" class="btn-ghost btn-sm" id="btnRefreshQueue">刷新队列</button>
               </div>
               <div class="queue-filters" id="queueFilters" role="tablist" aria-label="队列筛选">
-                <button type="button" class="active" data-qf="wait">待发布</button>
-                <button type="button" data-qf="active">发布中</button>
+                <button type="button" class="active" data-qf="wait">待创建草稿</button>
+                <button type="button" data-qf="active">创建中</button>
                 <button type="button" data-qf="ok">已完成</button>
                 <button type="button" data-qf="err">失败</button>
                 <button type="button" data-qf="confirm">待人工确认</button>
@@ -747,10 +747,10 @@ try {
           <section class="section" id="help">
             <div class="section-head"><h2>帮助</h2><span class="hint">快速理解</span></div>
             <div class="card pad help-text">
-              <p style="margin-top:0;"><b>这是什么？</b> 一个把本地文章批量发布到微信公众号的工作台。顶部状态条显示当前模式：演练（不联网）、真实连接仅草稿、或真实发布（需二次确认）。</p>
-              <p><b>怎么用？</b> ① 上传文章和封面 → ② 安排发布时间 → ③ 到时间后执行到点发布。</p>
+              <p style="margin-top:0;"><b>这是什么？</b> 一个把本地文章按计划送入微信公众号草稿箱的工作台。顶部状态条显示当前模式：演练（不联网）或真实草稿 API。</p>
+              <p><b>怎么用？</b> ① 上传文章和封面 → ② 安排草稿创建时间 → ③ 到时间后创建草稿；之后由用户在公众号后台发布或定时。</p>
               <div class="advanced-only">
-                <p><b>真实 API（高级）</b> 在 <code>.env</code> 设 <code>WECHAT_MODE=real</code> 与公众号凭证；推荐 <code>WECHAT_ENABLE_PUBLISH=false</code> 仅测草稿。命令行验证：<code>python3 scripts/real_api_check.py --samples 3</code>（报告在 <code>reports/real_api_runs/</code>）。</p>
+                <p><b>真实 API（高级）</b> 在 <code>.env</code> 设 <code>WECHAT_MODE=real</code> 与公众号凭证；当前只验证草稿创建。命令行验证：<code>python3 scripts/real_api_check.py --samples 3</code>（报告在 <code>reports/real_api_runs/</code>）。</p>
                 <p><b>草稿-only 测试清理</b> 真实草稿会留在公众号后台；测试后请登录后台手动删除测试草稿，并对照「微信草稿」区的 <code>media_id</code> 核对，避免残留占用草稿箱配额。</p>
                 <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
               </div>
@@ -845,15 +845,15 @@ try {
   </div>
 </div>
 
-<!-- 安排发布时间弹窗 -->
+<!-- 安排草稿创建时间弹窗 -->
 <div class="modal-back" id="scheduleModalBack">
   <div class="modal">
     <button class="btn-ghost btn-sm close" id="scheduleModalClose">关闭</button>
-    <h3 id="scheduleModalTitle">安排发布时间</h3>
-    <p class="preview-hint" id="scheduleModalHint">选择发布时间</p>
+    <h3 id="scheduleModalTitle">安排草稿创建时间</h3>
+    <p class="preview-hint" id="scheduleModalHint">选择草稿创建时间</p>
     <div class="schedule-form" id="scheduleSinglePanel" hidden>
       <label>
-        <span>发布时间</span>
+        <span>草稿创建时间</span>
         <input type="text" id="scheduleSingleAt" placeholder="选择日期与时间" />
       </label>
       <div class="publish-config-block" id="scheduleSinglePublishConfig"></div>
@@ -939,17 +939,17 @@ function flatpickrDefaults(){
 
 function publishConfigHtml(prefix) {
   return `
-    <p class="block-title">发布配置（批量统一应用）</p>
+    <p class="block-title">草稿配置（批量统一应用）</p>
     <label>
-      <span>发布方式</span>
+      <span>后续处理</span>
       <select id="${prefix}PublishAction">
-        <option value="draft">仅进草稿箱</option>
-        <option value="publish">正式发布到公众号</option>
+        <option value="draft">只按时创建草稿</option>
+        <option value="publish">创建草稿后人工后台发布</option>
       </select>
     </label>
     <label class="row-check">
       <input type="checkbox" id="${prefix}AutoExecute" checked />
-      <span>到点自动执行（无需手动点「执行到点发布」）</span>
+      <span>到点自动创建草稿（无需手动点「执行到点草稿创建」）</span>
     </label>
     <label class="row-check">
       <input type="checkbox" id="${prefix}OpenComment" />
@@ -1038,12 +1038,12 @@ function openScheduleModal(mode, articleId){
   el('scheduleBatchPanel').hidden = mode !== 'batch';
   if (mode === 'single') {
     const art = workArticlesList.find(a => a.id === articleId);
-    el('scheduleModalTitle').textContent = '安排发布时间';
-    el('scheduleModalHint').textContent = art ? `为《${art.title || '（无标题）'}》设定发布时间` : '设定发布时间';
+    el('scheduleModalTitle').textContent = '安排草稿创建时间';
+    el('scheduleModalHint').textContent = art ? `为《${art.title || '（无标题）'}》设定草稿创建时间` : '设定草稿创建时间';
     if (fpSingle) fpSingle.setDate(now, true);
   } else {
-    el('scheduleModalTitle').textContent = '批量发布设置';
-    el('scheduleModalHint').textContent = '统一设置发布时间、发布方式与其它参数，应用到选中作品';
+    el('scheduleModalTitle').textContent = '批量草稿排期';
+    el('scheduleModalHint').textContent = '统一设置草稿创建时间、后续处理方式与其它参数，应用到选中作品';
     if (fpBatch) fpBatch.setDate(now, true);
     updateScheduleBatchPreview();
   }
@@ -1074,8 +1074,8 @@ function setupScheduleModal(){
 
 async function submitSingleSchedule(){
   const raw = el('scheduleSingleAt').value.trim();
-  if (!raw || !scheduleSingleArticleId) { setAlert('warn', '请选择发布时间'); return; }
-  setAlert('info', '正在保存发布时间…');
+  if (!raw || !scheduleSingleArticleId) { setAlert('warn', '请选择草稿创建时间'); return; }
+  setAlert('info', '正在保存草稿创建时间…');
   try {
     const r = await fetch(`/api/articles/${scheduleSingleArticleId}/schedule`, {
       method: 'POST',
@@ -1085,7 +1085,7 @@ async function submitSingleSchedule(){
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || '保存失败');
     closeScheduleModal();
-    showResult(data.human || ['已安排发布时间']);
+    showResult(data.human || ['已安排草稿创建时间']);
     setAlert('ok', (data.human || ['已安排']).join('；'));
     await refreshAll();
   } catch(e) { setAlert('err', '安排失败：' + e.message); }
@@ -1413,8 +1413,8 @@ function stepKeyFromPrimary(primary){
 function renderSteps(primary){
   const steps = (COPY.steps && COPY.steps.length===3) ? COPY.steps : [
     '1 上传作品：把文章和封面拖进来，自动收录',
-    '2 安排时间：为作品设定发布时间',
-    '3 执行到点：到时间后执行发布或演练'
+    '2 安排时间：为作品设定草稿创建时间',
+    '3 执行到点：到时间后创建草稿或演练'
   ];
   const active = stepKeyFromPrimary(primary || dashboardPrimaryAction);
   el('stepCards').innerHTML = steps.map((s,i) => {
@@ -1557,7 +1557,7 @@ let lastPublishPreflight = null;
 let lastScanSummary = null;
 
 const CHAIN_ACTION_LABELS = {
-  scan: '扫描收件箱', plan: '生成排期', 'run-once': '执行到点发布', 'retry-failed': '重试失败', idle: '暂无待办',
+  scan: '扫描收件箱', plan: '生成排期', 'run-once': '执行到点草稿创建', 'retry-failed': '重试失败', idle: '暂无待办',
 };
 
 function applyScanPreflightGate(pre){
@@ -1654,9 +1654,9 @@ function applyActionPreflightGate(preflight, btnId, hintId, gateKey, prefix){
   const blocked = !!(gate.blocked || (preflight && preflight.ready === false &&
     (preflight.checks || []).some(c => c.required && !c.ok)));
   const reason = gate.reason || ((preflight && preflight.human) || []).find(h => String(h).startsWith('需处理：')) ||
-    '发布前检查未通过，请先处理待发布作品的内容问题';
+    '草稿创建前检查未通过，请先处理待创建草稿作品的内容问题';
   btn.disabled = blocked;
-  btn.title = blocked ? reason : (btnId === 'btnPlan' ? '按合集规则自动推荐发布时间' : '');
+  btn.title = blocked ? reason : (btnId === 'btnPlan' ? '按合集规则自动推荐草稿创建时间' : '');
   btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
   if (!hint) return;
   if (blocked) {
@@ -1728,7 +1728,7 @@ async function onPlan(){
   const btn = el('btnPlan');
   if (btn && btn.disabled) {
     const gate = (lastPublishPreflight && lastPublishPreflight.plan_gate) || {};
-    setAlert('err', gate.reason || '发布前检查未通过，无法生成排期');
+    setAlert('err', gate.reason || '草稿创建前检查未通过，无法生成排期');
     return;
   }
   let pf = lastPublishPreflight;
@@ -1736,7 +1736,7 @@ async function onPlan(){
     try { pf = await (await fetch('/api/publish-preflight')).json(); } catch(e){}
   }
   if (pf && pf.plan_gate && pf.plan_gate.blocked) {
-    setAlert('err', pf.plan_gate.reason || '发布前检查未通过');
+    setAlert('err', pf.plan_gate.reason || '草稿创建前检查未通过');
     applyPreflightGates(pf);
     return;
   }
@@ -1766,7 +1766,7 @@ async function onRun(){
   const btn = el('btnRun');
   if (btn && btn.disabled) {
     const gate = (lastPublishPreflight && lastPublishPreflight.run_once_gate) || {};
-    setAlert('err', gate.reason || '发布前检查未通过，无法执行到点发布');
+    setAlert('err', gate.reason || '草稿创建前检查未通过，无法执行到点草稿创建');
     return;
   }
   let st = {};
@@ -1776,13 +1776,13 @@ async function onRun(){
     try { pf = await (await fetch('/api/publish-preflight')).json(); } catch(e){}
   }
   if (pf && pf.run_once_gate && pf.run_once_gate.blocked) {
-    setAlert('err', pf.run_once_gate.reason || '发布前检查未通过');
+    setAlert('err', pf.run_once_gate.reason || '草稿创建前检查未通过');
     applyPreflightGates(pf);
     return;
   }
   if (pf && pf.ready === false) {
     const blocking = (pf.checks || []).some(c => c.required && !c.ok);
-    const msg = (pf.human || []).join(' ') || '发布前检查未通过，请先处理内容质量问题';
+    const msg = (pf.human || []).join(' ') || '草稿创建前检查未通过，请先处理内容质量问题';
     if (blocking) {
       setAlert('err', msg);
       applyPreflightGates(pf);
@@ -1791,11 +1791,6 @@ async function onRun(){
     if (st.wechat_mode === 'mock') {
       setAlert('warn', msg);
     }
-  }
-  if (st.wechat_mode === 'real' && st.wechat_enable_publish) {
-    let extra = '';
-    if (pf && (pf.human || []).length) extra = '\n\n' + pf.human.join('\n');
-    if (!window.confirm('当前是「真实 API 测试」模式；任务选择「正式发布」时会真的发到公众号。确定继续吗？' + extra)) return;
   }
   await runAction('run-once', '/api/run-once');
 }
@@ -1920,11 +1915,11 @@ function renderSafety(status, preflight){
     const blocked = preflight && preflight.ready === false;
     pill.className = blocked ? 'pill err' : 'pill err';
     const hint = blocked ? ' · 内容质量未通过' : '';
-    pill.innerHTML = '<span class="dot"></span> 真实 API 测试 · 正式发布任务会真的发' + hint + genBadge;
+    pill.innerHTML = '<span class="dot"></span> 真实 API · 按时创建草稿，不自动发布' + hint + genBadge;
   } else if (mode === 'real') {
     pill.className = 'pill warn'; pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿，不会发布' + auto + genBadge;
   } else {
-    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 不会真的发到公众号' + auto + genBadge;
+    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 只模拟创建草稿' + auto + genBadge;
   }
 }
 
@@ -1939,10 +1934,10 @@ function dashboardMode(status, preflight){
     };
   }
   if (mode === 'real' && status && status.wechat_enable_publish) {
-    return { label: '真实 API 测试 · 正式发布任务会真的发' + (blocked ? ' · 内容质量未通过' : ''), cls: 'err' };
+    return { label: '真实 API · 按时创建草稿，不自动发布' + (blocked ? ' · 内容质量未通过' : ''), cls: 'warn' };
   }
   if (mode === 'real') return { label: '真实连接 · 仅创建草稿，不会发布', cls: 'warn' };
-  return { label: '演练模式 · 不会真的发到公众号', cls: 'ok' };
+  return { label: '演练模式 · 只模拟创建草稿', cls: 'ok' };
 }
 
 function dashboardPrimaryConfig(primary){
@@ -1950,10 +1945,10 @@ function dashboardPrimaryConfig(primary){
     scan: { label: '开始扫描收件箱', onClick: onScan, section: 'actions' },
     upload: { label: '上传或选择作品', section: 'works' },
     plan: { label: '生成排期', onClick: onPlan, section: 'actions' },
-    wait: { label: '查看发布队列', section: 'queue' },
-    run: { label: '执行到点发布', onClick: onRun, section: 'actions' },
+    wait: { label: '查看草稿队列', section: 'queue' },
+    run: { label: '执行到点草稿创建', onClick: onRun, section: 'actions' },
     retry: { label: '处理失败任务', section: 'queue' },
-    preflight: { label: '查看发布前检查', section: 'queue' },
+    preflight: { label: '查看草稿创建前检查', section: 'queue' },
     idle: { label: '刷新工作台', onClick: refreshAll, section: 'overview' },
   };
   return map[primary] || map.idle;
@@ -1999,7 +1994,7 @@ function renderDashboard(ov, draftsSummary){
   const draftCount = int(dsum.total || dsum.created_count || dsum.count || 0);
   el('dashboardMetrics').innerHTML = [
     { n: ac.imported || 0, label: '已收录作品' },
-    { n: jc.pending || 0, label: '待发布任务' },
+    { n: jc.pending || 0, label: '待创建草稿' },
     { n: jc.failed || 0, label: '失败任务' },
     { n: draftCount, label: '微信草稿记录' },
   ].map(m => `<div class="safety-metric"><b>${m.n}</b><span>${esc(m.label)}</span></div>`).join('');
@@ -2057,7 +2052,7 @@ function renderStats(ov){
   const cards = [
     { num: (ac.imported||0), lbl: '已收录作品' },
     { num: (ac.published||0), lbl: '已发布' },
-    { num: (jc.pending||0), lbl: '待发布' },
+    { num: (jc.pending||0), lbl: '待创建草稿' },
     { num: (jc.done||0), lbl: '已完成' },
     { num: (jc.failed||0), lbl: '失败', goto: 'err' },
   ];
@@ -2317,7 +2312,7 @@ function renderDrafts(drafts){
   if (!drafts || !drafts.length) {
     const emptyMsg = draftFilterKey === 'created'
       ? '当前筛选下没有已创建草稿'
-      : '还没有微信草稿记录。执行到点发布（演练）后会出现在这里。';
+      : '还没有微信草稿记录。执行到点草稿创建（演练）后会出现在这里。';
     box.innerHTML = `<div class="empty" style="padding:14px;">${esc(emptyMsg)}</div>`;
     return;
   }
@@ -2424,7 +2419,7 @@ function renderQueue(jobs){
   }
   if (!jobs || !jobs.length) {
     const emptyMsg = queueFilterKey === 'wait'
-      ? L(COPY.empty,'jobs','还没有待发布作品')
+      ? L(COPY.empty,'jobs','还没有待创建草稿作品')
       : (queueFilterKey === 'err'
         ? '当前筛选下没有失败任务（可点上方「重试全部失败」处理其他失败记录）'
         : (queueFilterKey === 'confirm'
@@ -2468,12 +2463,12 @@ function renderQueue(jobs){
     </tr>`;
   }).join('');
   const failTh = showFailCol ? '<th>失败原因</th>' : '';
-  el('queueBox').innerHTML = failBanner + `<table class="queue-table"><thead><tr><th>作品</th><th>计划时间</th><th>发布配置</th><th>状态</th>${failTh}<th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+  el('queueBox').innerHTML = failBanner + `<table class="queue-table"><thead><tr><th>作品</th><th>草稿创建时间</th><th>草稿配置</th><th>状态</th>${failTh}<th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
   refreshWorkbenchDetailLinkBindings(el('queueBox'));
 }
 
 async function retryJob(jobId){
-  if (!window.confirm('将该失败任务重新加入待发布队列？')) return;
+  if (!window.confirm('将该失败任务重新加入草稿队列？')) return;
   try {
     const d = await (await fetch(`/api/jobs/${jobId}/retry`, { method:'POST' })).json();
     setAlert('ok', (d.human||['已重试']).join('；'));
@@ -2482,7 +2477,7 @@ async function retryJob(jobId){
 }
 
 async function bulkRetryFailed(){
-  if (!window.confirm('将所有失败任务重新加入待发布队列？')) return;
+  if (!window.confirm('将所有失败任务重新加入草稿队列？')) return;
   try {
     const d = await (await fetch('/api/jobs/bulk-retry', {
       method:'POST',
@@ -2523,7 +2518,7 @@ function renderWorks(arts){
     const pillCls = a.status==='published'?'ok':(a.latest_job_status==='failed'?'err':(a.latest_job_status==='pending'?'warn':''));
     const pf = a.preflight_bar || {};
     const pfBar = pf.bar_level && pf.bar_level !== 'ok'
-      ? `<div class="preflight-bar ${esc(pf.bar_level)}" title="发布前检查">${esc(pf.bar_text||'')}</div>`
+      ? `<div class="preflight-bar ${esc(pf.bar_level)}" title="草稿创建前检查">${esc(pf.bar_text||'')}</div>`
       : '';
     return `
       <div class="work${selCls}" data-work-id="${a.id}" data-work-index="${idx}">
@@ -3150,7 +3145,7 @@ function renderTrash(items){
 }
 
 async function trashArticle(id){
-  if (!window.confirm('移入回收站？相关待发布任务将取消。')) return;
+  if (!window.confirm('移入回收站？相关草稿创建任务将取消。')) return;
   try {
     const d = await (await fetch(`/api/articles/${id}/trash`, { method:'POST' })).json();
     selectedWorkIds.delete(id);
@@ -3159,7 +3154,7 @@ async function trashArticle(id){
   } catch(e){ setAlert('err', '删除失败：'+e); }
 }
 
-const RESTORE_SCHEDULE_HINT = '恢复作品不等于恢复排期；删除时已取消的待发布任务不会自动恢复，请重新安排发布时间。';
+const RESTORE_SCHEDULE_HINT = '恢复作品不等于恢复排期；删除时已取消的草稿创建任务不会自动恢复，请重新安排草稿创建时间。';
 
 async function restoreArticle(id){
   if (!window.confirm(`恢复后作品回到作品库。\n\n注意：${RESTORE_SCHEDULE_HINT}\n\n确定恢复？`)) return;
@@ -3172,7 +3167,7 @@ async function restoreArticle(id){
 }
 
 async function cancelJob(jobId){
-  if (!window.confirm('取消该待发布任务？作品仍保留在作品库，可重新安排时间。')) return;
+  if (!window.confirm('取消该草稿创建任务？作品仍保留在作品库，可重新安排时间。')) return;
   try {
     const d = await (await fetch(`/api/jobs/${jobId}/cancel`, { method:'POST' })).json();
     setAlert('ok', (d.human||['已取消任务']).join('；'));

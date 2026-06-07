@@ -38,7 +38,7 @@ def test_build_article_detail_next_action_schedule(app_config: AppConfig) -> Non
         aid = _insert_article(conn)
         conn.commit()
         detail = build_article_detail(app_config, conn, aid)
-    assert detail["workflow_hint"] == "待安排发布"
+    assert detail["workflow_hint"] == "待安排草稿创建"
     assert detail["workbench"]["primary_action"] == "schedule"
 
 
@@ -92,7 +92,7 @@ def test_detail_with_job_and_long_summary(app_config: AppConfig) -> None:
         )
         conn.commit()
     data = client.get(f"/api/articles/{aid}").json()
-    assert data["latest_job"]["status_label"] == "待发布"
+    assert data["latest_job"]["status_label"] == "待创建草稿"
     digest_check = next(c for c in data["preflight_checks"] if c["id"] == "digest")
     assert digest_check["ok"] is False
 
@@ -101,3 +101,12 @@ def test_suggest_detail_actions_cover(app_config: AppConfig) -> None:
     row = {"status": "published", "cover_path": ""}
     wb = suggest_detail_actions(row=row, job=None, checks=[], config=app_config)
     assert wb["primary_action"] == "cover"
+
+
+def test_suggest_detail_actions_done_job_with_draft(app_config: AppConfig) -> None:
+    row = {"status": "imported", "has_wechat_draft": True}
+    job = {"status": "done", "scheduled_at_label": "2026年06月07日 20:09"}
+    wb = suggest_detail_actions(row=row, job=job, checks=[], config=app_config)
+    assert wb["primary_action"] == "draft_done"
+    assert "草稿已创建" in wb["headline"]
+    assert "尚未安排发布时间" not in wb["headline"]

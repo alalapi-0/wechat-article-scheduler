@@ -87,6 +87,7 @@ from wechat_article_scheduler.adapters.browser_assist import (
     confirm_schedule_setup,
     get_browser_assist_session,
     list_browser_assist_sessions,
+    record_browser_connection,
     start_browser_assist_session,
 )
 from wechat_article_scheduler.adapters.manual_export import (
@@ -534,9 +535,32 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 conn,
                 session_id,
                 attestation_note=body.get("note"),
+                connection_report=body.get("connection_report")
+                if isinstance(body.get("connection_report"), dict)
+                else None,
             )
         if not result.get("ok"):
             raise HTTPException(status_code=400, detail=result.get("error") or "确认失败")
+        return result
+
+    @app.post("/api/browser-assist/sessions/{session_id}/record-connection")
+    def api_browser_assist_record_connection(
+        session_id: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        body = payload or {}
+        report = body.get("report")
+        if report is not None and not isinstance(report, dict):
+            raise HTTPException(status_code=400, detail="report 必须是 object")
+        with db.connect(cfg.database_path) as conn:
+            result = record_browser_connection(
+                cfg,
+                conn,
+                session_id,
+                report=report if isinstance(report, dict) else None,
+            )
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error") or "记录失败")
         return result
 
     @app.post("/api/browser-assist/sessions/{session_id}/confirm-schedule-setup")
@@ -546,7 +570,13 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     ) -> dict[str, Any]:
         body = payload or {}
         with db.connect(cfg.database_path) as conn:
-            result = confirm_schedule_setup(cfg, conn, session_id, note=body.get("note"))
+            result = confirm_schedule_setup(
+                cfg,
+                conn,
+                session_id,
+                note=body.get("note"),
+                scheduled_at=str(body.get("scheduled_at") or "").strip() or None,
+            )
         if not result.get("ok"):
             raise HTTPException(status_code=400, detail=result.get("error") or "确认失败")
         return result
@@ -980,6 +1010,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "generation_policy": build_generation_policy_status(),
             "web_auto_run_due": cfg.web_auto_run_due,
             "web_auto_publish": cfg.web_auto_publish,
+            "web_auto_publish_effective": bool(cfg.wechat_enable_publish and cfg.web_auto_publish),
             "web_auto_runner_active": bool(getattr(app.state, "web_auto_runner_active", False)),
             "web_auto_runner_reason": str(getattr(app.state, "web_auto_runner_reason", "")),
             "database": str(cfg.database_path),

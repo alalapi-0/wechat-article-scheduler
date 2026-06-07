@@ -16,7 +16,14 @@ from wechat_article_scheduler.scan_support import allowed_extensions, reconcile_
 
 
 def _merge_stats(target: dict[str, object], part: dict[str, object]) -> None:
-    for key in ("scanned", "imported", "reconciled_reupload", "skipped_duplicate", "errors"):
+    for key in (
+        "scanned",
+        "imported",
+        "reconciled_reupload",
+        "skipped_duplicate",
+        "skipped_empty",
+        "errors",
+    ):
         target[key] = int(target.get(key, 0)) + int(part.get(key, 0))
     rec = target.setdefault("reconciled_articles", [])
     assert isinstance(rec, list)

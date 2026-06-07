@@ -67,7 +67,7 @@ def enrich_draft_row(row: dict[str, Any], config: AppConfig) -> dict[str, Any]:
     if article_status == "published":
         out["next_hint"] = "作品已发布，可在作品详情查看最终状态"
     else:
-        out["next_hint"] = "可在作品详情继续排期或执行发布"
+        out["next_hint"] = "可在作品详情继续排期或更新草稿"
     return out
 
 

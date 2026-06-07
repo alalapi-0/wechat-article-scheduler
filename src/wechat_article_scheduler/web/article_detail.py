@@ -128,8 +128,8 @@ def suggest_detail_actions(
 
     if job and job.get("status") == "pending":
         primary = "wait"
-        headline = f"已排期：{job.get('scheduled_at_label') or '待发布'}"
-        actions.append("到时间后在工作台执行「执行到点发布」")
+        headline = f"已排期：{job.get('scheduled_at_label') or '待创建草稿'}"
+        actions.append("到时间后在工作台执行「执行到点草稿创建」")
     elif job and job.get("status") == WAITING_CONFIRMATION:
         primary = "proof"
         headline = "待在公众号后台确认并回填证明"
@@ -140,6 +140,19 @@ def suggest_detail_actions(
         actions.append("在发布队列「失败」筛选中点「重试」，或返回工作台批量重试")
         if job.get("failure_reason_short") or job.get("failure_reason"):
             actions.append(job.get("failure_reason_short") or job.get("failure_reason"))
+    elif job and job.get("status") == "done":
+        primary = "draft_done"
+        if bool(row.get("has_wechat_draft")):
+            headline = "草稿已创建，可在公众号后台核对后人工发布"
+            actions.append("本文仅创建草稿，未正式发布")
+            actions.append("修改正文后可点「更新微信草稿」同步到已有草稿")
+        else:
+            headline = "草稿创建任务已完成"
+            actions.append("返回工作台查看队列与事件记录")
+    elif job and job.get("status") == "running":
+        primary = "wait"
+        headline = "正在创建草稿，请稍候"
+        actions.append("完成后刷新本页查看状态")
     elif (row.get("status") or "") == "imported" and (
         job is None or job.get("status") not in ("pending", "running")
     ):
@@ -151,7 +164,7 @@ def suggest_detail_actions(
         headline = "建议先设置封面"
         actions.append("返回工作台为作品上传或绑定封面")
     elif bool(row.get("has_wechat_draft")):
-        actions.append("改稿后可在本页「更新微信草稿」同步（无草稿时需先执行发布流程）")
+        actions.append("改稿后可在本页「更新微信草稿」同步（无草稿时需先执行草稿创建流程）")
 
     failed_checks = [c for c in checks if not c.get("ok")]
     for c in failed_checks[:2]:

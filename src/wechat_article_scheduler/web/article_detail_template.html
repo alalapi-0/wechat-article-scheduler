@@ -91,7 +91,7 @@
         <button type="button" class="btn-primary" id="btnPreview">刷新正文预览</button>
         <button type="button" class="btn" id="btnUpdateDraft" hidden>更新微信草稿</button>
         <div id="exportOutboxSlot"></div>
-        <a class="btn" id="btnWorkbench" href="/#works">去工作台安排发布</a>
+        <a class="btn" id="btnWorkbench" href="/#works">返回工作台</a>
       </div>
     </section>
     <section class="card">
@@ -340,15 +340,15 @@ function renderBrowserAssistSession(session, job){
   card.hidden = false;
   const sid = session && session.session_id;
   const st = session && session.status;
+  const connVerified = !!(session && session.connection_verified);
   if (!sid) {
-    statusEl.innerHTML = '<span class="pill wait">未启动</span> 点击开始后将打开登录门控，请在 Chrome 扫码登录。';
+    statusEl.innerHTML = '<span class="pill wait">未启动</span> 请先按 Chrome 会话手册连接已登录页面，再启动浏览器辅助。';
     actionsEl.innerHTML = `<button type="button" class="btn-primary btn-sm" id="btnBaStart">开始浏览器辅助</button>`;
     document.getElementById('btnBaStart').onclick = async () => {
-      if (!window.confirm('将启动手动登录门控。请在本机 Chrome 扫码登录后再点「已登录，继续」。')) return;
+      if (!window.confirm('将启动浏览器辅助门控。请确认 Cursor 已通过 wechat-chrome-session 连接现有 Chrome。')) return;
       try {
         const r = await postBrowserAssist('/api/browser-assist/sessions/start', { job_id: job.id });
         if (!r.ok) { alert(r.detail || r.error || '启动失败'); return; }
-        window.open(r.login_gate && r.login_gate.login_url ? r.login_gate.login_url : 'https://mp.weixin.qq.com/', '_blank');
         renderBrowserAssistSession(r, job);
       } catch(e) { alert('启动失败：'+e); }
     };
@@ -356,50 +356,75 @@ function renderBrowserAssistSession(session, job){
     return;
   }
   const label = {
-    awaiting_browser_login: '等待扫码登录',
+    awaiting_browser_login: '等待接管已登录页',
     browser_session_ready: '已登录，可继续',
     assist_in_progress: '辅助进行中',
-    awaiting_schedule_setup: '待设置后台定时',
-    awaiting_final_schedule_confirm: '待用户最终定时确认',
+    draft_review_in_progress: '草稿检查中',
     awaiting_proof: '待回填 proof',
     completed: '已完成',
     cancelled: '已取消',
   }[st] || st;
   statusEl.innerHTML = `<span class="pill ${st==='awaiting_browser_login'?'wait':'ok'}">${esc(label)}</span> 会话 <code>${esc(sid)}</code>`;
+  if (st === 'awaiting_browser_login') {
+    statusEl.innerHTML += `<p style="margin:8px 0 0;font-size:12px;color:var(--muted);">连接验收：${connVerified ? 'PASS（已记录）' : '未记录，需先提交只读接管报告'}</p>`;
+  }
   if ((session.human_steps||[]).length) {
     statusEl.innerHTML += '<ul style="margin:8px 0 0 16px;font-size:12px;color:var(--muted);">' +
       session.human_steps.map(h=>`<li>${esc(h)}</li>`).join('') + '</ul>';
   }
   let btns = '';
   if (st === 'awaiting_browser_login') {
-    btns += `<button type="button" class="btn-primary btn-sm" id="btnBaLogin">已登录，继续</button>`;
+    btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaRecord">记录接管报告</button>`;
+    btns += `<button type="button" class="btn-primary btn-sm" id="btnBaLogin"${connVerified ? '' : ' disabled title="先记录接管报告"'}>已登录，继续</button>`;
   } else if (st === 'assist_in_progress' || st === 'browser_session_ready') {
-    btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaSched">已设置后台定时，继续</button>`;
-  } else if (st === 'awaiting_final_schedule_confirm') {
-    btns += `<button type="button" class="btn-primary btn-sm" id="btnBaFinal">已完成后台最终确认</button>`;
+    btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaSched">草稿已定位并检查，记录 proof</button>`;
   }
   btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaCancel">取消会话</button>`;
   actionsEl.innerHTML = btns;
   const bind = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
+  bind('btnBaRecord', async () => {
+    const tmpl = (((session||{}).login_gate||{}).connection_report_template) || {
+      mcp: 'wechat-chrome-session',
+      connection_mode: 'existing Chrome / autoConnect',
+      target_host: 'mp.weixin.qq.com',
+      target_url: 'https://mp.weixin.qq.com/cgi-bin/home',
+      page_title: '微信公众号后台（脱敏）',
+      backend_visible: true,
+      login_required: false,
+      dom_snapshot_available: true,
+      screenshot_available: true,
+      write_actions_performed: 0,
+      result: 'PASS',
+      block_reason: 'none'
+    };
+    const raw = window.prompt('请粘贴或确认连接验收报告 JSON（不要包含 token/query）：', JSON.stringify(tmpl, null, 2));
+    if (!raw) return;
+    let report = null;
+    try {
+      report = JSON.parse(raw);
+    } catch (e) {
+      alert('JSON 解析失败，请检查格式');
+      return;
+    }
+    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/record-connection`, { report });
+    if (!r.ok) { alert(r.detail || r.error || '记录失败'); return; }
+    alert((r.human||['已记录']).join('\n'));
+    location.reload();
+  });
   bind('btnBaLogin', async () => {
+    if (!connVerified && !window.confirm('尚未记录 PASS 连接报告，是否继续尝试？通常会失败。')) return;
     const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-login`, {});
     if (!r.ok) { alert(r.detail || r.error || '确认失败'); return; }
     alert((r.human||['已确认登录']).join('\n'));
     location.reload();
   });
   bind('btnBaSched', async () => {
-    if (!window.confirm('确认已在公众号后台设置定时时间？仍未点击最终群发确认。')) return;
-    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-schedule-setup`, {});
+    if (!window.confirm('确认只完成了草稿定位/检查，并未点击发布、群发或定时确认？')) return;
+    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-schedule-setup`, {
+      scheduled_at: (job && job.scheduled_at) || null,
+    });
     if (!r.ok) { alert(r.detail || r.error || '确认失败'); return; }
     alert((r.human||['已记录']).join('\n'));
-    location.reload();
-  });
-  bind('btnBaFinal', async () => {
-    if (!window.confirm('确认您已在公众号后台亲自点击最终定时群发确认？')) return;
-    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-final-schedule`, {});
-    if (!r.ok) { alert(r.detail || r.error || '确认失败'); return; }
-    alert((r.human||['已记录']).join('\n'));
-    location.href = '#proof';
     location.reload();
   });
   bind('btnBaCancel', async () => {
@@ -473,6 +498,18 @@ async function boot(){
     const wb = d.workbench || {};
     document.getElementById('nextHeadline').innerHTML = `<b>${esc(wb.headline||'')}</b>`;
     document.getElementById('nextList').innerHTML = (wb.hints||[]).map(h=>`<li>${esc(h)}</li>`).join('') || '<li>预览正文后返回工作台继续</li>';
+    const wbBtn = document.getElementById('btnWorkbench');
+    if (wbBtn) {
+      const wbBtnLabels = {
+        schedule: '去工作台安排排期',
+        wait: '去工作台查看队列',
+        draft_done: '返回工作台',
+        retry: '去工作台处理失败任务',
+        proof: '返回工作台',
+        cover: '去工作台设置封面',
+      };
+      wbBtn.textContent = wbBtnLabels[wb.primary_action] || '返回工作台';
+    }
     let st = `<p style="margin:0 0 6px;font-size:14px;"><b>${esc(d.workflow_hint)}</b></p>`;
     const job = d.latest_job;
     if (job) {

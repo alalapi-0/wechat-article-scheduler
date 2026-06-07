@@ -25,9 +25,9 @@ def _humanize_reconciled(reconciled: list[dict[str, object]]) -> list[str]:
     for item in reconciled:
         title = str(item.get("title") or "该作品")
         if item.get("status_reset"):
-            lines.append(f"《{title}》已在作品库中，已识别为重新上传并重置为待发布")
+            lines.append(f"《{title}》已在作品库中，已识别为重新上传并重置为待创建草稿")
         else:
-            lines.append(f"《{title}》已在作品库中，可继续安排发布")
+            lines.append(f"《{title}》已在作品库中，可继续安排草稿创建")
     return lines
 
 
@@ -138,6 +138,8 @@ def handle_upload(
         human.append(f"已为 {matched_covers} 篇作品自动绑定封面")
     if scan_stats.get("skipped_duplicate"):
         human.append(f"有 {scan_stats['skipped_duplicate']} 篇是重复内容，已跳过")
+    if scan_stats.get("skipped_empty"):
+        human.append(f"有 {scan_stats['skipped_empty']} 个空文件已跳过，未入库")
     if skipped_articles:
         human.append(f"有 {len(skipped_articles)} 个文件格式不支持，未处理（支持 md/txt/html）")
     if skipped_covers:

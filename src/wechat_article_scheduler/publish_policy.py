@@ -1,4 +1,4 @@
-"""可选正式发布策略：全局开关 + 任务级 publish_action（Round 20）。"""
+"""草稿创建策略：全局安全摘要 + 历史 publish_action 降级解释。"""
 
 from __future__ import annotations
 
@@ -16,29 +16,31 @@ def global_publish_policy(config: AppConfig) -> dict[str, Any]:
     """工作台顶部安全条与 /api/status 用的全局策略摘要。"""
     mode = (config.wechat_mode or "mock").strip().lower()
     pub_on = bool(config.wechat_enable_publish)
+    raw_web_auto = bool(config.web_auto_publish)
+    auto_publish_effective = pub_on and raw_web_auto
     if mode == "mock":
-        headline = "演练模式：不联网，不会真的发到公众号"
+        headline = "演练模式：不联网，只模拟创建草稿"
         badge = "mock"
         env_hint = "默认 WECHAT_MODE=mock"
-    elif not pub_on:
-        headline = "真实 API · 全局草稿-only（WECHAT_ENABLE_PUBLISH=false）"
+    else:
+        headline = "真实 API · 按时创建公众号草稿（不自动发布）"
         badge = "real_draft_only"
         env_hint = (
-            "需要正式发布时设置 WECHAT_ENABLE_PUBLISH=true 且任务选「正式发布」；"
-            "草稿-only 测试后请在公众号后台手动删除测试草稿，"
-            "本地记录见「微信草稿」区与 reports/real_api_runs/"
+            "本项目只调用草稿相关 API；后台发布或定时发布必须由用户在公众号后台人工确认。"
         )
-    else:
-        headline = "真实 API · 正式发布已开启（任务选「正式发布」时会 freepublish/submit）"
-        badge = "real_publish_enabled"
-        env_hint = "执行到点前有二次确认；预检未通过会阻断"
+    if raw_web_auto and not pub_on:
+        env_hint = (
+            f"{env_hint} · WEB_AUTO_PUBLISH=true 已忽略（WECHAT_ENABLE_PUBLISH=false，不会自动发布）"
+        )
     return {
         "mode": mode,
         "publish_enabled": pub_on,
         "badge": badge,
         "headline": headline,
         "env_hint": env_hint,
-        "web_auto_publish": bool(config.web_auto_publish),
+        "web_auto_publish": raw_web_auto,
+        "web_auto_publish_effective": auto_publish_effective,
+        "web_auto_publish_ignored": raw_web_auto and not pub_on,
     }
 
 
@@ -54,39 +56,23 @@ def resolve_effective_submit(
             "will_submit": False,
             "publish_action": action,
             "badge": "演练",
-            "label": "演练模式不调用真实发布接口",
+            "label": "演练模式只模拟创建草稿",
             "level": "mock",
         }
     if action == "draft":
         return {
             "will_submit": False,
             "publish_action": action,
-            "badge": "任务·仅草稿",
-            "label": "任务设为仅草稿，不调用 freepublish/submit",
+            "badge": "草稿排期",
+            "label": "到点创建/更新公众号草稿，后续后台发布需人工完成",
             "level": "task_draft_only",
-        }
-    if not app_config.wechat_enable_publish:
-        return {
-            "will_submit": False,
-            "publish_action": action,
-            "badge": "全局·草稿-only",
-            "label": "WECHAT_ENABLE_PUBLISH=false，任务「正式发布」不会提交",
-            "level": "global_draft_only",
-        }
-    if will_submit:
-        return {
-            "will_submit": True,
-            "publish_action": action,
-            "badge": "将正式发布",
-            "label": "到点将调用 freepublish/submit",
-            "level": "real_publish",
         }
     return {
         "will_submit": False,
         "publish_action": action,
-        "badge": "不发布",
-        "label": "当前配置不会提交发布",
-        "level": "blocked",
+        "badge": "待人工后台发布",
+        "label": "历史“正式发布”配置已降级：只按时创建草稿，不调用 freepublish/submit",
+        "level": "manual_backend_publish",
     }
 
 

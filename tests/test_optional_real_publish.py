@@ -54,6 +54,21 @@ def test_global_policy_mock_default(tmp_path: Path) -> None:
     assert "演练" in pol["headline"]
 
 
+def test_global_policy_ignores_web_auto_publish_when_publish_off(tmp_path: Path) -> None:
+    cfg = make_test_config(
+        tmp_path,
+        tmp_path / "w.sqlite3",
+        wechat_mode="real",
+        wechat_enable_publish=False,
+        web_auto_publish=True,
+    )
+    pol = global_publish_policy(cfg)
+    assert pol["web_auto_publish"] is True
+    assert pol["web_auto_publish_effective"] is False
+    assert pol["web_auto_publish_ignored"] is True
+    assert "WEB_AUTO_PUBLISH=true 已忽略" in pol["env_hint"]
+
+
 def test_resolve_real_draft_only_blocks_publish(tmp_path: Path) -> None:
     cfg = make_test_config(
         tmp_path,
@@ -66,7 +81,7 @@ def test_resolve_real_draft_only_blocks_publish(tmp_path: Path) -> None:
         job_config=PublishConfig(publish_action="publish"),
     )
     assert eff["will_submit"] is False
-    assert eff["level"] == "global_draft_only"
+    assert eff["level"] == "manual_backend_publish"
 
 
 def test_task_draft_only_even_when_publish_enabled(tmp_path: Path) -> None:
@@ -82,6 +97,22 @@ def test_task_draft_only_even_when_publish_enabled(tmp_path: Path) -> None:
     )
     assert eff["will_submit"] is False
     assert eff["level"] == "task_draft_only"
+
+
+def test_publish_action_is_downgraded_even_when_publish_enabled(tmp_path: Path) -> None:
+    cfg = make_test_config(
+        tmp_path,
+        tmp_path / "p.sqlite3",
+        wechat_mode="real",
+        wechat_enable_publish=True,
+    )
+    eff = resolve_effective_submit(
+        app_config=cfg,
+        job_config=PublishConfig(publish_action="publish"),
+    )
+    assert eff["will_submit"] is False
+    assert eff["level"] == "manual_backend_publish"
+    assert "不调用 freepublish/submit" in eff["label"]
 
 
 def test_status_api_includes_publish_policy(tmp_path: Path) -> None:
