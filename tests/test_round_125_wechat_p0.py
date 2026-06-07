@@ -52,6 +52,7 @@ def test_export_outbox_zhihu_platform(client: TestClient, tmp_path: Path) -> Non
 def test_home_export_dropdown_markup(client: TestClient) -> None:
     html = client.get("/").text
     assert "loadManualExportPlatforms" in html
+    assert "ordinaryExportPlatforms" in html
     assert "workExportMenuHtml" in html
     assert 'class="export-drop"' in html
     assert "export-drop-menu" in html

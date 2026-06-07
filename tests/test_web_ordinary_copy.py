@@ -33,13 +33,13 @@ def test_user_labels_single_source(client: TestClient) -> None:
     assert r.status_code == 200
     data = r.json()
     assert data["article_status"]["imported"] == "已收录"
-    assert data["job_status"]["pending"] == "待发布"
+    assert data["job_status"]["pending"] == "待创建草稿"
     assert "forbidden_ordinary_terms" in data
 
 
 def test_label_helpers():
-    assert label_mode("mock") == "演练（不会真的发到公众号）"
-    assert label_job_status("pending") == "待发布"
+    assert label_mode("mock") == "演练（只模拟创建草稿）"
+    assert label_job_status("pending") == "待创建草稿"
 
 
 def _ordinary_html(html: str) -> str:
@@ -83,3 +83,15 @@ def test_scan_returns_human_summary(client: TestClient, tmp_path: Path) -> None:
 
 def test_export_matches_module():
     assert export_labels_json()["mode"]["mock"] == label_mode("mock")
+
+
+def test_index_localhost_security_note(client: TestClient) -> None:
+    html = client.get("/").text
+    assert "127.0.0.1" in html
+    assert "请勿暴露到公网" in html
+
+
+def test_index_ordinary_export_platform_filter(client: TestClient) -> None:
+    html = client.get("/").text
+    assert "ordinaryExportPlatforms" in html
+    assert "refreshWorkbenchFast" in html
