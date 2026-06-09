@@ -64,11 +64,11 @@ def test_publish_preflight_blocks_real_publish_empty_body(tmp_path: Path) -> Non
     )
     with db.connect(db_path) as conn:
         pf = build_publish_preflight(cfg, conn)
-    assert pf["ready"] is False
-    assert any(c["id"] == "empty_body" and c["required"] for c in pf["checks"])
+    assert pf["ready"] is True
+    assert any(c["id"] == "empty_body" and not c["required"] for c in pf["checks"])
 
 
-def test_run_due_skips_real_publish_on_empty_body(
+def test_run_due_real_draft_creation_does_not_skip_empty_body(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     db_path = tmp_path / "run-cq.sqlite3"
@@ -105,7 +105,7 @@ def test_run_due_skips_real_publish_on_empty_body(
 
         def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
             called.append("publish")
-            return {"errcode": 0}
+            return {"errcode": 0, "skipped": True, "media_id": media_id}
 
     monkeypatch.setattr(
         "wechat_article_scheduler.scheduler.domain.get_adapter",
@@ -119,14 +119,14 @@ def test_run_due_skips_real_publish_on_empty_body(
         dry_run=False,
     )
     stats = run_due_jobs(cfg)
-    assert stats["skipped_content"] == 1
-    assert stats["processed"] == 0
-    assert called == []
+    assert stats["skipped_content"] == 0
+    assert stats["processed"] == 1
+    assert called == ["draft", "publish"]
     with db.connect(db_path) as conn:
         event = conn.execute(
             "SELECT event_type FROM events WHERE event_type = 'publish_blocked_content'"
         ).fetchone()
-        assert event is not None
+        assert event is None
 
 
 def test_run_due_mock_does_not_skip_empty_body(tmp_path: Path) -> None:
@@ -195,8 +195,11 @@ def real_publish_client(tmp_path: Path) -> tuple[TestClient, AppConfig]:
     return TestClient(create_app(cfg)), cfg
 
 
-def test_publish_preflight_api_not_ready(real_publish_client: tuple[TestClient, AppConfig]) -> None:
+def test_publish_preflight_api_allows_draft_creation_with_warning(
+    real_publish_client: tuple[TestClient, AppConfig],
+) -> None:
     client, _cfg = real_publish_client
     data = client.get("/api/publish-preflight").json()
-    assert data["ready"] is False
+    assert data["ready"] is True
     assert data["mode"] == "real"
+    assert any(c["id"] == "empty_body" and not c["required"] for c in data["checks"])

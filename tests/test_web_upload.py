@@ -128,11 +128,11 @@ def test_reupload_same_content_reconciles_existing(client) -> None:
     assert second["scan"]["reconciled_reupload"] == 1
     assert second["reconciled_articles"][0]["id"] == aid
     assert any("已在作品库中" in line for line in second["human"])
-    assert any("可继续安排发布" in line for line in second["human"])
+    assert any("可继续安排草稿创建" in line for line in second["human"])
 
     arts = c.get("/api/articles").json()
     assert len(arts) == 1
-    assert arts[0]["workflow_hint"] == "待安排发布"
+    assert arts[0]["workflow_hint"] == "待安排草稿创建"
     assert not list(cfg.inbox_dir.iterdir())
 
 
@@ -152,11 +152,11 @@ def test_reupload_published_resets_to_imported(client) -> None:
     ).json()
     assert data["scan"]["reconciled_reupload"] == 1
     assert data["reconciled_articles"][0]["status_reset"] is True
-    assert any("重置为待发布" in line for line in data["human"])
+    assert any("重置为待创建草稿" in line for line in data["human"])
 
     art = c.get("/api/articles").json()[0]
     assert art["status"] == "imported"
-    assert art["workflow_hint"] == "待安排发布"
+    assert art["workflow_hint"] == "待安排草稿创建"
     plan = c.post("/api/plan").json()
     assert plan["planned"] == 1
 

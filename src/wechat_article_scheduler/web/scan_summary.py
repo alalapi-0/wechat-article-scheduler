@@ -7,7 +7,7 @@ from typing import Any
 CHAIN_ACTION_LABELS = {
     "scan": "扫描收件箱",
     "plan": "生成排期",
-    "run-once": "执行到点发布",
+    "run-once": "执行到点草稿创建",
     "retry-failed": "重试失败任务",
     "idle": "暂无待办",
 }

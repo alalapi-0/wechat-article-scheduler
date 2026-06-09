@@ -1,5 +1,7 @@
 # MCP 工具使用技能（Agent 自动推进轮）
 
+**标准 Runbook**：任务开始前先读 [`docs/runbooks/cursor_mcp_runbook.md`](../runbooks/cursor_mcp_runbook.md)（配置检查 + 当前线程最小探测）。
+
 本文档说明本仓库 `.cursor/mcp.json` 中启用的 MCP 服务器、用途、授权范围与降级策略。Agent 自动推进轮开始前应阅读本文档，并在 Cursor **Tools & MCP** 中确认相关 server 已加载。
 
 ## 当前启用的 MCP
@@ -45,6 +47,8 @@
 4. 重启或重新加载 Cursor MCP。
 5. Cursor 第一次连接时，用户在 Chrome 弹窗中选择允许。
 6. Agent 先执行 `list_pages` 和只读截图，确认账号与页面；不得直接开始批量写操作。
+
+这里的 `list_pages` 必须来自 `wechat-chrome-session` MCP。Cursor 内置 `browser_tabs` 只代表 Cursor 自己的浏览器/预览标签；它列出 localhost 页面时不能据此判断用户 Chrome 中没有公众号标签页。
 
 该 MCP 使用 `--autoConnect`，可访问所选 Chrome profile 的所有窗口和标签页。操作前应关闭银行、邮箱、密码管理器等无关敏感页面；更稳妥的长期方案是使用只登录公众号的独立 Chrome profile。
 

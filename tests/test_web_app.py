@@ -42,7 +42,7 @@ def test_index_html(app_config: AppConfig) -> None:
     assert "安全状态与下一步" in r.text
     assert "dashboardModePill" in r.text
     assert "主操作" in r.text
-    assert "发布队列" in r.text
+    assert "草稿队列" in r.text
     assert "操作记录" in r.text
     assert "高级排错" in r.text
 
@@ -60,7 +60,7 @@ def test_user_labels_endpoint(app_config: AppConfig) -> None:
     client = TestClient(create_app(app_config))
     r = client.get("/api/user-labels")
     assert r.status_code == 200
-    assert r.json()["job_status"]["pending"] == "待发布"
+    assert r.json()["job_status"]["pending"] == "待创建草稿"
 
 
 def test_render_preview_endpoint(app_config: AppConfig) -> None:

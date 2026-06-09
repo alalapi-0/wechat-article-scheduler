@@ -1,0 +1,18 @@
+---
+description: "UI/发布工具必须进行用户视角验证"
+alwaysApply: true
+---
+
+# User View Testing
+
+涉及 Web 工作台、预览、队列、发布流程时：
+
+1. `python -m wechat_article_scheduler.cli serve`
+2. 浏览器打开 `http://127.0.0.1:8080/`
+3. 使用 **playwright** 或 **chrome-devtools**（非仅读代码）
+4. 检查 console、network、主流程、空状态
+5. `python scripts/user_view_test.py`
+
+微信已登录后台 → **wechat-chrome-session**；禁止 Multitask 子 Agent。
+
+详见 `docs/USER_VIEW_TESTING.md` 与 `.cursor/rules/no-multitask-for-browser.mdc`。

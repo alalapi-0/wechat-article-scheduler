@@ -135,7 +135,6 @@ def load_config(env_file: Path | None = None) -> AppConfig:
     )
 
     wechat_mode = os.getenv("WECHAT_MODE", "mock").strip().lower()
-    real_api_mode = wechat_mode == "real"
     manual_outbox = Path(
         os.getenv(
             "MANUAL_EXPORT_OUTBOX",
@@ -182,9 +181,9 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         wechat_app_id=os.getenv("WECHAT_APP_ID", "").strip(),
         wechat_app_secret=os.getenv("WECHAT_APP_SECRET", "").strip(),
         wechat_default_thumb_path=os.getenv("WECHAT_DEFAULT_THUMB_PATH", "").strip(),
-        wechat_enable_publish=_env_bool("WECHAT_ENABLE_PUBLISH", real_api_mode),
+        wechat_enable_publish=_env_bool("WECHAT_ENABLE_PUBLISH", False),
         web_auto_run_due=_env_bool("WEB_AUTO_RUN_DUE", True),
-        web_auto_publish=_env_bool("WEB_AUTO_PUBLISH", real_api_mode),
+        web_auto_publish=_env_bool("WEB_AUTO_PUBLISH", False),
         web_host=os.getenv("WEB_HOST", "127.0.0.1").strip(),
         web_port=int(os.getenv("WEB_PORT", "8080")),
         rules=rules,

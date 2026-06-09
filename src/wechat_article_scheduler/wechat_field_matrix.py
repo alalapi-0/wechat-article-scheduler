@@ -15,7 +15,7 @@ class FieldCapability(TypedDict):
     code_refs: str
 
 
-# api_support: 微信官方草稿/发布 API 是否覆盖该字段（据当前文档与实现，非法律结论）
+# api_support: 微信官方草稿 API 是否覆盖该字段（据当前文档与实现，非法律结论）
 # implemented: 本仓库是否已接线
 WECHAT_FIELD_MATRIX: list[FieldCapability] = [
     {
@@ -96,26 +96,26 @@ WECHAT_FIELD_MATRIX: list[FieldCapability] = [
         "api_support": "unverified",
         "implemented": "partial",
         "gap": "cover_config_json 仅存本地，未确认写入微信 API",
-        "handling": "工作台可设裁剪；发布前需人工核对后台效果",
+        "handling": "工作台可设裁剪；草稿创建后需人工核对后台效果",
         "code_refs": "articles.cover_config_json, web/covers",
     },
     {
         "field_id": "local_schedule",
-        "label": "本地排期时间",
+        "label": "本地草稿创建排期",
         "api_support": "n/a",
         "implemented": "yes",
-        "gap": "非微信字段，仅存 publish_jobs.scheduled_at",
-        "handling": "本地 scheduler 到点执行",
+        "gap": "非微信字段，仅存 publish_jobs.scheduled_at；不写入微信后台定时发布",
+        "handling": "本地 scheduler 到点创建/更新草稿",
         "code_refs": "plan.py, scheduler/runtime.py",
     },
     {
         "field_id": "wechat_backend_schedule",
-        "label": "公众号后台定时群发",
-        "api_support": "unverified",
-        "implemented": "no",
-        "gap": "未写入微信后台定时字段",
-        "handling": "待核验官方 API；不支持则 browser_assist + 人工确认",
-        "code_refs": "docs/wechat_capability_matrix.md",
+        "label": "公众号后台定时发布",
+        "api_support": "unsupported",
+        "implemented": "partial",
+        "gap": "草稿 API 与 freepublish/submit 都不能写入后台时间；时间能否随“保存草稿”持久化需按当前后台实机核验",
+        "handling": "browser_assist 填写目标时间并保存草稿、重新打开核验；正式发表和安全验证由用户完成",
+        "code_refs": "docs/wechat_scheduled_publish_browser_test.md",
     },
     {
         "field_id": "draft_create",
@@ -137,11 +137,11 @@ WECHAT_FIELD_MATRIX: list[FieldCapability] = [
     },
     {
         "field_id": "freepublish",
-        "label": "正式发布",
+        "label": "API 正式发布",
         "api_support": "supported",
-        "implemented": "yes",
-        "gap": "受 WECHAT_ENABLE_PUBLISH 与任务级 draft 限制",
-        "handling": "freepublish/submit；二次确认",
+        "implemented": "no",
+        "gap": "当前产品目标放弃自动正式发布；当前账号截图显示“发布草稿”无权限",
+        "handling": "Agent 完成发布前字段准备并保存草稿；用户点击最终发表并完成安全验证",
         "code_refs": "adapters/real.py, web/publish_preflight",
     },
     {

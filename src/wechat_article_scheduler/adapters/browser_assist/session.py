@@ -1,4 +1,4 @@
-"""browser_assist 手动登录门控与会话状态（人在环，不自动登录/发布）。"""
+"""browser_assist 手动登录门控与草稿检查状态（人在环，不自动登录/发布）。"""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters.browser_assist.workflow import (
@@ -18,14 +19,14 @@ from wechat_article_scheduler.config import AppConfig
 
 MP_LOGIN_URL = "https://mp.weixin.qq.com/"
 MP_DRAFT_BOX_HINT = "https://mp.weixin.qq.com/cgi-bin/appmsg?begin=0&count=10&type=10&action=list_card"
+MP_HOST = "mp.weixin.qq.com"
 
 SESSION_STATUSES = frozenset(
     {
         "awaiting_browser_login",
         "browser_session_ready",
         "assist_in_progress",
-        "awaiting_schedule_setup",
-        "awaiting_final_schedule_confirm",
+        "draft_review_in_progress",
         "awaiting_proof",
         "completed",
         "cancelled",
@@ -33,11 +34,140 @@ SESSION_STATUSES = frozenset(
 )
 
 LOGIN_GATE_PROMPT = (
-    "请在本浏览器窗口扫码登录微信公众平台，完成后点击「已登录，继续」。"
+    "请先按 Chrome 会话手册用 wechat-chrome-session 连接现有公众号页面（不要新开登录页）；"
+    "若登录已过期，由用户本人扫码后点击「已登录，继续」。"
     "Agent 不得代填账号密码、不得绕过扫码或验证码。"
 )
 
 CHROME_SESSION_DOC = "docs/wechat_chrome_session_runbook.md"
+
+
+def _coerce_bool(value: Any, *, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "on"}:
+        return True
+    if text in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
+def _sanitize_page_url(raw: Any) -> str:
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+    parsed = urlsplit(text)
+    if not parsed.scheme or not parsed.netloc:
+        return ""
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path or "", "", ""))
+
+
+def _connection_report_template(*, scheduled_at: str | None = None) -> dict[str, Any]:
+    return {
+        "mcp": "wechat-chrome-session",
+        "connection_mode": "existing Chrome / autoConnect",
+        "target_host": MP_HOST,
+        "target_url": "https://mp.weixin.qq.com/cgi-bin/home",
+        "page_title": "微信公众号后台（脱敏）",
+        "backend_visible": True,
+        "login_required": False,
+        "dom_snapshot_available": True,
+        "screenshot_available": True,
+        "write_actions_performed": 0,
+        "result": "PASS",
+        "block_reason": "none",
+        "target_scheduled_at": (scheduled_at or "").strip() or None,
+    }
+
+
+def _normalize_connection_report(raw: dict[str, Any] | None) -> dict[str, Any]:
+    payload = raw or {}
+    mcp = str(payload.get("mcp") or "wechat-chrome-session").strip() or "wechat-chrome-session"
+    target_url = _sanitize_page_url(payload.get("target_url") or payload.get("url") or "")
+    parsed = urlsplit(target_url) if target_url else None
+    host = str(payload.get("target_host") or (parsed.netloc if parsed else "")).strip().lower()
+    title = str(payload.get("page_title") or "").strip() or "微信公众号后台（脱敏）"
+    connection_mode = (
+        str(payload.get("connection_mode") or "existing Chrome / autoConnect").strip()
+        or "existing Chrome / autoConnect"
+    )
+    mode_lower = connection_mode.lower()
+    backend_visible = _coerce_bool(payload.get("backend_visible"), default=False)
+    login_required = _coerce_bool(payload.get("login_required"), default=False)
+    dom_snapshot_available = _coerce_bool(payload.get("dom_snapshot_available"), default=False)
+    screenshot_available = _coerce_bool(payload.get("screenshot_available"), default=False)
+    try:
+        write_actions_performed = max(0, int(payload.get("write_actions_performed") or 0))
+    except (TypeError, ValueError):
+        write_actions_performed = 0
+
+    blockers: list[str] = []
+    if host != MP_HOST:
+        blockers.append(f"target_host_not_mp:{host or 'none'}")
+    if "existing" not in mode_lower:
+        blockers.append("connection_mode_not_existing")
+    if not target_url:
+        blockers.append("target_url_missing")
+    if login_required:
+        blockers.append("login_required")
+    if not backend_visible:
+        blockers.append("backend_not_visible")
+    if not dom_snapshot_available:
+        blockers.append("dom_snapshot_missing")
+    if not screenshot_available:
+        blockers.append("screenshot_missing")
+    if write_actions_performed > 0:
+        blockers.append("write_actions_detected")
+
+    limitations: list[str] = []
+    if mcp != "wechat-chrome-session":
+        limitations.append(
+            "当前记录不是 wechat-chrome-session；"
+            "若是工具限制下的替代流程，请在报告中注明并由用户人工确认。"
+        )
+
+    requested_result = str(payload.get("result") or "").strip().upper()
+    if requested_result in {"PASS", "BLOCKED"}:
+        result = requested_result
+    else:
+        result = "PASS" if not blockers else "BLOCKED"
+    if blockers:
+        result = "BLOCKED"
+    block_reason = str(payload.get("block_reason") or "").strip()
+    if result == "BLOCKED" and not block_reason:
+        block_reason = blockers[0] if blockers else "unknown_block"
+    if result == "PASS":
+        block_reason = "none"
+
+    return {
+        "mcp": mcp,
+        "connection_mode": connection_mode,
+        "target_host": host or MP_HOST,
+        "target_url": target_url or "https://mp.weixin.qq.com/",
+        "page_title": title,
+        "backend_visible": backend_visible,
+        "login_required": login_required,
+        "dom_snapshot_available": dom_snapshot_available,
+        "screenshot_available": screenshot_available,
+        "write_actions_performed": write_actions_performed,
+        "result": result,
+        "block_reason": block_reason or "none",
+        "strict_mcp_match": mcp == "wechat-chrome-session",
+        "limitations": limitations,
+    }
+
+
+def _connection_report_passed(session: dict[str, Any]) -> bool:
+    raw = session.get("connection_report")
+    if not isinstance(raw, dict):
+        return False
+    return (
+        str(raw.get("result") or "").upper() == "PASS"
+        and not _coerce_bool(raw.get("login_required"), default=True)
+    )
 
 
 def sessions_root(config: AppConfig) -> Path:
@@ -108,6 +238,11 @@ def _login_gate_block(*, job: dict[str, Any], session_id: str) -> dict[str, Any]
         "draft_box_hint_url": MP_DRAFT_BOX_HINT,
         "mcp_server": "wechat-chrome-session",
         "mcp_doc": CHROME_SESSION_DOC,
+        "target_host": MP_HOST,
+        "target_scheduled_at": job.get("scheduled_at"),
+        "connection_report_template": _connection_report_template(
+            scheduled_at=str(job.get("scheduled_at") or "").strip() or None
+        ),
         "verification_hints": [
             "页面 URL 不再停留在 login 或扫码页",
             "能看到公众号后台导航或草稿箱",
@@ -116,7 +251,7 @@ def _login_gate_block(*, job: dict[str, Any], session_id: str) -> dict[str, Any]
         "forbidden": [
             "不得导出或保存 cookie",
             "不得读取 .env 或 token",
-            "不得自动点击最终发布或定时群发确认",
+            "不得自动点击最终发布、群发或后台定时确认",
         ],
         "job_id": job["job_id"],
         "article_id": job["article_id"],
@@ -128,29 +263,29 @@ def _login_gate_block(*, job: dict[str, Any], session_id: str) -> dict[str, Any]
 def _human_steps_for_status(status: str) -> list[str]:
     if status == "awaiting_browser_login":
         return [
-            "打开 mp.weixin.qq.com 或连接 wechat-chrome-session",
+            "按 docs/wechat_chrome_session_runbook.md 连接现有 Chrome",
+            "确认 wechat-chrome-session 已找到 mp.weixin.qq.com 标签页",
+            "先记录连接验收报告（list_pages/select_page/snapshot/screenshot），再点「已登录，继续」",
             LOGIN_GATE_PROMPT,
         ]
     if status == "browser_session_ready":
         return [
             "在已登录页面打开草稿箱",
-            "按任务包 checklist 核对字段",
-            "可辅助填写非最终字段，不得点击最终发布",
+            "按任务包 checklist 设置发布前字段并保存草稿",
+            "重新打开同一草稿核验字段；不得点击正式发表、群发或定时最终确认",
         ]
-    if status == "awaiting_schedule_setup":
+    if status in ("assist_in_progress", "draft_review_in_progress"):
         return [
-            "在公众号后台设置定时群发时间（对照本地 scheduled_at）",
-            "设置完成后在本项目点击「已设置定时，继续」",
-            "仍未到最终确认：不得代为点击定时群发确认/发布",
-        ]
-    if status == "awaiting_final_schedule_confirm":
-        return [
-            "请用户在公众号后台亲自确认定时群发",
-            "Agent 不得代替点击最终确认按钮",
-            "确认后在本项目点击「已完成后台最终确认」并回填 proof",
+            "在公众号后台定位草稿并核对标题、摘要、封面和正文",
+            "设置合集、通知、封面和目标时间，保存后重新打开核验",
+            "完成后记录 proof；正式发表、扫码和定时最终确认由用户完成",
         ]
     if status == "awaiting_proof":
-        return ["回填截图路径或公开链接", "使用 POST /api/publish-jobs/{id}/proof"]
+        return [
+            "回填保存后重新打开的截图、字段持久化结果或用户确认备注",
+            "正式发表、扫码/手机确认和定时最终确认仍由用户本人完成",
+            "使用 POST /api/publish-jobs/{id}/proof",
+        ]
     return []
 
 
@@ -167,9 +302,21 @@ def enrich_session_view(config: AppConfig, session: dict[str, Any]) -> dict[str,
                 "article_id": session.get("article_id"),
                 "title": session.get("title"),
                 "media_id": session.get("media_id"),
+                "scheduled_at": session.get("scheduled_at"),
             },
             session_id=str(session.get("session_id") or ""),
         )
+    raw_report = out.get("connection_report")
+    if isinstance(raw_report, dict):
+        out["connection_report"] = _normalize_connection_report(raw_report)
+        out["connection_verified"] = _connection_report_passed(out)
+        out["connection_report_brief"] = (
+            f"{out['connection_report']['result']} / "
+            f"{out['connection_report']['target_host']} / "
+            f"{out['connection_report']['mcp']}"
+        )
+    else:
+        out["connection_verified"] = False
     rel = _session_path(config, str(session["session_id"]))
     if rel.is_relative_to(config.root):
         out["session_file"] = str(rel.relative_to(config.root))
@@ -243,8 +390,12 @@ def start_browser_assist_session(
         "created_at": _utc_now(),
         "updated_at": _utc_now(),
         "login_confirmed_at": None,
-        "schedule_setup_at": None,
-        "final_schedule_confirmed_at": None,
+        "draft_review_completed_at": None,
+        "connection_report": None,
+        "connection_verified_at": None,
+        "connection_verified_result": None,
+        "backend_schedule_target_at": job.get("scheduled_at"),
+        "backend_schedule_recorded_at": None,
         "task_package_path": (task_package or {}).get("relative_path")
         or (task_package or {}).get("task_package_path"),
     }
@@ -278,9 +429,75 @@ def start_browser_assist_session(
         "task_package": task_package,
         "human": [
             LOGIN_GATE_PROMPT,
+            "真实页面连接说明见 docs/wechat_chrome_session_runbook.md。",
             f"会话 id={session_id}；确认登录：browser-assist-session confirm-login --session-id {session_id}",
             f"Chrome 会话说明见 {CHROME_SESSION_DOC}",
         ],
+    }
+
+
+def record_browser_connection(
+    config: AppConfig,
+    conn: Any,
+    session_id: str,
+    *,
+    report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """记录已接管公众号页面的只读验收报告（PASS/BLOCKED）。"""
+    session = _load_session(config, session_id)
+    if not session:
+        return {"ok": False, "error": "会话不存在"}
+    if session.get("status") in {"cancelled", "completed"}:
+        return {"ok": False, "error": f"当前状态不可记录连接：{session['status']}"}
+
+    normalized = _normalize_connection_report(report)
+    normalized["recorded_at"] = _utc_now()
+    session["connection_report"] = normalized
+    session["connection_verified_at"] = _utc_now()
+    session["connection_verified_result"] = normalized["result"]
+    if normalized["result"] == "PASS" and not normalized["login_required"]:
+        if session["status"] == "awaiting_browser_login":
+            session["status"] = "browser_session_ready"
+    session["updated_at"] = _utc_now()
+    _save_session(config, session)
+
+    db.log_event(
+        conn,
+        entity_type="publish_job",
+        entity_id=int(session["job_id"]),
+        event_type="browser_assist_connection_reported",
+        payload=json.dumps(
+            {
+                "session_id": session_id,
+                "result": normalized["result"],
+                "target_host": normalized["target_host"],
+                "target_url": normalized["target_url"],
+                "mcp": normalized["mcp"],
+                "strict_mcp_match": normalized["strict_mcp_match"],
+            },
+            ensure_ascii=False,
+        ),
+    )
+    conn.commit()
+
+    view = enrich_session_view(config, session)
+    human = [
+        "连接验收报告已记录。",
+        "请确认该报告来自当前已登录公众号页面，且未执行写操作。",
+    ]
+    if normalized["result"] == "PASS":
+        human.append("连接验收为 PASS，可继续点击「已登录，继续」。")
+        if normalized["limitations"]:
+            human.append("注意：当前记录包含工具限制，请用户再次人工确认账号与页面。")
+    else:
+        human.append(f"连接验收为 BLOCKED：{normalized['block_reason']}")
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "status": session.get("status"),
+        "connection_report": normalized,
+        "human": human,
+        **{k: view[k] for k in ("human_steps", "guardrails") if k in view},
     }
 
 
@@ -290,15 +507,29 @@ def confirm_browser_login(
     session_id: str,
     *,
     attestation_note: str | None = None,
+    connection_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """用户确认已完成扫码登录；不在此自动校验页面（仅记录用户 attestation）。"""
+    """用户确认已完成登录；需先有接管页面验收报告。"""
     session = _load_session(config, session_id)
     if not session:
         return {"ok": False, "error": "会话不存在"}
-    if session["status"] != "awaiting_browser_login":
+    if session["status"] not in ("awaiting_browser_login", "browser_session_ready"):
         return {
             "ok": False,
             "error": f"当前状态不可确认登录：{session['status']}",
+        }
+
+    if connection_report:
+        normalized = _normalize_connection_report(connection_report)
+        normalized["recorded_at"] = _utc_now()
+        session["connection_report"] = normalized
+        session["connection_verified_at"] = _utc_now()
+        session["connection_verified_result"] = normalized["result"]
+
+    if not _connection_report_passed(session):
+        return {
+            "ok": False,
+            "error": "请先记录接管页面的连接验收报告（PASS）后再确认登录",
         }
 
     session["status"] = "browser_session_ready"
@@ -331,9 +562,9 @@ def confirm_browser_login(
         "status": "assist_in_progress",
         "blocked": False,
         "human": [
-            "登录已确认。请在外部 Agent / wechat-chrome-session 已登录页继续 checklist。",
-            "完成字段核对与后台定时设置后，调用 confirm-schedule-setup。",
-            "最终定时群发确认必须由用户本人在公众号后台操作。",
+            "登录已确认。请在外部 Agent / wechat-chrome-session 已登录页定位草稿并继续 checklist。",
+            "Agent 可设置发布前字段、填写目标时间并保存草稿，随后重新打开核验。",
+            "完成草稿准备后记录 proof；不要点击正式发表、群发或定时最终确认。",
         ],
         **{k: view[k] for k in ("human_steps", "guardrails", "task_package_path") if k in view},
     }
@@ -345,20 +576,28 @@ def confirm_schedule_setup(
     session_id: str,
     *,
     note: str | None = None,
+    scheduled_at: str | None = None,
 ) -> dict[str, Any]:
-    """用户/Agent 已在后台设置定时，但仍未到最终群发确认。"""
+    """兼容旧入口：记录草稿检查完成并进入 proof 阶段，不表示已设置后台定时。"""
     session = _load_session(config, session_id)
     if not session:
         return {"ok": False, "error": "会话不存在"}
-    if session["status"] not in ("browser_session_ready", "assist_in_progress", "awaiting_schedule_setup"):
+    if session["status"] not in (
+        "browser_session_ready",
+        "assist_in_progress",
+        "draft_review_in_progress",
+    ):
         return {
             "ok": False,
-            "error": f"当前状态不可确认定时设置：{session['status']}",
+            "error": f"当前状态不可确认草稿检查：{session['status']}",
         }
 
-    session["status"] = "awaiting_final_schedule_confirm"
-    session["schedule_setup_at"] = _utc_now()
-    session["schedule_setup_note"] = (note or "").strip() or None
+    session["status"] = "awaiting_proof"
+    session["draft_review_completed_at"] = _utc_now()
+    session["draft_review_note"] = (note or "").strip() or None
+    target_schedule = (scheduled_at or "").strip() or str(session.get("scheduled_at") or "").strip() or None
+    session["backend_schedule_target_at"] = target_schedule
+    session["backend_schedule_recorded_at"] = _utc_now()
     session["updated_at"] = _utc_now()
     _save_session(config, session)
 
@@ -367,11 +606,11 @@ def confirm_schedule_setup(
         conn,
         entity_type="publish_job",
         entity_id=job_id,
-        event_type="browser_assist_schedule_setup",
+        event_type="browser_assist_draft_reviewed",
         payload=json.dumps(
             {
                 "session_id": session_id,
-                "status": "awaiting_final_schedule_confirm",
+                "status": "awaiting_proof",
             },
             ensure_ascii=False,
         ),
@@ -382,12 +621,17 @@ def confirm_schedule_setup(
     return {
         "ok": True,
         "session_id": session_id,
-        "status": "awaiting_final_schedule_confirm",
+        "status": "awaiting_proof",
         "blocked": True,
         "human": [
-            "后台定时已标记为已设置。",
-            "请用户在公众号后台亲自点击最终定时群发确认；Agent 不得代点。",
-            f"完成后：browser-assist-session confirm-final-schedule --session-id {session_id}",
+            "已记录发布前草稿准备完成，等待 proof。",
+            (
+                f"后台目标时间：{target_schedule}（请记录保存后是否仍存在；最终发表由用户完成）。"
+                if target_schedule
+                else "如需后台定时，请由 Agent 填写目标时间、保存草稿并重新打开核验。"
+            ),
+            "正式发表、扫码/手机确认和定时最终确认由用户本人完成；本项目不记录为自动发布成功。",
+            f"请回填 proof：POST /api/publish-jobs/{job_id}/proof 或作品详情 #proof",
         ],
         "human_steps": view["human_steps"],
     }
@@ -400,21 +644,26 @@ def confirm_final_schedule(
     *,
     attestation_note: str | None = None,
 ) -> dict[str, Any]:
-    """用户确认已在公众号后台完成最终定时群发确认（仍不自动标记 published）。"""
+    """兼容旧入口：不确认最终定时发布，只进入 proof 阶段。"""
     session = _load_session(config, session_id)
     if not session:
         return {"ok": False, "error": "会话不存在"}
-    if session["status"] != "awaiting_final_schedule_confirm":
+    if session["status"] not in (
+        "browser_session_ready",
+        "assist_in_progress",
+        "draft_review_in_progress",
+        "awaiting_proof",
+    ):
         return {
             "ok": False,
-            "error": f"当前状态不可确认最终定时：{session['status']}",
+            "error": f"当前状态不可记录草稿检查 proof：{session['status']}",
         }
 
     session["status"] = "awaiting_proof"
-    session["final_schedule_confirmed_at"] = _utc_now()
-    session["final_schedule_attestation"] = (
+    session["draft_review_completed_at"] = session.get("draft_review_completed_at") or _utc_now()
+    session["draft_review_attestation"] = (
         attestation_note or ""
-    ).strip() or "user_confirmed_final_schedule_in_backend"
+    ).strip() or "user_confirmed_draft_review_requires_manual_backend_publish"
     session["updated_at"] = _utc_now()
     _save_session(config, session)
 
@@ -426,7 +675,7 @@ def confirm_final_schedule(
         conn,
         entity_type="publish_job",
         entity_id=job_id,
-        event_type="browser_assist_final_schedule_confirmed",
+        event_type="browser_assist_draft_review_proof_requested",
         payload=json.dumps(
             {"session_id": session_id, "status": "awaiting_proof"},
             ensure_ascii=False,
@@ -441,7 +690,8 @@ def confirm_final_schedule(
         "status": "awaiting_proof",
         "waiting_confirmation": mark_result,
         "human": [
-            "已记录后台最终定时确认（用户 attestation）。",
+            "已记录发布前草稿准备完成，等待用户回填 proof。",
+            "这不代表已发布或已创建后台定时任务；最终发表与平台安全验证仍需人工完成。",
             f"请回填 proof：POST /api/publish-jobs/{job_id}/proof 或作品详情 #proof",
         ],
         "human_steps": view["human_steps"],

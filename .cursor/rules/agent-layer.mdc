@@ -1,0 +1,37 @@
+---
+description: "Tool-aware Agent Layer 2.0 — 每轮必读与生命周期"
+alwaysApply: true
+---
+
+# Agent Layer 2.0
+
+Cursor 是本仓库**主力 Agent**。
+
+## 每轮开始前必读
+
+1. `AGENTS.md`
+2. `agent_tools.yaml`
+3. `agent_layer.yaml`
+4. `docs/TOOL_USAGE_POLICY.md`
+5. `docs/AGENT_RUNBOOK.md`
+6. `reports/latest-agent-report.json`
+
+## 工具盘点
+
+- 先运行 `python scripts/tool_probe.py` 或读取 `reports/tool_probe_report.json`（24h 内有效）
+- 规划任务前确认 `callable_now`，不只读 `mcp.json`
+
+## 轮次生命周期
+
+1. 小 scope（一个主要能力）
+2. 选对工具并记录
+3. `python scripts/agent_layer_gate.py`
+4. 更新 `reports/latest-agent-report.json`
+5. 默认不 push
+
+## 与既有治理
+
+- 功能 round：`docs/rounds.md` + `scripts/agent_gate.py`
+- 工具 round：`docs/AGENT_ROADMAP.md` + Layer 2 报告
+
+P0/P1 未清零不做 P2/P3 优化。

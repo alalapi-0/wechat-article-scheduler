@@ -37,6 +37,13 @@ outbox/*
 !outbox/.gitkeep
 # Playwright MCP 页面快照与 console 日志
 .playwright-mcp/
+# 浏览器 profile / session / cookie（不得入库）
+storage/browser_profiles/
+storage/chrome_user_data/
+*.cookies.json
+*.session.json
+browser_profile/
+chrome_user_data/
 # Round 114 浏览器/API 测试稿（保留本地，不入库）
 articles/imported/r114_*
 # 用户视角功能测试隔离数据（不入库）

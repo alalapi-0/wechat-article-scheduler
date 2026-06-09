@@ -1,0 +1,281 @@
+{
+  "version": 1,
+  "timestamp": "2026-06-09T13:26:27.365114+00:00",
+  "repo": "/Users/alalapi/PycharmProjects/wechat-article-scheduler",
+  "agent_surface": "cursor",
+  "curator_config_visibility": "limited",
+  "curator_notes": [
+    "MCP callable_now verified in layer2-004 thread via CallMcpTool safe probes",
+    "cursor-agent CLI may show needs approval while foreground Agent thread exposes tools",
+    "Cursor UI settings (Cloud Agent, Hooks) need manual confirmation"
+  ],
+  "thread_registry": {
+    "verified_at": "2026-06-09T13:26:00Z",
+    "round_id": "layer2-004",
+    "thread_status": "PASS",
+    "cli_status": "partial",
+    "cli_note": "npm run check:cursor-mcp: only wechat-chrome-session ready; 6 others needs approval at CLI layer",
+    "servers_exposed": 7,
+    "servers_callable": 7,
+    "extra_thread_servers": [
+      "cursor-ide-browser",
+      "cursor-app-control"
+    ]
+  },
+  "codex_available": "unknown",
+  "web_search": {
+    "available": true,
+    "tool": "WebSearch (Cursor agent)",
+    "note": "Official docs preferred; encode findings in docs/RESEARCH_NOTES.md"
+  },
+  "probes": [
+    {
+      "name": "shell",
+      "command": "pwd",
+      "available": true,
+      "exit_code": 0,
+      "output": "/Users/alalapi/PycharmProjects/wechat-article-scheduler"
+    },
+    {
+      "name": "git",
+      "command": "git status --short",
+      "available": true,
+      "exit_code": 0,
+      "output": "M .cursor/rules/mcp-agent-tools.mdc\n M .cursor/rules/mcp-required.mdc\n M .env.example\n M .gitignore\n M AGENTS.md\n M README.md\n M config/rules.example.yaml\n M docs/agent_skills/mcp_usage_skill.md\n M docs/api_research.md\n M docs/browser_assist_runbook.md\n M docs/external_agent_integration_guide.md\n M docs/external_agent_safety_policy.md\n M docs/external_agent_task_package_design.md\n M docs/mcp/README.md\n M docs/optional_real_publish.md\n M docs/repo_protocol_standard.yaml\n M docs/reports/agent_gate"
+    },
+    {
+      "name": "git_branch",
+      "command": "git branch --show-current",
+      "available": true,
+      "exit_code": 0,
+      "output": "main"
+    },
+    {
+      "name": "node",
+      "command": "node -v",
+      "available": true,
+      "exit_code": 0,
+      "output": "v26.0.0"
+    },
+    {
+      "name": "npm",
+      "command": "npm -v",
+      "available": true,
+      "exit_code": 0,
+      "output": "11.12.1"
+    },
+    {
+      "name": "python3",
+      "command": "python3 --version",
+      "available": true,
+      "exit_code": 0,
+      "output": "Python 3.14.5"
+    },
+    {
+      "name": "uv",
+      "command": "uv --version",
+      "available": true,
+      "exit_code": 0,
+      "output": "uv 0.11.19 (7b2cff1c3 2026-06-03 aarch64-apple-darwin)"
+    },
+    {
+      "name": "pytest",
+      "command": "pytest --version",
+      "available": true,
+      "exit_code": 0,
+      "output": "pytest 9.0.3"
+    },
+    {
+      "name": "gh",
+      "command": "gh --version",
+      "available": true,
+      "exit_code": 0,
+      "output": "gh version 2.92.0 (2026-04-28)\nhttps://github.com/cli/cli/releases/tag/v2.92.0"
+    },
+    {
+      "name": "make",
+      "command": "make --version",
+      "available": true,
+      "exit_code": 0,
+      "output": "GNU Make 3.81\nCopyright (C) 2006  Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.\nThere is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A\nPARTICULAR PURPOSE.\n\nThis program built for i386-apple-darwin11.3.0"
+    },
+    {
+      "name": "ffmpeg",
+      "command": "ffmpeg -version",
+      "available": true,
+      "exit_code": 0,
+      "output": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers\nbuilt with Apple clang version 17.0.0 (clang-1700.6.3.2)\nconfiguration: --prefix=/opt/homebrew/Cellar/ffmpeg/8.0.1_4 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags= --enable-ffplay --enable-gpl --enable-libsvtav1 --enable-libopus --enable-libx264 --enable-libmp3lame --enable-libdav1d --enable-libvpx --enable-libx265 --enable-openssl --enable-videotoolbox --enable-audiotoolbox --enable"
+    },
+    {
+      "name": "playwright_npx",
+      "command": "npx playwright --version",
+      "available": true,
+      "exit_code": 0,
+      "output": "Version 1.60.0"
+    },
+    {
+      "name": "mcp_check",
+      "command": "npm run check:mcp",
+      "available": true,
+      "exit_code": 0,
+      "output": "> check:mcp\n> node scripts/check_mcp_config.js\n\ncheck_mcp_config: PASS\n  path: .cursor/mcp.json\n  servers (7): chrome-devtools, context7, filesystem, github, playwright, stitch, wechat-chrome-session\n  required: chrome-devtools, wechat-chrome-session, context7, filesystem, github, playwright, stitch\n  - chrome-devtools: command=\"npx\", args=[\"-y\",\"chrome-devtools-mcp@latest\"]\n  - context7: command=\"npx\", args=[\"-y\",\"@upstash/context7-mcp@latest\"]\n  - filesystem: command=\"npx\", args=[\"-y\",\"@modelc"
+    }
+  ],
+  "mcp": {
+    "configured": true,
+    "path": ".cursor/mcp.json",
+    "servers": [
+      {
+        "name": "playwright",
+        "configured": true,
+        "callable_now": true,
+        "thread_tools_count": 23,
+        "safe_probe_command": "browser_tabs action=list",
+        "probe_result": "thread_call_ok",
+        "allowed_scope": "workspace",
+        "recommended_use_cases": [
+          "e2e regression",
+          "user-view multi-viewport",
+          "local Web UI http://127.0.0.1:8080/"
+        ],
+        "risks": [
+          "--isolated context",
+          "no WeChat login state"
+        ],
+        "fallback": "pytest tests/test_ui_e2e.py, scripts/user_view_test.py"
+      },
+      {
+        "name": "chrome-devtools",
+        "configured": true,
+        "callable_now": true,
+        "thread_tools_count": 29,
+        "safe_probe_command": "list_pages",
+        "probe_result": "thread_call_ok",
+        "allowed_scope": "workspace",
+        "recommended_use_cases": [
+          "DOM/console/network on local Web UI",
+          "screenshots before/after UI changes"
+        ],
+        "risks": [
+          "isolated browser context",
+          "not for logged-in WeChat backend"
+        ],
+        "fallback": "playwright MCP"
+      },
+      {
+        "name": "wechat-chrome-session",
+        "configured": true,
+        "callable_now": true,
+        "thread_tools_count": 29,
+        "safe_probe_command": "list_pages",
+        "probe_result": "thread_call_ok_mp_backend_visible",
+        "allowed_scope": "user Chrome via --autoConnect",
+        "recommended_use_cases": [
+          "logged-in mp.weixin.qq.com backend",
+          "draft locate and field verify"
+        ],
+        "risks": [
+          "no final publish click",
+          "captcha/risk control needs human"
+        ],
+        "fallback": "external agent task package export"
+      },
+      {
+        "name": "context7",
+        "configured": true,
+        "callable_now": true,
+        "thread_tools_count": 2,
+        "safe_probe_command": "resolve-library-id libraryName=FastAPI",
+        "probe_result": "thread_call_ok",
+        "allowed_scope": "workspace",
+        "recommended_use_cases": [
+          "FastAPI docs",
+          "Playwright docs",
+          "library API lookup"
+        ],
+        "risks": [
+          "requires network",
+          "max 3 resolve calls per question"
+        ],
+        "fallback": "web_search, official README"
+      },
+      {
+        "name": "filesystem",
+        "configured": true,
+        "callable_now": true,
+        "thread_tools_count": 14,
+        "safe_probe_command": "thread tool registry present",
+        "probe_result": "thread_registry_ok",
+        "allowed_scope": "workspace only",
+        "recommended_use_cases": [
+          "safe file inspection within workspace"
+        ],
+        "risks": [
+          "must not access / or home root"
+        ],
+        "fallback": "Cursor Read/Grep"
+      },
+      {
+        "name": "github",
+        "configured": true,
+        "callable_now": true,
+        "thread_tools_count": 26,
+        "safe_probe_command": "search_repositories query=wechat-article-scheduler",
+        "probe_result": "thread_call_ok",
+        "allowed_scope": "workspace",
+        "recommended_use_cases": [
+          "issues",
+          "PRs",
+          "remote repo inspection"
+        ],
+        "risks": [
+          "token must stay in env",
+          "never print secrets"
+        ],
+        "fallback": "gh CLI"
+      },
+      {
+        "name": "stitch",
+        "configured": true,
+        "callable_now": true,
+        "thread_tools_count": 15,
+        "safe_probe_command": "list_projects filter=view=owned",
+        "probe_result": "thread_call_ok",
+        "allowed_scope": "workspace",
+        "recommended_use_cases": [
+          "UI design prototypes before implementation"
+        ],
+        "risks": [
+          "STITCH_API_KEY env only",
+          "exports must not overwrite src without review"
+        ],
+        "fallback": "docs/design templates"
+      }
+    ],
+    "thread_note": "layer2-004: all 7 configured servers callable_now=true in foreground Agent thread"
+  },
+  "cursor_rules_count": 11,
+  "cursor_rules": [
+    "agent-layer.mdc",
+    "cursor-browser-ui.mdc",
+    "mcp-agent-tools.mdc",
+    "mcp-required.mdc",
+    "no-multitask-for-browser.mdc",
+    "safety-gates.mdc",
+    "search-policy.mdc",
+    "stitch-design-mcp.mdc",
+    "tool-usage.mdc",
+    "user-view-testing.mdc",
+    "verification-gate.mdc"
+  ],
+  "remote": {
+    "configured": true,
+    "origin": {
+      "name": "git_remote",
+      "command": "git remote -v",
+      "available": true,
+      "exit_code": 0,
+      "output": "origin\thttps://github.com/alalapi-0/wechat-article-scheduler.git (fetch)\norigin\thttps://github.com/alalapi-0/wechat-article-scheduler.git (push)"
+    }
+  }
+}

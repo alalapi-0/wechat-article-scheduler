@@ -52,7 +52,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     ba_sess = sub.add_parser(
         "browser-assist-session",
-        help="browser_assist 手动登录门控会话（阻塞等待扫码，不自动发布）",
+        help="browser_assist 手动登录门控与草稿检查会话（不自动发布）",
     )
     ba_sess.add_argument(
         "action",
@@ -60,16 +60,35 @@ def _build_parser() -> argparse.ArgumentParser:
             "start",
             "status",
             "list",
+            "record-connection",
             "confirm-login",
             "confirm-schedule-setup",
             "confirm-final-schedule",
             "cancel",
         ],
-        help="start=打开登录门控 | confirm-login=用户确认已登录 | confirm-schedule-setup=已设后台定时 | confirm-final-schedule=用户已点最终确认",
+        help="start=打开登录门控 | record-connection=记录接管页面验收 | confirm-login=用户确认已登录 | confirm-schedule-setup=兼容旧名，记录草稿检查完成 | confirm-final-schedule=兼容旧名，进入 proof",
     )
     ba_sess.add_argument("--job-id", type=int, default=None, help="start 时必填")
     ba_sess.add_argument("--session-id", type=str, default=None)
     ba_sess.add_argument("--note", type=str, default=None, help="用户 attestation 备注")
+    ba_sess.add_argument(
+        "--report-json",
+        type=str,
+        default=None,
+        help="连接验收报告 JSON（record-connection/confirm-login 可选）",
+    )
+    ba_sess.add_argument(
+        "--report-file",
+        type=str,
+        default=None,
+        help="连接验收报告 JSON 文件路径（record-connection/confirm-login 可选）",
+    )
+    ba_sess.add_argument(
+        "--scheduled-at",
+        type=str,
+        default=None,
+        help="confirm-schedule-setup 时记录后台目标定时时间（默认沿用任务 scheduled_at）",
+    )
     ba_sess.add_argument(
         "--no-export-task",
         action="store_true",
@@ -338,6 +357,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "browser-assist-session":
         import json
+        from pathlib import Path
 
         from wechat_article_scheduler.adapters.browser_assist import (
             cancel_browser_assist_session,
@@ -346,8 +366,28 @@ def main(argv: list[str] | None = None) -> int:
             confirm_schedule_setup,
             get_browser_assist_session,
             list_browser_assist_sessions,
+            record_browser_connection,
             start_browser_assist_session,
         )
+
+        def _load_connection_report() -> tuple[dict[str, object] | None, dict[str, object] | None]:
+            if args.report_json and args.report_file:
+                return None, {"ok": False, "error": "--report-json 与 --report-file 只能选一个"}
+            text = args.report_json
+            if args.report_file:
+                path = Path(args.report_file)
+                if not path.is_file():
+                    return None, {"ok": False, "error": "--report-file 不存在"}
+                text = path.read_text(encoding="utf-8")
+            if not text:
+                return None, None
+            try:
+                loaded = json.loads(text)
+            except json.JSONDecodeError as exc:
+                return None, {"ok": False, "error": f"连接报告 JSON 解析失败：{exc}"}
+            if not isinstance(loaded, dict):
+                return None, {"ok": False, "error": "连接报告必须是 JSON object"}
+            return loaded, None
 
         action = args.action
         if action == "list":
@@ -355,21 +395,47 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0 if result.get("ok") else 1
 
-        if action in ("status", "confirm-login", "confirm-schedule-setup", "confirm-final-schedule", "cancel"):
+        if action in (
+            "status",
+            "record-connection",
+            "confirm-login",
+            "confirm-schedule-setup",
+            "confirm-final-schedule",
+            "cancel",
+        ):
             if not args.session_id:
                 print(json.dumps({"ok": False, "error": "需要 --session-id"}, ensure_ascii=False))
+                return 1
+            report_payload, report_err = _load_connection_report()
+            if report_err:
+                print(json.dumps(report_err, ensure_ascii=False, indent=2))
                 return 1
             db.init_db(config.database_path)
             with db.connect(config.database_path) as conn:
                 if action == "status":
                     result = get_browser_assist_session(config, args.session_id)
+                elif action == "record-connection":
+                    result = record_browser_connection(
+                        config,
+                        conn,
+                        args.session_id,
+                        report=report_payload,
+                    )
                 elif action == "confirm-login":
                     result = confirm_browser_login(
-                        config, conn, args.session_id, attestation_note=args.note
+                        config,
+                        conn,
+                        args.session_id,
+                        attestation_note=args.note,
+                        connection_report=report_payload,
                     )
                 elif action == "confirm-schedule-setup":
                     result = confirm_schedule_setup(
-                        config, conn, args.session_id, note=args.note
+                        config,
+                        conn,
+                        args.session_id,
+                        note=args.note,
+                        scheduled_at=args.scheduled_at,
                     )
                 elif action == "confirm-final-schedule":
                     result = confirm_final_schedule(

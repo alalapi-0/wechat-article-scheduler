@@ -109,8 +109,8 @@ def update_article_wechat_draft(config: AppConfig, article_id: int) -> dict[str,
         if draft_row is None:
             return {
                 "ok": False,
-                "error": "尚未创建微信草稿，请先执行到点发布或创建草稿",
-                "fallback": "可先在工作台安排发布并执行 run-once",
+                "error": "尚未创建微信草稿，请先执行到点草稿创建",
+                "fallback": "可先在工作台安排草稿创建时间并执行 run-once",
             }
 
         media_id = str(draft_row["media_id"])

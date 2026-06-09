@@ -1,4 +1,4 @@
-"""发布任务级配置：批量预设置、到点自动发布。"""
+"""草稿排期任务级配置：批量预设置、到点创建草稿。"""
 
 from __future__ import annotations
 
@@ -106,21 +106,16 @@ def publish_config_from_payload(payload: dict[str, Any]) -> PublishConfig:
 
 
 def should_submit_publish(*, app_config: AppConfig, job_config: PublishConfig) -> bool:
-    """是否应对该任务调用 freepublish/submit。"""
-    action = job_config.publish_action
-    if action == "draft":
-        return False
-    if action == "publish":
-        return app_config.wechat_mode == "real" and bool(app_config.wechat_enable_publish)
-    return app_config.wechat_mode == "real" and bool(app_config.wechat_enable_publish)
+    """当前产品目标只按时创建草稿，永不自动调用 freepublish/submit。"""
+    return False
 
 
 def human_publish_action_label(config: PublishConfig) -> str:
     action = config.publish_action
     if action == "publish":
-        return "正式发布"
+        return "草稿后人工后台发布"
     if action == "draft":
-        return "仅草稿"
+        return "仅创建草稿"
     return "跟随全局"
 
 

@@ -49,7 +49,7 @@ async function loadDrafts(){
   const url = draftFilter === 'all' ? '/api/drafts?limit=80' : '/api/drafts?limit=80&status=created';
   const rows = await (await fetch(url)).json();
   if (!rows.length) {
-    document.getElementById('draftsTable').innerHTML = '<p style="color:var(--muted);">暂无草稿记录。执行到点发布（演练）后会出现在这里。</p>';
+    document.getElementById('draftsTable').innerHTML = '<p style="color:var(--muted);">暂无草稿记录。执行到点草稿创建（演练）后会出现在这里。</p>';
     return;
   }
   const body = rows.map(d => `<tr>

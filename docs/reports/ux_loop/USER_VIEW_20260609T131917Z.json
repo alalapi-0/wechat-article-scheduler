@@ -1,0 +1,22 @@
+{
+  "timestamp": "20260609T131917Z",
+  "dry_run": true,
+  "status": "passed",
+  "checks": [
+    {
+      "name": "drafts_template_exists",
+      "ok": true,
+      "detail": "src/wechat_article_scheduler/web/drafts_page_template.html"
+    },
+    {
+      "name": "web_app_module_exists",
+      "ok": true,
+      "detail": "FastAPI workbench entry"
+    }
+  ],
+  "next_steps": [
+    "Start: python -m wechat_article_scheduler.cli serve",
+    "Open: http://127.0.0.1:8080/",
+    "Use playwright or chrome-devtools MCP for console/network/screenshots"
+  ]
+}

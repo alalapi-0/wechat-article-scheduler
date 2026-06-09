@@ -16,7 +16,7 @@ from wechat_article_scheduler.publish_config import (
 from tests.conftest import make_test_config
 
 
-def test_load_config_defaults_keep_mock_safe_but_real_test_enabled(
+def test_load_config_defaults_keep_mock_and_real_draft_safe(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -33,8 +33,8 @@ def test_load_config_defaults_keep_mock_safe_but_real_test_enabled(
     monkeypatch.setenv("WECHAT_MODE", "real")
     real_cfg = load_config(env_file=tmp_path / "missing.env")
     assert real_cfg.wechat_mode == "real"
-    assert real_cfg.wechat_enable_publish is True
-    assert real_cfg.web_auto_publish is True
+    assert real_cfg.wechat_enable_publish is False
+    assert real_cfg.web_auto_publish is False
 
     monkeypatch.setenv("WECHAT_ENABLE_PUBLISH", "false")
     monkeypatch.setenv("WEB_AUTO_PUBLISH", "false")
@@ -48,7 +48,7 @@ def test_should_submit_publish_requires_global_switch(tmp_path: Path) -> None:
     assert should_submit_publish(app_config=cfg, job_config=PublishConfig(publish_action="publish")) is False
     assert should_submit_publish(app_config=cfg, job_config=PublishConfig(publish_action="draft")) is False
     cfg.wechat_enable_publish = True
-    assert should_submit_publish(app_config=cfg, job_config=PublishConfig(publish_action="publish")) is True
+    assert should_submit_publish(app_config=cfg, job_config=PublishConfig(publish_action="publish")) is False
 
 
 def test_defaults_from_rules() -> None:

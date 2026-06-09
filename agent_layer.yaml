@@ -1,0 +1,99 @@
+version: 2
+updated_at: "2026-06-09T00:00:00Z"
+
+repo:
+  name: wechat-article-scheduler
+  type: python_cli_web_workbench
+  primary_language: python
+  package_manager: pip
+  entrypoints:
+    - README.md
+    - AGENTS.md
+    - python -m wechat_article_scheduler.cli
+    - python -m wechat_article_scheduler.cli serve
+  core_user_flows:
+    - import articles and scan
+    - schedule publish jobs
+    - create/update WeChat drafts (mock by default)
+    - web workbench review at http://127.0.0.1:8080/
+    - export external browser agent task packages
+    - manual proof and draft-only backend publish
+
+docs:
+  read_first:
+    - AGENTS.md
+    - agent_tools.yaml
+    - agent_layer.yaml
+    - docs/TOOL_USAGE_POLICY.md
+    - docs/AGENT_RUNBOOK.md
+    - docs/AGENT_ROADMAP.md
+    - reports/latest-agent-report.json
+  research_notes: docs/RESEARCH_NOTES.md
+  tool_inventory: docs/TOOL_INVENTORY.md
+  legacy_roadmap: docs/rounds.md
+  legacy_governance: governance/repo_protocol_standard.yaml
+
+commands:
+  install:
+    - python3 -m venv .venv
+    - source .venv/bin/activate
+    - pip install -r requirements.txt
+    - npm install
+  dev:
+    - python -m wechat_article_scheduler.cli serve
+  build: []
+  lint: []
+  test:
+    - python -m pytest
+  e2e:
+    - python -m pytest tests/test_ui_e2e.py
+    - python scripts/user_view_test.py --dry-run
+  typecheck: []
+  format_check: []
+  dry_run:
+    - python scripts/real_api_check.py --dry-run --skip-if-blocked
+    - python -m wechat_article_scheduler.cli plan
+  agent_gate:
+    - python scripts/agent_layer_gate.py
+    - python scripts/agent_gate.py gate
+  user_view_test:
+    - python scripts/user_view_test.py
+  tool_probe:
+    - python scripts/tool_probe.py
+
+paths:
+  docs: docs
+  reports: reports
+  scripts: scripts
+  tests: tests
+  artifacts: artifacts
+  fixtures: fixtures
+  schemas: schemas
+
+agent_policy:
+  primary_agent_surface: cursor
+  secondary_agent_surface: codex
+  default_mode: safe
+  allow_real_api: false
+  allow_real_publish: false
+  require_web_search_for_fresh_info: true
+  require_tool_probe_before_tool_plan: true
+  require_tool_usage_log: true
+  require_report: true
+  require_gate_before_commit: true
+  max_scope_per_round: small
+  prefer_incremental_changes: true
+
+severity:
+  p0: "data loss, secret leak, app cannot start, build completely broken, destructive behavior, real publish/API misfire"
+  p1: "core user flow broken, main feature unusable, core tests failing, user cannot complete main task"
+  p2: "non-critical feature issue, UI/UX defect, partial degradation"
+  p3: "docs, refactor, polish, non-blocking improvement"
+
+round:
+  report_schema: schemas/agent_round_report.schema.json
+  latest_report: reports/latest-agent-report.json
+  audit_log: reports/agent_audit_log.jsonl
+  roadmap: docs/AGENT_ROADMAP.md
+  tool_probe_report: reports/tool_probe_report.json
+  gate_result: reports/gate_result.json

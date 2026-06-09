@@ -168,7 +168,11 @@ def test_field_capability_model() -> None:
     assert "fixed_collection" in ids
     assert "wechat_backend_schedule" in ids
     coll = next(c for c in caps if c["field_id"] == "fixed_collection")
+    schedule = next(c for c in caps if c["field_id"] == "wechat_backend_schedule")
+    notify = next(c for c in caps if c["field_id"] == "recommend_notify")
     assert coll["level"] == "browser_required"
+    assert schedule["level"] == "browser_required"
+    assert notify["level"] == "browser_required"
 
 
 def test_batch_publish_config_fixed_collection_persists(tmp_path: Path) -> None:
@@ -238,6 +242,11 @@ def test_mock_task_package_simulation_no_backend_locate(tmp_path: Path) -> None:
     assert task["simulation"] is True
     assert "locate_draft" not in task["required_actions"]
     assert task["target_backend"] == "local_mock"
+    assert "wechat_backend_schedule" in task["target_field_values"]
+    assert (
+        task["target_field_values"]["wechat_backend_schedule"]
+        == "agent_prepare_and_save_draft_user_final_publish"
+    )
 
 
 def test_delete_manifest_stable_media_id(tmp_path: Path) -> None:

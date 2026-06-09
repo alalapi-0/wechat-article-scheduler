@@ -22,7 +22,7 @@ def client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(cfg))
 
 
-def test_run_once_gate_blocked_real_publish(tmp_path: Path) -> None:
+def test_run_once_gate_allows_real_draft_creation_without_cover(tmp_path: Path) -> None:
     db_path = tmp_path / "r110b.sqlite3"
     db.init_db(db_path)
     cfg = make_test_config(tmp_path, db_path)
@@ -43,12 +43,11 @@ def test_run_once_gate_blocked_real_publish(tmp_path: Path) -> None:
         )
         conn.commit()
         pf = build_publish_preflight(cfg, conn)
-    assert pf["run_once_gate"]["blocked"] is True
-    assert pf["ready"] is False
+    assert pf["run_once_gate"]["blocked"] is False
+    assert pf["ready"] is True
     client = TestClient(create_app(cfg))
     res = client.post("/api/run-once").json()
-    assert res.get("blocked_by_preflight") is True
-    assert res.get("processed", 0) == 0
+    assert res.get("blocked_by_preflight") is not True
 
 
 def test_publish_preflight_has_run_once_gate(client: TestClient) -> None:

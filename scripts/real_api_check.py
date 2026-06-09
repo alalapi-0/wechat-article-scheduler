@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""真实微信 API 批量验证（默认 draft-only；--publish 才提交 freepublish）。
+"""真实微信 API 批量验证（只验证草稿创建；不提交 freepublish）。
 
 从环境变量 / .env 读取凭证，不打印 secret。报告写入 reports/real_api_runs/。
 """
@@ -282,18 +282,12 @@ def run_check(
             )
             result.media_id = draft.media_id[:16] + "..." if len(draft.media_id) > 16 else draft.media_id
             result.content_len = len(sample["body"])
-            submit = adapter.submit_publish(draft.media_id, force=allow_publish)
-            if submit.get("skipped") and not allow_publish:
-                result.ok = True
-            elif allow_publish and not submit.get("skipped"):
+            submit = adapter.submit_publish(draft.media_id, force=False)
+            if submit.get("skipped"):
                 result.ok = True
             else:
                 result.ok = False
-                result.error = (
-                    "发布提交未执行（--publish 模式下应调用 freepublish/submit）"
-                    if allow_publish
-                    else "意外提交了发布（draft-only 模式应跳过 freepublish/submit）"
-                )
+                result.error = "意外提交了发布（本脚本只应验证 draft/add 并跳过 freepublish/submit）"
         except Exception as exc:  # noqa: BLE001
             result.error = str(exc)[:500]
         result.quality_status = _quality_status(ok=result.ok, body=sample["body"], notes=notes)
@@ -332,7 +326,7 @@ def _write_report(report: RunReport) -> Path:
         f"- mock_used: {report.mock_used}",
         f"- auto_approve: {report.auto_approve}",
         f"- auto_approved_count: {report.auto_approved_count}",
-        f"- allow_publish: {report.allow_publish}",
+        f"- allow_publish: {report.allow_publish} (ignored; draft-only check)",
         f"- enable_publish: {report.enable_publish}",
         f"- token_ok: {report.token_ok}",
         f"- samples: {report.samples_requested}",
@@ -375,15 +369,10 @@ def _write_report(report: RunReport) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="真实微信 API 闭环验证（默认 draft-only）")
+    parser = argparse.ArgumentParser(description="真实微信 API 草稿创建验证（不提交发布）")
     parser.add_argument("--samples", type=int, default=3, help="草稿样本数量（默认 3）")
     parser.add_argument("--token-only", action="store_true", help="仅验证 access_token")
     parser.add_argument("--dry-run", action="store_true", help="不调用 draft/add")
-    parser.add_argument(
-        "--publish",
-        action="store_true",
-        help="真实提交 freepublish/submit；会消耗发布额度，仅用于明确的正式发布测试",
-    )
     parser.add_argument(
         "--auto-approve",
         action="store_true",
@@ -400,7 +389,7 @@ def main() -> int:
         samples=max(1, args.samples),
         dry_run=args.dry_run,
         token_only=args.token_only,
-        allow_publish=args.publish,
+        allow_publish=False,
         auto_approve=True if args.auto_approve else None,
     )
     out = _write_report(report)

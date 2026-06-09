@@ -43,13 +43,17 @@ REQUIRED_ACTIONS = [
     "check_comment_setting",
     "check_recommend_notify",
     "check_original_declaration",
-    "set_backend_schedule_time",
-    "check_schedule_setting",
     "check_collection_setting",
-    "fill_non_final_field",
+    "set_pre_publish_fields",
+    "set_target_schedule_if_available",
+    "save_draft",
+    "reopen_same_draft",
+    "verify_saved_field_persistence",
+    "record_manual_final_publish_steps",
+    "report_non_api_field_gap",
     "take_screenshot",
     "generate_report",
-    "stop_before_final_schedule_confirm",
+    "stop_before_publish_or_schedule_confirm",
 ]
 
 FORBIDDEN_ACTIONS = [
@@ -62,7 +66,8 @@ FORBIDDEN_ACTIONS = [
     "delete_draft",
     "delete_article",
     "operate_outside_approved_manifest",
-    "schedule_without_batch_confirmation",
+    "schedule_without_user_confirmation",
+    "click_final_schedule_confirm",
     "click_final_publish_without_user_confirmation",
     "hide_browser_window",
     "ignore_platform_warning",
@@ -171,9 +176,10 @@ def _backend_field_targets(
         "fixed_collection": pub_cfg.fixed_collection or package.collection_name,
         "need_open_comment": pub_cfg.need_open_comment,
         "only_fans_can_comment": pub_cfg.only_fans_can_comment,
-        "wechat_backend_schedule": package.scheduled_at,
-        "backend_schedule_setup": "agent_may_assist_set_time_only",
-        "backend_schedule_final_confirm": "user_only_in_wechat_backend",
+        "wechat_backend_schedule": "agent_prepare_and_save_draft_user_final_publish",
+        "scheduled_draft_creation": package.scheduled_at,
+        "manual_backend_publish": "user_only_final_publish_and_security_verification",
+        "backend_schedule_final_confirm": "user_only",
         "recommend_notify": "browser_required",
         "show_cover_pic": "browser_required_verify_in_backend",
         "cover_crop": cover_cfg or "verify_crop_in_backend",
@@ -301,8 +307,8 @@ def export_task_package(config: AppConfig, conn: Any, job_id: int) -> dict[str, 
             "target_field_values": _backend_field_targets(package, pub_cfg, row),
             "human_confirmation_steps": {
                 "manual_login": "用户扫码登录后在本项目或 CLI 确认",
-                "schedule_setup": "Agent 可辅助设置后台定时时间，不得点击最终确认",
-                "final_schedule_confirm": "用户必须在公众号后台亲自点击最终定时群发确认",
+                "draft_check": "Agent 可辅助定位和核对草稿，不得点击发布/群发/定时确认",
+                "manual_backend_publish": "用户必须在公众号后台自行发布或定时",
                 "final_publish": "禁止 Agent 点击最终发布",
             },
             "local_files": {
@@ -323,7 +329,7 @@ def export_task_package(config: AppConfig, conn: Any, job_id: int) -> dict[str, 
             "human_confirmation": (
                 "演练任务包：不得在真实公众号后台定位 mock 草稿；仅供本地核对流程。"
                 if simulation
-                else "需要人工确认；外部 Agent 不得点击最终发布按钮。"
+                else "需要人工确认；外部 Agent 不得点击发布、群发或后台定时确认按钮。"
             ),
         }
     )

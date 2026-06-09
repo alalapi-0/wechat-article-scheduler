@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## 基本原则
 
-- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP（chrome-devtools、context7、filesystem、github、playwright、stitch）；自动推进轮开始前运行 `npm run check:mcp`、`npm run check:stitch` 或对应 Python 检查并确认 Cursor 已加载 MCP。详见 `.cursor/rules/mcp-required.mdc`。
+- 本项目优先使用 `.cursor/mcp.json` 中声明的 MCP（chrome-devtools、wechat-chrome-session、context7、filesystem、github、playwright、stitch）；自动推进轮开始前运行 `npm run check:mcp`、`npm run check:stitch` 或对应 Python 检查并确认 Cursor 已加载 MCP。详见 `.cursor/rules/mcp-required.mdc`。
 - 若 MCP 未加载，记录原因并尝试按 `docs/agent_skills/mcp_usage_skill.md` 修复；不因单个 MCP 不可用而停止整轮，除非该 MCP 是当前任务唯一阻塞。
 
 ## 浏览器与 UI
@@ -17,6 +17,7 @@ alwaysApply: true
 - **不得**只根据代码、静态阅读或单张截图判断页面成功。
 - 必须查看页面、走真实用户路径，并检查 **console** 与 **network**（核心 API 无失败）。
 - 启动 Web 验证前：`python -m wechat_article_scheduler.cli serve`（默认 `http://127.0.0.1:8080/`）。
+- 复用用户现有公众号登录态时只能调用 `wechat-chrome-session`。如果 Agent 调用的是 `browser_tabs`，或只能列出 Cursor 内置 localhost 页面，应判定为“选错工具”，停止并报告 MCP 未加载。
 
 ## 文件系统
 

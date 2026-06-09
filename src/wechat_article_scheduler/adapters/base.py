@@ -55,7 +55,7 @@ class WechatAdapter(ABC):
 
     @abstractmethod
     def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-        """提交发布（mock 仅返回成功结构）。force=True 只能由全局开关和任务级确认共同决定。"""
+        """历史提交发布接口；当前调度策略只创建草稿，不应传入 force=True。"""
 
     def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
         """draft/batchget 分页列表（子类可覆盖）。"""

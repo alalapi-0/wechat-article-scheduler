@@ -12,6 +12,7 @@ const MCP_PATH = path.join(ROOT, ".cursor", "mcp.json");
 
 const REQUIRED_SERVERS = [
   "chrome-devtools",
+  "wechat-chrome-session",
   "context7",
   "filesystem",
   "github",
@@ -162,6 +163,17 @@ function main() {
       warnings.push(
         "github MCP 未引用 GITHUB_TOKEN / GITHUB_PERSONAL_ACCESS_TOKEN 环境变量占位符"
       );
+    }
+  }
+
+  if (servers["wechat-chrome-session"]) {
+    const cfg = servers["wechat-chrome-session"];
+    const args = Array.isArray(cfg.args) ? cfg.args : [];
+    if (!args.includes("--autoConnect") && !args.includes("--auto-connect")) {
+      issues.push("wechat-chrome-session 必须启用 --autoConnect");
+    }
+    if (!args.includes("--redactNetworkHeaders") && !args.includes("--redact-network-headers")) {
+      issues.push("wechat-chrome-session 必须启用 --redactNetworkHeaders");
     }
   }
 

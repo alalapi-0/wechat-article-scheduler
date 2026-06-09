@@ -36,8 +36,8 @@ BACKEND_FIELD_CAPABILITIES: list[BackendFieldCapability] = [
     {
         "field_id": "recommend_notify",
         "label": "推荐/通知",
-        "level": "unavailable",
-        "note": "当前 API 未映射；仅任务目标记录，需后台人工",
+        "level": "browser_required",
+        "note": "官方草稿/发布 API 未提供对应字段；需公众号后台或外部 Agent 设置",
     },
     {
         "field_id": "show_cover_pic",
@@ -47,9 +47,9 @@ BACKEND_FIELD_CAPABILITIES: list[BackendFieldCapability] = [
     },
     {
         "field_id": "wechat_backend_schedule",
-        "label": "后台定时",
-        "level": "unavailable",
-        "note": "本地 scheduler 到点执行；不能写入微信后台定时字段",
+        "label": "后台发布/定时",
+        "level": "browser_required",
+        "note": "草稿 API 不支持；浏览器 Agent 可填写目标时间并保存草稿，正式发表、扫码或手机确认由用户本人完成",
     },
 ]
 

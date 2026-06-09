@@ -1,0 +1,189 @@
+version: 1
+updated_at: "2026-06-09T00:00:00Z"
+repo_name: wechat-article-scheduler
+
+agent_surfaces:
+  cursor:
+    primary: true
+    available: true
+    recommended_use:
+      - local editing
+      - UI debugging
+      - browser-based user-view testing
+      - repo rule enforcement
+      - MCP-assisted workflows
+      - small incremental rounds
+    notes: "主力 Agent；每轮读取 AGENTS.md + agent_layer.yaml + latest-agent-report"
+  codex:
+    primary: false
+    available: unknown
+    recommended_use:
+      - long-horizon implementation
+      - code review
+      - refactor
+      - cloud/background tasks
+      - worktree-based parallel tasks
+    notes: "额度有限时仅高价值 handoff；读取同一套 AGENTS.md 与 docs/CODEX_HANDOFF.md"
+  local_scripts:
+    primary: true
+    available: true
+    recommended_use:
+      - deterministic gates
+      - reports
+      - smoke tests
+      - artifact checks
+      - tool_probe
+
+tools:
+  shell:
+    available: true
+    safe_probe: "pwd"
+    use_for:
+      - run gates
+      - inspect repo
+      - run tests
+      - start local web server
+    never_use_for:
+      - destructive deletion without approval
+      - printing secrets
+      - real publish triggers
+  git:
+    available: true
+    safe_probe: "git status --short"
+    use_for:
+      - inspect changes
+      - branch workflow
+      - commit if user explicitly allows
+    never_use_for:
+      - reset --hard without explicit approval
+      - force push to main
+  web_search:
+    available: true
+    use_for:
+      - latest official docs
+      - current platform rules
+      - dependency API changes
+      - model/tool capability changes
+    fallback:
+      - ask user to provide docs
+      - use local docs/RESEARCH_NOTES.md
+      - context7 when MCP available
+  context7:
+    available: unknown
+    configured: true
+    callable_now: unknown
+    safe_probe: "MCP thread check + library query"
+    use_for:
+      - FastAPI docs
+      - Playwright docs
+      - library API usage
+    fallback:
+      - web_search
+      - official GitHub README
+  browser:
+    available: unknown
+    configured: false
+    use_for:
+      - UI smoke tests via Cursor Browser tool when exposed
+    fallback:
+      - playwright MCP
+      - chrome-devtools MCP
+  playwright:
+    available: true
+    configured: true
+    callable_now: unknown
+    safe_probe: "npx playwright --version"
+    use_for:
+      - e2e tests
+      - user-view flows
+      - regression tests
+      - multi-viewport screenshots
+    fallback:
+      - pytest tests/test_ui_e2e.py
+      - scripts/user_view_test.py
+  chrome_devtools:
+    available: unknown
+    configured: true
+    callable_now: unknown
+    safe_probe: "npm run check:mcp"
+    use_for:
+      - inspect DOM
+      - console errors
+      - network failures
+      - local web UI at http://127.0.0.1:8080/
+    fallback:
+      - playwright MCP
+  wechat_chrome_session:
+    available: unknown
+    configured: true
+    callable_now: unknown
+    safe_probe: "thread must expose wechat-chrome-session tools"
+    use_for:
+      - logged-in WeChat official account backend
+      - draft locate and field verify
+    never_use_for:
+      - local web workbench
+      - final publish click
+    fallback:
+      - external agent task package export
+      - manual user verification
+  filesystem_mcp:
+    available: unknown
+    configured: true
+    callable_now: unknown
+    safe_probe: "read AGENTS.md via MCP"
+    use_for:
+      - safe file inspection within workspace
+    fallback:
+      - Cursor Read/Grep tools
+  github_mcp:
+    available: unknown
+    configured: true
+    callable_now: unknown
+    safe_probe: "gh --version"
+    use_for:
+      - issues
+      - PRs
+      - remote repo inspection
+    fallback:
+      - gh CLI
+  stitch:
+    available: unknown
+    configured: true
+    callable_now: unknown
+    safe_probe: "npm run check:stitch"
+    use_for:
+      - UI design prototypes before implementation
+    fallback:
+      - docs/design templates
+  project_specific:
+    cli:
+      available: true
+      entry: "python -m wechat_article_scheduler.cli"
+      use_for:
+        - scan
+        - plan
+        - run-once
+        - serve
+        - export-agent-task
+    agent_gate_legacy:
+      available: true
+      entry: "python scripts/agent_gate.py gate"
+      use_for:
+        - round governance
+        - pytest full suite
+    agent_layer_gate:
+      available: true
+      entry: "python scripts/agent_layer_gate.py"
+      use_for:
+        - Layer 2.0 file checks
+        - structured gate_result.json
+
+policies:
+  default_real_api: false
+  default_real_publish: false
+  require_dry_run: true
+  require_report: true
+  require_gate_before_commit: true
+  require_tool_usage_log: true
+  default_wechat_mode: mock

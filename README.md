@@ -239,6 +239,22 @@ bash scripts/run_scheduler_daemon.sh
 
 阶段一完成前，不开发其他平台。
 
+## Cursor MCP Runbook
+
+任务开始前请先阅读 **[`docs/runbooks/cursor_mcp_runbook.md`](docs/runbooks/cursor_mcp_runbook.md)**（MCP readiness 标准检查流程）。
+
+| 文档 | 用途 |
+|------|------|
+| [`docs/runbooks/cursor_mcp_runbook.md`](docs/runbooks/cursor_mcp_runbook.md) | 配置检查 + 当前线程最小探测 |
+| [`docs/runbooks/browser_context_guide.md`](docs/runbooks/browser_context_guide.md) | 浏览器上下文隔离说明 |
+| [`docs/runbooks/mcp_troubleshooting.md`](docs/runbooks/mcp_troubleshooting.md) | 常见失败与恢复 |
+
+要点：
+
+- **本地 Web UI**（`http://127.0.0.1:8080/`）可使用 `chrome-devtools` 或 `playwright`（当前为 isolated 实例）。
+- **微信公众号已登录后台**需要单独浏览器上下文：`wechat-chrome-session` 或用户已登录 Chrome + CDP。
+- **不要把** isolated browser（探测时常见的 `about:blank`）**当作**已登录公众号浏览器。
+
 ## MCP 配置检查
 
 本项目在 Cursor 中要求启用 `chrome-devtools`、`wechat-chrome-session`、`context7`、`filesystem`、`github`、`playwright`、`stitch`。检查命令：

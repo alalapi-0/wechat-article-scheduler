@@ -62,9 +62,9 @@ outbox/
 - `compare_cover`
 - `compare_article_body`
 - `check_comment_setting`
-- `check_schedule_setting`
+- `record_manual_backend_publish_steps`
 - `check_collection_setting`
-- `fill_non_final_field`
+- `report_non_api_field_gap`
 - `take_screenshot`
 - `generate_report`
 
@@ -78,7 +78,9 @@ outbox/
 - `change_account_security_settings`
 - `delete_draft`
 - `delete_article`
-- `mass_publish`
+- `operate_outside_approved_manifest`
+- `schedule_without_user_confirmation`
+- `click_final_schedule_confirm`
 - `click_final_publish_without_user_confirmation`
 - `hide_browser_window`
 - `ignore_platform_warning`
@@ -97,5 +99,4 @@ outbox/
 - `LLM_API_KEY`
 - `OPENAI_API_KEY`
 
-任务包可以包含草稿标题、计划时间、发布设置、检查清单和本地预览文件路径。`media_id` 仅用于本地对照，不包含访问权限；实际后台定位优先使用标题。
-
+任务包可以包含草稿标题、计划草稿创建时间、人工后台发布清单、检查清单和本地预览文件路径。`media_id` 仅用于本地对照，不包含访问权限；实际后台定位优先使用标题。

@@ -23,7 +23,7 @@ def client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(cfg))
 
 
-def test_plan_gate_blocked_real_publish(tmp_path: Path) -> None:
+def test_plan_gate_allows_draft_schedule_without_cover(tmp_path: Path) -> None:
     db_path = tmp_path / "r111b.sqlite3"
     db.init_db(db_path)
     cfg = make_test_config(tmp_path, db_path)
@@ -44,11 +44,10 @@ def test_plan_gate_blocked_real_publish(tmp_path: Path) -> None:
         )
         conn.commit()
         pf = build_publish_preflight(cfg, conn)
-    assert pf["plan_gate"]["blocked"] is True
+    assert pf["plan_gate"]["blocked"] is False
     client = TestClient(create_app(cfg))
     res = client.post("/api/plan").json()
-    assert res.get("blocked_by_preflight") is True
-    assert res.get("planned", 0) == 0
+    assert res.get("blocked_by_preflight") is not True
 
 
 def test_publish_preflight_has_plan_gate(client: TestClient) -> None:

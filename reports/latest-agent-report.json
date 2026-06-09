@@ -1,0 +1,178 @@
+{
+  "round_id": "layer2-004",
+  "timestamp": "2026-06-09T13:28:00Z",
+  "agent": "cursor-composer",
+  "agent_surface": "cursor",
+  "mode": "tool-probe",
+  "goal": "MCP 线程 callable_now 验证 + 更新 tool_probe_report.json 与 TOOL_INVENTORY.md",
+  "scope": [
+    "reports/tool_probe_report.json",
+    "docs/TOOL_INVENTORY.md",
+    "reports/latest-agent-report.json",
+    "reports/agent_audit_log.jsonl"
+  ],
+  "repo_status_before": "main branch; many pre-existing uncommitted changes",
+  "tool_probe_status": "passed",
+  "tools_available": [
+    "shell",
+    "git",
+    "node",
+    "npm",
+    "python3",
+    "uv",
+    "pytest",
+    "gh",
+    "ffmpeg",
+    "playwright_cli",
+    "web_search",
+    "playwright_mcp",
+    "chrome_devtools_mcp",
+    "wechat_chrome_session_mcp",
+    "context7_mcp",
+    "github_mcp",
+    "stitch_mcp",
+    "filesystem_mcp"
+  ],
+  "tools_used": [
+    {
+      "tool": "shell",
+      "purpose": "tool_probe, check:mcp, check:cursor-mcp, agent_layer_gate",
+      "result": "all layer2 commands completed; full pytest 1 pre-existing fail",
+      "fallback_used": false
+    },
+    {
+      "tool": "CallMcpTool",
+      "purpose": "thread safe probes for 6 required MCPs",
+      "result": "all callable_now=true",
+      "fallback_used": false
+    },
+    {
+      "tool": "Read",
+      "purpose": "AGENTS.md chain, tool schemas, prior reports",
+      "result": "layer2-004 context loaded",
+      "fallback_used": false
+    },
+    {
+      "tool": "playwright_mcp",
+      "purpose": "browser_tabs list safe probe",
+      "result": "isolated context 0 tabs",
+      "fallback_used": false
+    },
+    {
+      "tool": "chrome_devtools_mcp",
+      "purpose": "list_pages safe probe",
+      "result": "about:blank selected",
+      "fallback_used": false
+    },
+    {
+      "tool": "wechat_chrome_session",
+      "purpose": "list_pages safe probe",
+      "result": "7 pages incl mp.weixin.qq.com backend",
+      "fallback_used": false
+    },
+    {
+      "tool": "context7",
+      "purpose": "resolve-library-id FastAPI",
+      "result": "/fastapi/fastapi returned",
+      "fallback_used": false
+    },
+    {
+      "tool": "github_mcp",
+      "purpose": "search_repositories wechat-article-scheduler",
+      "result": "alalapi-0/wechat-article-scheduler found",
+      "fallback_used": false
+    },
+    {
+      "tool": "stitch",
+      "purpose": "list_projects view=owned",
+      "result": "3 projects returned",
+      "fallback_used": false
+    }
+  ],
+  "tools_not_used": [
+    {
+      "tool": "web_search",
+      "reason": "layer2-004 is registry verification only; no fresh external docs needed"
+    },
+    {
+      "tool": "filesystem_mcp",
+      "reason": "thread registry confirmed 14 tools; Cursor Read/Grep sufficient for doc updates"
+    },
+    {
+      "tool": "cursor-ide-browser",
+      "reason": "workspace playwright/chrome-devtools cover local UI tasks per policy"
+    },
+    {
+      "tool": "codex",
+      "reason": "CODEX_AVAILABLE unknown; no handoff this round"
+    },
+    {
+      "tool": "agent_gate.py gate",
+      "reason": "layer2 scope uses agent_layer_gate only; full gate deferred to feature rounds"
+    }
+  ],
+  "web_research": [],
+  "mcp_thread_registry": {
+    "status": "PASS",
+    "configured_servers": 7,
+    "callable_servers": 7,
+    "cli_divergence": "check:cursor-mcp shows 6 servers needs approval; thread probes all passed",
+    "servers": {
+      "playwright": { "configured": true, "callable_now": true, "fallback": "pytest e2e" },
+      "chrome-devtools": { "configured": true, "callable_now": true, "fallback": "playwright" },
+      "wechat-chrome-session": { "configured": true, "callable_now": true, "fallback": "external task package" },
+      "context7": { "configured": true, "callable_now": true, "fallback": "web_search" },
+      "filesystem": { "configured": true, "callable_now": true, "fallback": "Cursor Read" },
+      "github": { "configured": true, "callable_now": true, "fallback": "gh CLI" },
+      "stitch": { "configured": true, "callable_now": true, "fallback": "docs/design templates" }
+    }
+  },
+  "changed_files": [
+    "reports/tool_probe_report.json",
+    "docs/TOOL_INVENTORY.md",
+    "reports/latest-agent-report.json",
+    "reports/agent_audit_log.jsonl",
+    "reports/gate_result.json"
+  ],
+  "commands_run": [
+    "python3 scripts/tool_probe.py",
+    "npm run check:mcp",
+    "npm run check:cursor-mcp",
+    "python3 scripts/agent_layer_gate.py"
+  ],
+  "test_results": [
+    "tests/test_agent_layer_gate.py: 2 passed",
+    "agent_layer_gate layer_test: 463 passed, 1 failed, 1 skipped (pre-existing)",
+    "FAILED tests/test_user_view_rounds_abcd.py::test_weekly_plan_three_weeks_zero_repeat"
+  ],
+  "issues_found": [
+    "cursor-agent CLI reports 6 MCPs needs approval while thread exposes all tools",
+    "Pre-existing pytest failure test_weekly_plan_three_weeks_zero_repeat (P1)"
+  ],
+  "issues_fixed": [
+    "tool_probe_report.json callable_now was unknown for all MCPs",
+    "TOOL_INVENTORY.md stale layer2-001 thread false-negative"
+  ],
+  "remaining_issues": [
+    "CLI vs thread registry divergence needs user awareness each session",
+    "test_weekly_plan_three_weeks_zero_repeat failing (pre-existing P1)",
+    "layer2-022 user-view browser smoke still pending"
+  ],
+  "severity_summary": {
+    "p0": 0,
+    "p1": 1,
+    "p2": 1,
+    "p3": 0
+  },
+  "gate_status": "partial",
+  "blockers": [],
+  "risks": [
+    "New Cursor sessions may lose MCP thread exposure — re-probe each round",
+    "Multitask sub-agents may not inherit workspace MCP tools"
+  ],
+  "next_recommended_round": "layer2-005",
+  "human_decisions_required": [
+    "Optional: approve MCP servers in Settings to align CLI status with thread",
+    "Whether to fix pre-existing test_weekly_plan_three_weeks_zero_repeat before layer2-022"
+  ]
+}

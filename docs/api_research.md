@@ -1,6 +1,6 @@
 # 微信公众平台 API 调研
 
-> 基于官方文档与公开资料整理（2026-05）。接入前请在公众平台确认账号类型与接口权限。
+> 基于官方文档整理，2026-06-06 复核。接入前请在公众平台确认账号类型与接口权限。
 
 ## 认证
 
@@ -24,16 +24,21 @@
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| [发布草稿](https://developers.weixin.qq.com/doc/subscription/api/public/api_freepublish_submit.html) | `POST /cgi-bin/freepublish/submit` | Body: `media_id`；异步结果通过回调 `PUBLISHJOBFINISH` |
+| [发布草稿](https://developers.weixin.qq.com/doc/service/api/public/api_freepublish_submit.html) | `POST /cgi-bin/freepublish/submit` | Body 只有 `media_id`；异步结果通过回调 `PUBLISHJOBFINISH` |
 
 常见错误码：`48001` 未授权、`53503` 草稿未通过检查。
+
+官方[发布能力](https://developers.weixin.qq.com/doc/service/guide/product/publish.html)列出了发布列表、删除、状态、详情和提交发布接口，没有“写入后台定时时间”的接口。后台定时发布不能由草稿 API 或 `freepublish/submit` 设置。
+
+当前账号截图显示上述发布接口均为“无权限”，草稿接口均为“有权限”。因此它可以管理草稿，但不能使用本地 scheduler 到点调用发布接口。
 
 ## 本项目策略
 
 - 默认 `WECHAT_MODE=mock`，`MockWechatAdapter` 生成本地 `mock_media_*` id。
 - `RealWechatAdapter` 在 `WECHAT_MODE=real` 且凭证齐全时调用：token 缓存 → thumb 上传 → `draft/add` → `freepublish/submit`（可通过 `WECHAT_ENABLE_PUBLISH=false` 跳过发布）。
 - 单元测试 mock HTTP，不默认联网。
-- **待人工确认**：订阅号 vs 服务号权限差异、封面 `thumb_media_id` 获取流程、是否需素材库永久 media。
+- **当前账号固定策略**：`WECHAT_ENABLE_PUBLISH=false`，发布与后台定时走能力门控和外部任务包。
+- **待人工确认**：封面 `thumb_media_id` 获取流程、是否需素材库永久 media。
 
 ## 安全
 

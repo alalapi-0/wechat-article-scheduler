@@ -8,6 +8,7 @@ alwaysApply: true
 当前仓库默认需要以下 **Workspace MCP Servers**（见 `.cursor/mcp.json`）：
 
 - `chrome-devtools`
+- `wechat-chrome-session`
 - `context7`
 - `filesystem`
 - `github`
@@ -23,6 +24,7 @@ alwaysApply: true
 ## 任务与工具映射
 
 - **UI / 浏览器任务**：必须使用 **chrome-devtools** 或 **playwright** 做真实浏览器检查（页面 + console + network + 核心流程），不得仅凭代码或截图判断成功。
+- **已登录公众号页面**：必须使用 **wechat-chrome-session**。`browser_tabs`、普通 `chrome-devtools`、`playwright --isolated` 只能看到各自浏览器上下文，不能证明已连接用户现有 Chrome。当前会话没有暴露该 MCP 的工具时必须停止，不得降级或新开登录页。
 - **新页面 / UI 方案**：先读 `docs/design/`；Stitch 可用时用它生成设计输入，导出后再按当前技术栈实现。
 - **文档与依赖不确定**：优先用 **context7** 查询第三方库/框架文档。
 - **文件读写**：仅当前项目目录；filesystem 仅 `${workspaceFolder}`，禁止 `/`、`~`、用户主目录根、磁盘根。

@@ -1,0 +1,26 @@
+---
+description: "安全门禁 — 禁止真实发布与密钥泄露"
+alwaysApply: true
+---
+
+# Safety Gates
+
+## 默认禁止
+
+- 读取/打印 `.env`、token、cookie
+- 默认 `WECHAT_MODE=real`
+- 真实发布 / 群发 / 确认定时发布
+- `git push --force` main
+- 为通过 gate 删除失败测试
+
+## 每轮必须
+
+- 运行 `python scripts/agent_layer_gate.py`（Layer 2）
+- 涉及功能 round 时运行 `python scripts/agent_gate.py gate`
+- 生成 `reports/latest-agent-report.json`
+
+## 高风险
+
+删除用户文稿、修改已发布内容、真实 API → 需人工确认。
+
+详见 `docs/AGENT_SAFETY.md`。

@@ -1,0 +1,28 @@
+---
+description: "工具映射与 MCP 必须使用策略"
+alwaysApply: true
+---
+
+# Tool Usage
+
+## 任务阶段 → 工具
+
+| 阶段 | 工具 |
+|------|------|
+| 理解仓库 | Read, Grep, AGENTS.md |
+| 最新文档 | WebSearch, context7 |
+| 改代码 | Edit + pytest |
+| 本地 Web UI | chrome-devtools 或 playwright |
+| 微信已登录后台 | wechat-chrome-session only |
+| 门禁 | agent_layer_gate + agent_gate |
+| 报告 | latest-agent-report.json |
+
+## MCP 禁止闲置
+
+- UI 任务：必须尝试 browser 类 MCP
+- 库 API 不确定：必须尝试 context7 或 web_search
+- 可用但未用：在报告 `tools_not_used` 说明原因
+
+## Fallback
+
+见 `docs/TOOL_USAGE_POLICY.md` §4。

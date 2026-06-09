@@ -14,6 +14,7 @@ MCP_PATH = ROOT / ".cursor" / "mcp.json"
 
 REQUIRED_SERVERS = (
     "chrome-devtools",
+    "wechat-chrome-session",
     "context7",
     "filesystem",
     "github",
@@ -148,6 +149,20 @@ def main() -> int:
             warnings.append(
                 "github MCP 未引用 GITHUB_TOKEN / GITHUB_PERSONAL_ACCESS_TOKEN 环境变量占位符"
             )
+
+    if "wechat-chrome-session" in servers:
+        cfg = servers["wechat-chrome-session"]
+        args = cfg.get("args", []) if isinstance(cfg, dict) else []
+        if not isinstance(args, list):
+            issues.append("wechat-chrome-session args 必须是数组")
+        else:
+            if "--autoConnect" not in args and "--auto-connect" not in args:
+                issues.append("wechat-chrome-session 必须启用 --autoConnect")
+            if (
+                "--redactNetworkHeaders" not in args
+                and "--redact-network-headers" not in args
+            ):
+                issues.append("wechat-chrome-session 必须启用 --redactNetworkHeaders")
 
     print("check_mcp_config: PASS" if not issues else "check_mcp_config: FAIL")
     print(f"  path: {MCP_PATH.relative_to(ROOT)}")

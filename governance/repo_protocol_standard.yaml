@@ -815,6 +815,32 @@ versioning_policy:
     minor: "New optional fields, new recommended files, stronger validation."
     major: "Breaking field renames, changed authority order or incompatible reading protocol."
 
+mcp:
+  readiness_check_required: true
+  runbook: docs/runbooks/cursor_mcp_runbook.md
+  config_check_commands:
+    - "node scripts/check_mcp_config.js"
+    - "npm run check:stitch"
+  required_servers:
+    - chrome-devtools
+    - playwright
+    - context7
+    - filesystem
+    - github
+    - stitch
+    - wechat-chrome-session
+  thread_probe_required: true
+  baseline_date: "2026-06-07"
+  browser_context_policy:
+    local_web_ui: "chrome-devtools/playwright isolated browser is acceptable"
+    wechat_backend: "requires logged-in browser profile, CDP session, or wechat-chrome-session"
+    do_not_assume_isolated_browser_is_logged_in: true
+  security:
+    never_log_tokens: true
+    never_log_cookies: true
+    never_commit_browser_profile: true
+    never_click_final_publish_without_user_confirmation: true
+
 project_specific_extensions:
   wechat_article_scheduler:
     project_type: python_cli_project

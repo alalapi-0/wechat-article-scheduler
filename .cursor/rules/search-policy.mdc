@@ -1,0 +1,18 @@
+---
+description: "遇到可能过期信息时必须搜索官方文档"
+alwaysApply: true
+---
+
+# Search Policy
+
+遇到以下情况**必须先搜索**（或 context7），再改代码：
+
+- 工具能力（Cursor/Codex/MCP/Playwright）
+- 依赖 API / 版本差异
+- 微信公众号平台规则
+- 无法从本地代码判断的报错
+
+写入 `docs/RESEARCH_NOTES.md`；优先官方来源。  
+无法搜索时记录 `TOOL_UNAVAILABLE_WEB_SEARCH`。
+
+详见 `docs/SEARCH_POLICY.md`。

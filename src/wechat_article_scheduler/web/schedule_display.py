@@ -1,4 +1,4 @@
-"""定时发布展示辅助（Round 40）。"""
+"""草稿创建排期展示辅助（Round 40）。"""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def format_scheduled_at(iso: str | None) -> str:
 
 
 def summarize_schedule(conn: Any, *, limit: int = 5) -> dict[str, Any]:
-    """汇总最近待发布任务与下一篇到点文章。"""
+    """汇总最近待创建草稿任务与下一篇到点文章。"""
     rows = conn.execute(
         """
         SELECT j.id, j.scheduled_at, j.status, a.title
@@ -35,14 +35,14 @@ def summarize_schedule(conn: Any, *, limit: int = 5) -> dict[str, Any]:
     now = datetime.now().isoformat(timespec="seconds")
     due_now = [j for j in pending if (j.get("scheduled_at") or "") <= now]
     next_job = pending[0] if pending else None
-    summary = "暂无待发布任务"
+    summary = "暂无待创建草稿任务"
     if next_job:
         title = (next_job.get("title") or "（无标题）").strip()
         when = format_scheduled_at(next_job.get("scheduled_at"))
         if due_now:
-            summary = f"有 {len(due_now)} 篇已到发布时间，最近一篇是《{title}》"
+            summary = f"有 {len(due_now)} 篇已到草稿创建时间，最近一篇是《{title}》"
         else:
-            summary = f"下一篇《{title}》计划在 {when} 发布"
+            summary = f"下一篇《{title}》计划在 {when} 创建草稿"
     return {
         "pending_count": len(pending),
         "due_now_count": len(due_now),

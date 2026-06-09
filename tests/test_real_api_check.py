@@ -82,7 +82,7 @@ def test_run_check_real_mode_defaults_to_draft_only_without_blocking(
     assert report.success_count == 1
 
 
-def test_run_check_publish_flag_allows_submit(rac, monkeypatch):
+def test_run_check_allow_publish_still_skips_submit(rac, monkeypatch):
     from wechat_article_scheduler.adapters.base import DraftResult
     import wechat_article_scheduler.adapters as adapters_mod
 
@@ -99,8 +99,8 @@ def test_run_check_publish_flag_allows_submit(rac, monkeypatch):
             return DraftResult(media_id="draft-real", raw_response={"media_id": "draft-real"})
 
         def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-            assert force is True
-            return {"publish_id": "pub-1", "media_id": media_id}
+            assert force is False
+            return {"skipped": True, "media_id": media_id}
 
     monkeypatch.setattr(adapters_mod, "get_adapter", lambda cfg: FakeAdapter())  # noqa: ARG005
 

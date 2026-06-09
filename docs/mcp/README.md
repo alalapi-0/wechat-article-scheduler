@@ -2,6 +2,9 @@
 
 本目录说明 Cursor 工作区 MCP 的配置、用途、安全边界和降级方式。
 
+**任务开始前请先读**：[`../runbooks/cursor_mcp_runbook.md`](../runbooks/cursor_mcp_runbook.md)
+
+- [`../runbooks/`](../runbooks/)：MCP readiness Runbook、工具矩阵、浏览器上下文、故障排查
 - [`WORKSPACE_MCP_SERVERS.md`](WORKSPACE_MCP_SERVERS.md)：当前 server 清单与任务映射。
 - `../../.cursor/mcp.json`：实际配置。
 - `../../scripts/check_mcp_config.js`：通用配置检查。

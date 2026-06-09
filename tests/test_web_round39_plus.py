@@ -105,7 +105,7 @@ def test_summarize_schedule_due_now(app_config: AppConfig) -> None:
         conn.commit()
         summary = summarize_schedule(conn)
     assert summary["due_now_count"] == 1
-    assert "已到发布时间" in summary["next_summary"]
+    assert "已到草稿创建时间" in summary["next_summary"]
 
 
 def test_web_auto_runner_enabled_with_auto_execute_job(tmp_path: Path) -> None:

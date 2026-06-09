@@ -27,8 +27,8 @@ ARTICLE_STATUS: dict[str, str] = {
 }
 
 JOB_STATUS: dict[str, str] = {
-    "pending": "待发布",
-    "running": "发布中",
+    "pending": "待创建草稿",
+    "running": "创建草稿中",
     "done": "已完成",
     "failed": "失败",
     "cancelled": "已取消",
@@ -43,7 +43,7 @@ EVENT_TYPE: dict[str, str] = {
     "job_done": "发布完成",
     "waiting_confirmation": "进入待人工确认",
     "proof_submitted": "已提交发布证明",
-    "publish_skipped_draft_only": "正式发布已跳过（草稿-only）",
+    "publish_skipped_draft_only": "自动发布已跳过（仅创建草稿）",
     "outbox_exported": "已导出 outbox 包",
     "draft_created": "微信草稿已创建",
     "job_failed": "发布失败",
@@ -52,11 +52,11 @@ EVENT_TYPE: dict[str, str] = {
 }
 
 MODE_LABELS: dict[str, str] = {
-    "mock": "演练（不会真的发到公众号）",
-    "real": "真实 API 测试（按任务设置创建草稿或正式发布）",
+    "mock": "演练（只模拟创建草稿）",
+    "real": "真实 API（按计划创建公众号草稿）",
 }
 
-RESTORE_SCHEDULE_HINT = "恢复作品不等于恢复排期；删除时已取消的待发布任务不会自动恢复，请重新安排发布时间"
+RESTORE_SCHEDULE_HINT = "恢复作品不等于恢复排期；删除时已取消的草稿创建任务不会自动恢复，请重新安排草稿创建时间"
 
 
 def humanize_restore_result(*, count: int = 1) -> list[str]:
@@ -65,8 +65,8 @@ def humanize_restore_result(*, count: int = 1) -> list[str]:
     return [f"已恢复 {count} 篇作品", RESTORE_SCHEDULE_HINT]
 
 PUBLISH_SWITCH: dict[bool, str] = {
-    False: "不会真的发布",
-    True: "已允许真实发布（请谨慎）",
+    False: "不会自动发布",
+    True: "历史开关已降级：仍只创建草稿",
 }
 
 DRY_RUN_LABELS: dict[bool, str] = {
@@ -78,18 +78,18 @@ ACTION_LABELS: dict[str, str] = {
     "upload": "上传作品与封面",
     "scan": "扫描收件箱",
     "plan": "自动推荐时间",
-    "run-once": "执行到点发布",
+    "run-once": "执行到点草稿创建",
     "status": "刷新状态",
 }
 
 STEP_LABELS: tuple[str, str, str] = (
     "1 收录作品：拖拽上传，或扫描本地收件箱（articles/inbox）",
-    "2 安排时间：自动推荐或自定义设定发布时间",
-    "3 执行到点：到时间后执行发布或演练",
+    "2 安排时间：自动推荐或自定义设定草稿创建时间",
+    "3 执行到点：到时间后创建草稿或演练",
 )
 
 EMPTY_MESSAGES: dict[str, str] = {
-    "jobs": "还没有待发布作品。先在上方上传作品，再点「安排发布时间」。",
+    "jobs": "还没有待创建草稿作品。先在上方上传作品，再点「安排草稿创建时间」。",
     "events": "还没有操作记录。完成上传、排期或执行后，这里会显示你刚才做了什么。",
     "articles": "作品库还是空的。把文章（md/txt/html）和封面图拖到上传区，或点「选择文件」即可收录。",
     "overview": "欢迎使用本地发布工作台。建议按三步开始：先上传作品，再安排时间，最后到点执行。",
@@ -114,7 +114,7 @@ def article_workflow_hint(
         return "已发布"
     if st == "imported":
         if job == "pending":
-            return "待发布（已排期）"
+            return "待创建草稿（已排期）"
         if job == "running":
             return "发布中"
         if job == "failed":
@@ -125,7 +125,7 @@ def article_workflow_hint(
             return "仅草稿已完成 · 未正式发布"
         if has_wechat_draft:
             return "已收录 · 微信草稿已创建"
-        return "待安排发布"
+        return "待安排草稿创建"
     return label_article_status(status)
 
 
@@ -182,10 +182,10 @@ def humanize_plan_result(payload: dict[str, Any]) -> list[str]:
     if isinstance(hints, list) and hints:
         lines = [str(h) for h in hints if h]
         if planned:
-            lines.insert(0, f"已按合集规则为 {planned} 篇文章安排发布时间")
+            lines.insert(0, f"已按合集规则为 {planned} 篇文章安排草稿创建时间")
         return lines
     if planned:
-        return [f"已按推荐时段自动为 {planned} 篇文章安排发布时间"]
+        return [f"已按推荐时段自动为 {planned} 篇文章安排草稿创建时间"]
     return ["没有需要新安排的文章（可能已全部排期）"]
 
 
@@ -193,15 +193,15 @@ def humanize_schedule_single_result(payload: dict[str, Any]) -> list[str]:
     title = (payload.get("title") or "该作品").strip()
     when = payload.get("scheduled_at_label") or payload.get("scheduled_at") or ""
     verb = "已安排" if payload.get("created", True) else "已更新"
-    lines = [f"《{title}》{verb}发布时间为 {when}"]
+    lines = [f"《{title}》{verb}草稿创建时间为 {when}"]
     pub = payload.get("publish_config") or {}
     if pub:
         cfg = PublishConfig(**{k: pub[k] for k in pub if k in PublishConfig.__dataclass_fields__})
         action = human_publish_action_label(cfg)
         if pub.get("auto_execute"):
-            lines.append(f"发布方式：{action}，到点自动执行")
+            lines.append(f"草稿方式：{action}，到点自动执行")
         else:
-            lines.append(f"发布方式：{action}，需手动执行到点")
+            lines.append(f"草稿方式：{action}，需手动执行到点")
     return lines
 
 
@@ -212,7 +212,7 @@ def humanize_schedule_batch_result(stats: dict[str, Any]) -> list[str]:
     total = scheduled + updated
     if not total:
         return ["没有作品被安排（请确认已选中「已收录」作品）"]
-    lines = [f"已为 {total} 篇作品安排发布时间与配置"]
+    lines = [f"已为 {total} 篇作品安排草稿创建时间与配置"]
     pub = stats.get("publish_config") or {}
     if pub:
         cfg = PublishConfig(**{k: pub[k] for k in pub if k in PublishConfig.__dataclass_fields__})
@@ -229,7 +229,7 @@ def humanize_schedule_batch_result(stats: dict[str, Any]) -> list[str]:
 def humanize_retry_jobs_result(payload: dict[str, Any]) -> list[str]:
     retried = int(payload.get("retried") or 0)
     if retried:
-        return [f"已将 {retried} 个失败任务重新加入待发布队列"]
+        return [f"已将 {retried} 个失败任务重新加入草稿队列"]
     return ["没有可重试的失败任务"]
 
 
@@ -247,13 +247,13 @@ def humanize_run_once_result(payload: dict[str, Any]) -> list[str]:
         else:
             lines.append(f"已处理 {processed} 个到点任务")
     if skipped:
-        lines.append(f"有 {skipped} 个任务还没到发布时间")
+        lines.append(f"有 {skipped} 个任务还没到草稿创建时间")
     if failed:
-        lines.append(f"有 {failed} 个任务失败，请查看发布队列")
+        lines.append(f"有 {failed} 个任务失败，请查看草稿队列")
     skipped_content = int(payload.get("skipped_content") or 0)
     if skipped_content:
         lines.append(
-            f"有 {skipped_content} 个任务因内容质量问题未执行（真实正式发布已阻断，请先预览/修复）"
+            f"有 {skipped_content} 个任务因内容质量问题未执行，请先预览/修复"
         )
     if not lines:
         lines.append("当前没有需要执行的任务")

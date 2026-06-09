@@ -100,8 +100,8 @@ def test_ordinary_view_e2e_baseline():
                 assert term not in text, f"普通视图可见文本含 {term}"
             assert "主操作" in text
             assert "作品库" in text
-            assert "安排发布时间" in text
-            assert "执行到点发布" in text
+            assert "安排草稿创建时间" in text
+            assert "执行到点草稿创建" in text
             overflow = page.evaluate(
                 "document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1"
             )

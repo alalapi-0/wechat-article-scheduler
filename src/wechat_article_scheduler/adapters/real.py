@@ -33,7 +33,7 @@ class RealWechatAdapter(WechatAdapter):
     """
     真实微信草稿/发布适配器。
 
-    流程：获取 access_token → 上传封面 thumb → draft/add → freepublish/submit。
+    流程：获取 access_token → 上传封面 thumb → draft/add/draft/update。
     网络调用可注入 http_get/post 便于单元测试 mock。
     """
 
@@ -240,7 +240,7 @@ class RealWechatAdapter(WechatAdapter):
         return DraftResult(media_id=out_id, raw_response=data)
 
     def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-        """调用 freepublish/submit 提交发布（可通过 enable_publish=False 跳过）。"""
+        """历史接口：当前产品默认跳过 freepublish/submit，仅保留底层适配能力。"""
         self._ensure_credentials()
         if not self._enable_publish and not force:
             return {

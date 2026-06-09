@@ -73,7 +73,7 @@ def test_scan_plan_run_once_mock_chain(tmp_path: Path) -> None:
 
 
 def test_should_submit_publish_draft_only_matrix(tmp_path: Path) -> None:
-    """mock / real+draft-only / real+publish 三条路径可区分。"""
+    """历史 publish 配置也不再触发自动发布。"""
     mock_cfg = make_test_config(tmp_path, tmp_path / "m.sqlite3", wechat_mode="mock")
     real_draft = make_test_config(
         tmp_path,
@@ -95,7 +95,7 @@ def test_should_submit_publish_draft_only_matrix(tmp_path: Path) -> None:
     assert should_submit_publish(app_config=real_draft, job_config=publish_job) is False
     assert should_submit_publish(app_config=real_draft, job_config=draft_job) is False
     assert should_submit_publish(app_config=real_pub, job_config=draft_job) is False
-    assert should_submit_publish(app_config=real_pub, job_config=publish_job) is True
+    assert should_submit_publish(app_config=real_pub, job_config=publish_job) is False
 
 
 def test_real_draft_only_run_once_skips_submit(

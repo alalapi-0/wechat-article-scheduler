@@ -1,8 +1,8 @@
-"""发布前预检清单（替代旧的审核闸门）。
+"""草稿创建前预检清单（替代旧的审核闸门）。
 
 产品重定位后不再有"审核"步骤：用户上传的作品即视为想发布的内容。
 真实 API 测试策略 = 默认演练(mock) 不联网；WECHAT_MODE=real 显式启用真实 API；
-需要草稿-only 时设置 WECHAT_ENABLE_PUBLISH=false。
+当前产品目标是按计划创建草稿；后台发布/定时发布由用户人工完成。
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from wechat_article_scheduler.publish_policy import (
     count_pending_job_actions,
     global_publish_policy,
 )
+from wechat_article_scheduler.publish_config import PublishConfig, should_submit_publish
 from wechat_article_scheduler.publish_preview import _maybe_unescape_html
 
 
@@ -33,7 +34,10 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
     mode = (config.wechat_mode or "mock").strip().lower()
     publish_on = bool(config.wechat_enable_publish)
-    will_publish = mode == "real" and publish_on
+    will_publish = should_submit_publish(
+        app_config=config,
+        job_config=PublishConfig(publish_action="publish"),
+    )
 
     checks.append(
         {
@@ -41,12 +45,10 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             "ok": True,
             "required": False,
             "label": "运行模式",
-            "detail": "当前为演练模式，不会真的发布"
+            "detail": "当前为演练模式，只模拟创建草稿"
             if mode == "mock"
             else (
                 "真实连接已启用：执行到点会创建公众号草稿，不会提交发布"
-                if not publish_on
-                else "真实 API 测试已启用：任务选择正式发布时会提交发布"
             ),
         }
     )
@@ -68,12 +70,12 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
             "ok": cover_ok,
             "required": will_publish and not cover_ok,
             "label": "封面素材",
-            "detail": "待发布作品都已配置封面"
+            "detail": "待创建草稿作品都已配置封面"
             if no_cover == 0
             else (
-                f"有 {no_cover} 篇待发布作品没有单独封面，将使用默认封面"
+                f"有 {no_cover} 篇待创建草稿作品没有单独封面，将使用默认封面"
                 if has_default_cover
-                else f"有 {no_cover} 篇待发布作品缺少封面，且未配置默认封面，请先上传封面"
+                else f"有 {no_cover} 篇待创建草稿作品缺少封面，且未配置默认封面，请先上传封面"
             ),
         }
     )
@@ -105,7 +107,7 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
                 "ok": False,
                 "required": False,
                 "label": "标题重复",
-                "detail": f"有 {quality['duplicate_title']} 篇待发布作品正文含与标题重复的首标题，发布时会自动去掉",
+                "detail": f"有 {quality['duplicate_title']} 篇待创建草稿作品正文含与标题重复的首标题，创建草稿时会自动去掉",
             }
         )
     if quality["empty_body"]:
@@ -115,7 +117,7 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
                 "ok": False,
                 "required": will_publish,
                 "label": "正文为空",
-                "detail": f"有 {quality['empty_body']} 篇待发布作品正文为空",
+                "detail": f"有 {quality['empty_body']} 篇待创建草稿作品正文为空",
             }
         )
     if quality["escaped_html"]:
@@ -125,7 +127,7 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
                 "ok": False,
                 "required": will_publish,
                 "label": "疑似 HTML 源码",
-                "detail": f"有 {quality['escaped_html']} 篇作品正文像转义后的 HTML，正式发布前请先预览/修复",
+                "detail": f"有 {quality['escaped_html']} 篇作品正文像转义后的 HTML，创建草稿前请先预览/修复",
             }
         )
 
@@ -138,12 +140,12 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
                 "required": False,
                 "label": "任务级发布方式",
                 "detail": (
-                    f"待发布 {task_mix['draft_tasks']} 个仅草稿、"
-                    f"{task_mix['publish_tasks']} 个标记正式发布"
+                    f"待创建草稿 {task_mix['draft_tasks']} 个仅草稿、"
+                    f"{task_mix['publish_tasks']} 个标记为草稿后人工后台发布"
                     + (
-                        f"（其中 {task_mix['will_submit_tasks']} 个到点会真的发）"
+                        f"（其中 {task_mix['will_submit_tasks']} 个会提交发布，当前应为 0）"
                         if publish_on
-                        else f"（全局草稿-only，{task_mix['blocked_publish_tasks']} 个正式发布任务不会提交）"
+                        else f"（{task_mix['blocked_publish_tasks']} 个历史正式发布任务已降级，不会提交）"
                     )
                 ),
             }
@@ -154,11 +156,11 @@ def build_publish_preflight(config: AppConfig, conn: Any) -> dict[str, Any]:
     plan_gate = action_gate
     human: list[str] = []
     if mode == "mock":
-        human.append("当前为演练模式，执行到点任务不会真的发到公众号。")
+        human.append("当前为演练模式，执行到点任务只模拟创建草稿。")
     elif not publish_on:
-        human.append("真实连接已启用，但发布开关关闭，不会真的发布。")
+        human.append("真实连接已启用，执行到点任务会创建公众号草稿，不会发布。")
     else:
-        human.append("真实 API 测试已启用；任务选择「正式发布」时会真的发到公众号。")
+        human.append("真实连接已启用；本项目仍只创建草稿，不自动发布。")
     for c in checks:
         if c["required"] and not c["ok"]:
             human.append(f"需处理：{c['detail']}")

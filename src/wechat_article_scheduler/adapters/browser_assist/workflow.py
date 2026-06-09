@@ -9,8 +9,8 @@ from wechat_article_scheduler.wechat_field_matrix import field_gaps
 GUARDRAILS: list[str] = [
     "不保存密码、cookie 或会话密钥",
     "不绕过验证码、扫码登录或平台风控",
-    "不自动点击群发、发布或定时群发确认",
-    "人工确认前不得将任务标记为已正式发布",
+    "允许设置发布前字段并保存草稿；不自动点击群发、正式发表或后台定时最终确认",
+    "人工 proof 前不得将任务标记为已发布或已定时",
     "截图与 proof 仅写入用户指定本地路径，不入库敏感凭据",
 ]
 
@@ -33,22 +33,12 @@ HUMAN_CHECKPOINTS: list[dict[str, str]] = [
     {
         "id": "fields_reviewed",
         "label": "核对 API 缺口字段",
-        "instruction": "封面裁剪、后台定时、正文封面显示等需在后台目视确认",
-    },
-    {
-        "id": "schedule_setup",
-        "label": "设置后台定时（非最终确认）",
-        "instruction": "Agent 可辅助填写定时时间；不得点击最终定时群发确认",
-    },
-    {
-        "id": "final_schedule_confirm",
-        "label": "后台最终定时确认",
-        "instruction": "必须由用户本人在公众号后台点击；Agent 仅等待 attestation",
+        "instruction": "Agent 设置封面裁剪、合集、通知和目标时间，并保存草稿",
     },
     {
         "id": "save_only",
-        "label": "仅保存草稿（可选）",
-        "instruction": "默认停在保存；发布需用户显式点击且二次确认",
+        "label": "保存并重新核验草稿",
+        "instruction": "Agent 保存草稿并重新打开核验；正式发表、群发、扫码和定时最终确认由用户操作",
     },
     {
         "id": "proof_backfill",
@@ -78,9 +68,15 @@ WORKFLOW_STEPS: list[dict[str, str]] = [
     },
     {
         "step_id": "assist_fields",
-        "title": "辅助核对缺口字段",
+        "title": "设置发布前字段",
         "actor": "browser_assist",
-        "detail": "对照 target_fields 提示用户修改封面裁剪、定时或显示选项",
+        "detail": "对照 target_fields 设置封面裁剪、合集、通知和目标时间，然后保存草稿",
+    },
+    {
+        "step_id": "verify_saved_draft",
+        "title": "重新打开并核验",
+        "actor": "browser_assist",
+        "detail": "重新打开同一草稿，记录各字段及目标时间是否随草稿保存",
     },
     {
         "step_id": "screenshot",
@@ -92,7 +88,7 @@ WORKFLOW_STEPS: list[dict[str, str]] = [
         "step_id": "human_confirm",
         "title": "人工确认",
         "actor": "user",
-        "detail": "用户确认保存结果；禁止无人值守最终发布",
+        "detail": "用户确认草稿已核对；禁止无人值守发布、群发或定时确认",
     },
     {
         "step_id": "state_sync",
@@ -143,7 +139,7 @@ def build_dry_run_plan(
         "session_status_hint": "awaiting_browser_login",
         "manual_trigger_only": True,
         "login_gate_required": True,
-        "terminal_policy": "不得自动到达 published",
+        "terminal_policy": "可到达 draft_prepared；不得自动到达 published 或 backend_scheduled",
         "article_id": article_id,
         "media_id": media_id,
         "guardrails": GUARDRAILS,

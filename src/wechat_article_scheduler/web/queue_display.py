@@ -1,4 +1,4 @@
-"""发布队列展示与失败原因（收敛 Round 12 / round_067）。"""
+"""草稿队列展示与失败原因（收敛 Round 12 / round_067）。"""
 
 from __future__ import annotations
 
@@ -40,13 +40,13 @@ def failure_reasons_for_jobs(conn: Any, job_ids: list[int]) -> dict[int, str]:
 
 def _next_hint(*, status: str, is_due: bool, failure_reason: str) -> str:
     if status == "pending":
-        return "已到发布时间，可执行到点发布" if is_due else "等待到点或手动执行"
+        return "已到草稿创建时间，可执行到点草稿创建" if is_due else "等待到点或手动执行"
     if status == "waiting_confirmation":
         return "可快速提交占位证明，或打开作品详情填写"
     if status == "failed":
         return "可点「重试」重新排队，或去作品详情检查"
     if status == "running":
-        return "正在发布中，请稍候刷新"
+        return "正在创建草稿，请稍候刷新"
     if status == "done":
         return "已完成，可在作品详情查看结果"
     return ""
@@ -189,7 +189,7 @@ def queue_summary(conn: Any) -> dict[str, Any]:
     ).fetchone()["cnt"]
     pending = counts.get("pending", 0)
     failed = counts.get("failed", 0)
-    parts = [f"待发布 {pending}", f"失败 {failed}", f"已完成 {counts.get('done', 0)}"]
+    parts = [f"待创建草稿 {pending}", f"失败 {failed}", f"已完成 {counts.get('done', 0)}"]
     if int(due) > 0:
         parts.insert(0, f"已到点 {due}")
     next_row = conn.execute(

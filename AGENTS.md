@@ -2,6 +2,127 @@
 
 微信公众号文章本地调度器。默认 **WECHAT_MODE=mock**，不调用真实微信 API。
 
+> **Tool-aware Agent Layer 2.0**（Cursor 主力 + Codex 兼容）— 跨 Agent 协议入口。
+
+## Repo Mission
+
+个人本地微信公众号**草稿箱辅助**工作台：文章导入、排期、mock/真实草稿 API、Web 控制台、外部 Browser Agent 任务包。默认不自动正式发布。
+
+## Read First（Layer 2.0）
+
+每轮 Agent **必须先读**（顺序）：
+
+1. `AGENTS.md`（本文件）
+2. `agent_tools.yaml` — 工具清单与策略
+3. `agent_layer.yaml` — 机器配置、命令、路径
+4. `docs/TOOL_USAGE_POLICY.md`
+5. `docs/AGENT_RUNBOOK.md`
+6. `reports/latest-agent-report.json`
+
+然后按需：`docs/TOOL_INVENTORY.md`、`docs/SEARCH_POLICY.md`、`docs/AGENT_ROADMAP.md`。
+
+既有功能治理仍读：`governance/repo_protocol_standard.yaml`、`governance/round_state.yaml`、`docs/rounds.md`。
+
+## Tool Inventory
+
+- 人类可读：`docs/TOOL_INVENTORY.md`
+- 机器可读：`agent_tools.yaml`、`reports/tool_probe_report.json`
+- 探针：`python scripts/tool_probe.py`
+
+## Tool Usage Policy
+
+见 `docs/TOOL_USAGE_POLICY.md`。要点：代码理解用 repo search；最新文档用 web_search/context7；UI 用 Browser/Playwright；外部仓库用 gh/github MCP；确定性验证用 gate 脚本。
+
+## Search Policy
+
+见 `docs/SEARCH_POLICY.md`。依赖、平台规则、工具能力可能过期时**必须先搜索**；结论写入 `docs/RESEARCH_NOTES.md`。
+
+## Safe Operating Rules
+
+见 `docs/AGENT_SAFETY.md`。禁止读取打印密钥；禁止默认 real API/真实发布；禁止 force push；P0/P1 未清零不做 P2/P3。
+
+## Round Lifecycle（Layer 2.0）
+
+```
+tool_probe → 选工具 → 小 scope 实现 → agent_layer_gate → latest-agent-report
+```
+
+功能 round 并行：`python scripts/agent_gate.py status|gate|advance`。
+
+## Gate Commands
+
+```bash
+python scripts/tool_probe.py              # 工具探针
+python scripts/agent_layer_gate.py        # Layer 2 门禁 → reports/gate_result.json
+python scripts/agent_gate.py gate         # 既有 round 治理 + 全量 pytest
+python scripts/user_view_test.py --dry-run
+```
+
+## Severity Rules
+
+- **P0**：数据丢失、密钥泄露、无法启动、真实发布/API 误触
+- **P1**：主流程不可用、核心测试失败
+- **P2**：非关键缺陷、UI 问题
+- **P3**：文档、抛光
+
+## Report Format
+
+- Schema：`schemas/agent_round_report.schema.json`
+- 最新：`reports/latest-agent-report.json`
+- 审计：`reports/agent_audit_log.jsonl`
+- 说明：`docs/AGENT_REPORTING.md`
+
+每轮必须记录 `tools_used` / `tools_not_used` / `web_research`。
+
+## Cursor-specific Notes
+
+- 主力 Agent；读取 `.cursor/rules/agent-layer.mdc` 等 Layer 2.0 规则
+- MCP 配置 PASS ≠ 当前线程可调用；见 `docs/cursor_tool_registry_check.md`
+- UI/微信后台：禁止 Multitask 子 Agent（见 `no-multitask-for-browser.mdc`）
+- Prompt 模板：`docs/PROMPTS.md`
+
+## Codex-specific Notes
+
+- 读取同一 `AGENTS.md`；详见 `docs/CODEX_USAGE.md`
+- Handoff：`docs/CODEX_HANDOFF.md`
+- MCP 配置：`~/.codex/config.toml`（TOML）
+- 额度有限：仅高价值任务；小修由 Cursor 完成
+
+## MCP-specific Notes
+
+配置：`.cursor/mcp.json`。Runbook：`docs/runbooks/cursor_mcp_runbook.md`。  
+本地 Web UI → chrome-devtools/playwright；已登录公众号 → **仅** wechat-chrome-session。
+
+## Browser / Playwright Notes
+
+见 `docs/USER_VIEW_TESTING.md`、`docs/cursor_browser_ui_runbook.md`。不得仅凭代码判断 UI 完成。
+
+## Real API / Real Publish Rules
+
+- 默认 `WECHAT_MODE=mock`
+- 真实 API：`WECHAT_MODE=real` + 本地凭证 + 人工授权
+- 草稿-only：`WECHAT_ENABLE_PUBLISH=false`
+- `scripts/real_api_check.py --dry-run --skip-if-blocked` 用于 Agent 门控
+- 浏览器不得点击最终发布
+
+## Commit / Push Policy
+
+- 仅用户明确要求时 commit
+- 默认不 push；`agent_gate advance --push` 需人工授权
+- 提交前 gate；不提交 `.env`、密钥、大文件
+
+## Next Round Policy
+
+读 `reports/latest-agent-report.json` 的 `next_recommended_round` 与 `docs/AGENT_ROADMAP.md`。
+
+## Human Required Decisions
+
+- 真实 API 凭证与 `WECHAT_MODE=real`
+- 公众号后台发布/定时发布
+- git push、删除用户文稿、修改已发布内容
+
+---
+
 ## 路线图单一真相来源
 
 | 用途 | 文件 |
@@ -38,6 +159,20 @@ Agent 循环：`status` → 实现任务 → `gate` → `advance --commit`。默
 - 读取/打印 `.env` 密钥
 - 日志打印 token
 - 未授权时 `WECHAT_MODE=real` 联网
+
+## MCP Readiness（任务开始前）
+
+**先读** [`docs/runbooks/cursor_mcp_runbook.md`](docs/runbooks/cursor_mcp_runbook.md)，再运行配置检查并在**当前线程**做最小探测。
+
+| 场景 | 浏览器上下文 |
+|------|----------------|
+| 本地 Web UI（`http://127.0.0.1:8080/`） | `chrome-devtools` 或 `playwright`（isolated 可接受） |
+| 微信公众号已登录后台 | **仅** `wechat-chrome-session`（或用户批准的 CDP） |
+
+- 配置 PASS ≠ 当前线程 tools 已暴露；两层检查都必须做。
+- **禁止**输出 cookie / token；**禁止**默认点击最终发布。
+- 故障排查：[`docs/runbooks/mcp_troubleshooting.md`](docs/runbooks/mcp_troubleshooting.md)
+- 浏览器上下文：[`docs/runbooks/browser_context_guide.md`](docs/runbooks/browser_context_guide.md)
 
 ## MCP Tools
 

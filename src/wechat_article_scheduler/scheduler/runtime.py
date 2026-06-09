@@ -58,7 +58,7 @@ def _job_is_due(raw: str | None, *, now: datetime) -> bool:
 
 def run_due_jobs(config: AppConfig, *, only_auto_execute: bool = False) -> dict[str, int]:
     """
-    处理 scheduled_at <= now 的 pending 任务：创建草稿、标记完成、移动文章。
+    处理 scheduled_at <= now 的 pending 任务：创建/复用草稿并标记本地完成。
 
     only_auto_execute=True 时仅处理 publish_config.auto_execute 为真的任务（Web 后台自动执行）。
     DRY_RUN=true 时只记录计划动作，不调用适配器。

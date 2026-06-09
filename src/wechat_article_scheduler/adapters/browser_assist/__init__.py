@@ -11,6 +11,7 @@ from wechat_article_scheduler.adapters.browser_assist.session import (
     confirm_schedule_setup,
     get_browser_assist_session,
     list_browser_assist_sessions,
+    record_browser_connection,
     start_browser_assist_session,
 )
 from wechat_article_scheduler.adapters.browser_assist.workflow import (
@@ -25,6 +26,7 @@ __all__ = [
     "get_browser_assist_session",
     "list_browser_assist_sessions",
     "confirm_browser_login",
+    "record_browser_connection",
     "confirm_schedule_setup",
     "confirm_final_schedule",
     "cancel_browser_assist_session",

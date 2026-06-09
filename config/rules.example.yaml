@@ -24,7 +24,7 @@ schedule:
 # 合集级排期见 content/collections/*/collection.yaml 的 schedule 块（docs/collection_schedule_rules.md）
 
 publish:
-  # draft = 仅进草稿箱；publish = 到点正式发布（WECHAT_MODE=real 时用于真实 API 测试）
+  # draft = 按时创建草稿；publish = 历史值，当前只表示草稿后需人工后台发布
   default_action: draft
   auto_execute: false
   need_open_comment: false

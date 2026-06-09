@@ -166,7 +166,7 @@ def execute_due_job(
                 event_type="publish_skipped_draft_only",
                 payload=safe_payload(
                     {
-                        "reason": "WECHAT_ENABLE_PUBLISH=false 或任务/模式不允许正式发布",
+                        "reason": "历史正式发布配置已降级为草稿创建；后台发布需人工确认",
                         "publish_action": pub_cfg.publish_action,
                     }
                 ),

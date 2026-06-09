@@ -1,0 +1,75 @@
+{
+  "status": "failed",
+  "timestamp": "2026-06-09T13:26:27.160517+00:00",
+  "passed": [
+    "file_exists:AGENTS.md",
+    "file_exists:agent_tools.yaml",
+    "file_exists:agent_layer.yaml",
+    "file_exists:docs/TOOL_INVENTORY.md",
+    "file_exists:docs/TOOL_USAGE_POLICY.md",
+    "file_exists:docs/SEARCH_POLICY.md",
+    "file_exists:docs/RESEARCH_NOTES.md",
+    "file_exists:docs/AGENT_RUNBOOK.md",
+    "file_exists:docs/AGENT_ROADMAP.md",
+    "file_exists:docs/USER_VIEW_TESTING.md",
+    "file_exists:docs/CODEX_USAGE.md",
+    "file_exists:docs/CODEX_HANDOFF.md",
+    "file_exists:docs/PROMPTS.md",
+    "file_exists:schemas/agent_round_report.schema.json",
+    "file_exists:reports/latest-agent-report.json",
+    "file_exists:scripts/tool_probe.py",
+    "file_exists:scripts/user_view_test.py",
+    "tool_probe",
+    "mcp_config_check",
+    "agent_layer_tests"
+  ],
+  "failed": [
+    "layer_test"
+  ],
+  "skipped": [],
+  "blocked": [],
+  "commands": [
+    {
+      "name": "tool_probe",
+      "command": "/Users/alalapi/PycharmProjects/wechat-article-scheduler/.venv/bin/python scripts/tool_probe.py",
+      "exit_code": 0,
+      "summary": "tool_probe: wrote reports/tool_probe_report.json"
+    },
+    {
+      "name": "mcp_config_check",
+      "command": "npm run check:mcp",
+      "exit_code": 0,
+      "summary": "  - wechat-chrome-session: command=\"npx\", args=[\"-y\",\"chrome-devtools-mcp@latest\",\"--autoConnect\",\"--redactNetworkHeaders\",\"--no-usage-statistics\",\"--no-performance-crux\"]"
+    },
+    {
+      "name": "agent_layer_tests",
+      "command": "/Users/alalapi/PycharmProjects/wechat-article-scheduler/.venv/bin/python -m pytest tests/test_agent_layer_gate.py -q",
+      "exit_code": 0,
+      "summary": "2 passed in 0.01s"
+    },
+    {
+      "name": "layer_test",
+      "command": "/Users/alalapi/PycharmProjects/wechat-article-scheduler/.venv/bin/python -m pytest",
+      "exit_code": 1,
+      "summary": "============= 1 failed, 463 passed, 1 skipped, 1 warning in 53.49s ============="
+    }
+  ],
+  "tool_usage": [
+    {
+      "tool": "shell",
+      "used": true,
+      "purpose": "run gate commands"
+    },
+    {
+      "tool": "web_search",
+      "used": false,
+      "reason": "gate script does not search"
+    },
+    {
+      "tool": "playwright",
+      "used": false,
+      "reason": "not required for layer gate"
+    }
+  ],
+  "next_action": "fix_failed_checks"
+}

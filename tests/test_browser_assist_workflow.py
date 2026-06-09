@@ -32,7 +32,8 @@ def test_human_checkpoints_include_login_and_proof() -> None:
     ids = {c["id"] for c in HUMAN_CHECKPOINTS}
     assert "login_gate" in ids
     assert "login" in ids
-    assert "final_schedule_confirm" in ids
+    assert "final_schedule_confirm" not in ids
+    assert "save_only" in ids
     assert "proof_backfill" in ids
 
 

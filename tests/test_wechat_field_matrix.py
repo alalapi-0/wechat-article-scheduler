@@ -50,10 +50,10 @@ def test_required_fields_present() -> None:
         assert fid in {r["field_id"] for r in WECHAT_FIELD_MATRIX}
 
 
-def test_gaps_include_unverified_schedule() -> None:
+def test_gaps_include_unsupported_schedule() -> None:
     gaps = field_gaps()
-    ids = {g["field_id"] for g in gaps}
-    assert "wechat_backend_schedule" in ids
+    by_id = {g["field_id"]: g for g in gaps}
+    assert by_id["wechat_backend_schedule"]["api_support"] == "unsupported"
 
 
 def test_matrix_doc_lists_field_ids() -> None:
