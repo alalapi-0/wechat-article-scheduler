@@ -1,4 +1,4 @@
-"""微信公众号 API 常见错误码可读说明（Round 58 / 收敛 Round 3）。"""
+"""微信公众号 API 常见错误码可读说明。"""
 
 from __future__ import annotations
 

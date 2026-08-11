@@ -1,11 +1,11 @@
-"""单篇作品发布前检查摘要（作品卡片与详情页共用）。"""
+"""单篇作品草稿创建前检查摘要（作品卡片与详情页共用）。"""
 
 from __future__ import annotations
 
 from typing import Any
 
 from wechat_article_scheduler.config import AppConfig
-from wechat_article_scheduler.parser import clamp_summary
+from wechat_article_scheduler.cover_assets.index import check_configured_cover
 from wechat_article_scheduler.publish_body import publish_body_for
 from wechat_article_scheduler.publish_preview import _maybe_unescape_html
 from wechat_article_scheduler.web.user_copy import label_mode
@@ -15,8 +15,6 @@ def article_preflight_checks(row: dict[str, Any], config: AppConfig) -> list[dic
     """与作品详情页一致的检查项列表。"""
     checks: list[dict[str, Any]] = []
     mode = (config.wechat_mode or "mock").strip().lower()
-    publish_on = bool(config.wechat_enable_publish)
-    will_publish = mode == "real" and publish_on
 
     checks.append(
         {
@@ -27,15 +25,13 @@ def article_preflight_checks(row: dict[str, Any], config: AppConfig) -> list[dic
         }
     )
 
-    has_cover = bool((row.get("cover_path") or "").strip()) or bool(config.wechat_default_thumb_path)
+    cover = check_configured_cover(config, row.get("cover_path"))
     checks.append(
         {
             "id": "cover",
-            "ok": has_cover,
+            "ok": bool(cover["ok"]),
             "label": "封面",
-            "detail": "已设置封面"
-            if (row.get("cover_path") or "").strip()
-            else ("将使用默认封面" if config.wechat_default_thumb_path else "缺少封面，建议上传"),
+            "detail": str(cover["message"]),
         }
     )
 
@@ -48,7 +44,7 @@ def article_preflight_checks(row: dict[str, Any], config: AppConfig) -> list[dic
             "label": "摘要",
             "detail": "摘要长度正常"
             if not digest_truncated
-            else f"摘要超过 120 字，发布时将截断",
+            else "摘要超过 120 字，创建草稿时将截断",
         }
     )
 
@@ -62,7 +58,7 @@ def article_preflight_checks(row: dict[str, Any], config: AppConfig) -> list[dic
                 "id": "title_dup",
                 "ok": False,
                 "label": "标题重复",
-                "detail": "正文首行与标题重复，发布时会自动处理",
+                "detail": "正文首行与标题重复，创建草稿时会自动处理",
             }
         )
     if "&lt;" in body and _maybe_unescape_html(body) != body:
@@ -78,7 +74,7 @@ def article_preflight_checks(row: dict[str, Any], config: AppConfig) -> list[dic
     for c in checks:
         if c["id"] == "body" and not c.get("ok"):
             c["required"] = True
-        elif c["id"] in ("cover", "html") and will_publish and not c.get("ok"):
+        elif c["id"] in ("cover", "html") and mode == "real" and not c.get("ok"):
             c["required"] = True
         else:
             c["required"] = False
@@ -92,13 +88,13 @@ def build_article_preflight_summary(row: dict[str, Any], config: AppConfig) -> d
     ready = len(blocking) == 0
     if blocking:
         bar_level = "err"
-        bar_text = blocking[0].get("detail") or "发布前检查未通过"
+        bar_text = blocking[0].get("detail") or "草稿创建前检查未通过"
     elif issues:
         bar_level = "warn"
         bar_text = issues[0].get("detail") or "有预检提示"
     else:
         bar_level = "ok"
-        bar_text = "发布前检查通过"
+        bar_text = "草稿创建前检查通过"
     return {
         "ready": ready,
         "blocking_count": len(blocking),

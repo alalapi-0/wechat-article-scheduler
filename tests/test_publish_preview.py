@@ -1,4 +1,4 @@
-"""公众号效果预览（Round 49）。"""
+"""公众号效果预览。"""
 
 from __future__ import annotations
 

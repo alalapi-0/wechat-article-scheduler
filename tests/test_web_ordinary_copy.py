@@ -1,4 +1,4 @@
-"""普通视图文案与禁止词测试（Round 20+）。"""
+"""普通视图文案与禁止词测试。"""
 
 from __future__ import annotations
 
@@ -63,13 +63,6 @@ def test_index_avoids_forbidden_ordinary_terms(client: TestClient) -> None:
         )
 
 
-def test_debug_page_has_internal_fields(client: TestClient) -> None:
-    r = client.get("/debug")
-    assert r.status_code == 200
-    assert "高级排错" in r.text
-    assert "/api/status" in r.text
-
-
 def test_scan_returns_human_summary(client: TestClient, tmp_path: Path) -> None:
     inbox = tmp_path / "articles" / "inbox"
     inbox.mkdir(parents=True)
@@ -91,7 +84,6 @@ def test_index_localhost_security_note(client: TestClient) -> None:
     assert "请勿暴露到公网" in html
 
 
-def test_index_ordinary_export_platform_filter(client: TestClient) -> None:
+def test_index_keeps_fast_refresh_path(client: TestClient) -> None:
     html = client.get("/").text
-    assert "ordinaryExportPlatforms" in html
     assert "refreshWorkbenchFast" in html

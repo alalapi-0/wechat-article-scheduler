@@ -1,4 +1,4 @@
-"""单篇文章详情与发布前检查（收敛 Round 11 / round_066）。"""
+"""单篇文章详情与草稿创建前检查。"""
 
 from __future__ import annotations
 
@@ -7,15 +7,17 @@ from typing import Any
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.content_quality import article_content_hints
 from wechat_article_scheduler.parser import clamp_summary
-from wechat_article_scheduler.publish_body import publish_body_for
-from wechat_article_scheduler.publish_config import human_publish_config_summary, parse_publish_config, defaults_from_rules
-from wechat_article_scheduler.publish_policy import resolve_effective_submit
-from wechat_article_scheduler.publish_preview import _maybe_unescape_html
+from wechat_article_scheduler.publish_config import (
+    defaults_from_rules,
+    human_publish_config_summary,
+    parse_publish_config,
+)
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at
-from wechat_article_scheduler.review.proof import (
+from wechat_article_scheduler.publish_proof import (
     WAITING_CONFIRMATION,
     cannot_mark_published_without_proof,
     get_proof_for_job,
+    publish_proof_eligibility,
 )
 from wechat_article_scheduler.web.user_copy import (
     article_workflow_hint,
@@ -64,9 +66,6 @@ def _latest_job(conn: Any, article_id: int, config: AppConfig) -> dict[str, Any]
         out["failure_reason_short"] = (fr[:160] + "…") if len(fr) > 160 else fr
     pub = parse_publish_config(out.get("publish_config_json"), defaults=defaults_from_rules(config))
     out["publish_config_label"] = " · ".join(human_publish_config_summary(pub))
-    eff = resolve_effective_submit(app_config=config, job_config=pub)
-    out["publish_effective_badge"] = eff["badge"]
-    out["publish_effective_label"] = eff["label"]
     out["scheduled_at_label"] = format_scheduled_at(out.get("scheduled_at"))
     out["status_label"] = label_job_status(out.get("status"))
     return out
@@ -133,19 +132,24 @@ def suggest_detail_actions(
     elif job and job.get("status") == WAITING_CONFIRMATION:
         primary = "proof"
         headline = "待在公众号后台确认并回填证明"
-        actions.append("保存或发布后，在本页填写公开链接或截图路径")
+        actions.append("在公众号后台实际发布后，在本页填写公开链接或截图路径")
     elif job and job.get("status") == "failed":
         primary = "retry"
-        headline = "上次发布失败，可重试排队"
-        actions.append("在发布队列「失败」筛选中点「重试」，或返回工作台批量重试")
+        headline = "上次草稿创建失败，可重试排队"
+        actions.append("在草稿队列「失败」筛选中点「重试」，或返回工作台批量重试")
         if job.get("failure_reason_short") or job.get("failure_reason"):
             actions.append(job.get("failure_reason_short") or job.get("failure_reason"))
     elif job and job.get("status") == "done":
         primary = "draft_done"
         if bool(row.get("has_wechat_draft")):
-            headline = "草稿已创建，可在公众号后台核对后人工发布"
-            actions.append("本文仅创建草稿，未正式发布")
-            actions.append("修改正文后可点「更新微信草稿」同步到已有草稿")
+            if (config.wechat_mode or "mock").strip().lower() == "mock":
+                headline = "演练草稿已完成，未写入公众号后台"
+                actions.append("切换 real 模式并重新创建后，才会产生真实公众号草稿")
+                actions.append("当前更新操作也只修改本地演练记录")
+            else:
+                headline = "草稿已创建，可在公众号后台核对后人工发布"
+                actions.append("本文仅创建草稿，未正式发布")
+                actions.append("修改正文后可点「更新微信草稿」同步到已有草稿")
         else:
             headline = "草稿创建任务已完成"
             actions.append("返回工作台查看队列与事件记录")
@@ -157,7 +161,7 @@ def suggest_detail_actions(
         job is None or job.get("status") not in ("pending", "running")
     ):
         primary = "schedule"
-        headline = "尚未安排发布时间"
+        headline = "尚未安排草稿创建时间"
         actions.append("返回工作台点「自动推荐时间」或「安排时间」")
     elif not (row.get("cover_path") or "").strip() and not config.wechat_default_thumb_path:
         primary = "cover"
@@ -178,14 +182,28 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
     if row is None:
         return {}
     job = _latest_job(conn, article_id, config)
+    confirmation = {
+        "eligible": False,
+        "can_start": False,
+        "reason": "尚无已完成的真实草稿任务",
+    }
     proof_block: dict[str, Any] | None = None
-    if job and cannot_mark_published_without_proof(job.get("status")):
-        proof_block = {
-            "job_id": job["id"],
-            "needs_proof": True,
-            "existing": get_proof_for_job(conn, int(job["id"])),
-            "hint": "半自动流程需提交公开链接或截图路径后才能标记为已发布",
-        }
+    if job:
+        confirmation = publish_proof_eligibility(conn, int(job["id"]))
+        confirmation["can_start"] = bool(
+            confirmation["eligible"]
+            and job.get("status") == "done"
+            and row.get("status") != "published"
+            and get_proof_for_job(conn, int(job["id"])) is None
+        )
+        confirmation["job_id"] = int(job["id"])
+        if cannot_mark_published_without_proof(job.get("status")):
+            proof_block = {
+                "job_id": job["id"],
+                "needs_proof": True,
+                "existing": get_proof_for_job(conn, int(job["id"])),
+                "hint": "仅在人工完成公众号发表后，提交公开链接或截图路径",
+            }
     mode = (config.wechat_mode or "mock").strip().lower()
     draft = _draft_info(conn, article_id, mode=mode)
     checks = _article_preflight_checks(row, config)
@@ -213,6 +231,7 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
         "cover_url": f"/media/cover/{article_id}" if (row.get("cover_path") or "").strip() else None,
         "content_hints": article_content_hints(row.get("title") or "", body),
         "latest_job": job,
+        "publish_confirmation": confirmation,
         "publish_proof": proof_block,
         "wechat_draft": draft,
         "preflight_checks": checks,
@@ -220,11 +239,4 @@ def build_article_detail(config: AppConfig, conn: Any, article_id: int) -> dict[
         "workbench": suggest_detail_actions(row=row, job=job, checks=checks, config=config),
         "mode_label": label_mode(mode),
         "preview_url": f"/api/articles/{article_id}/render-preview",
-        "can_export_outbox": True,
-        "outbox_hint": "导出 outbox 包后可手动复制到其他平台，并在本页提交发布证明",
-        "manual_export_platforms": [
-            {"id": "generic", "label": "通用"},
-            {"id": "zhihu", "label": "知乎"},
-            {"id": "douban", "label": "豆瓣"},
-        ],
     }

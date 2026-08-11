@@ -1,4 +1,4 @@
-"""FastAPI 管理后台（Round 6）：文章列表、队列、事件与手动触发。"""
+"""FastAPI 管理后台：文章列表、队列、事件与手动触发。"""
 
 from __future__ import annotations
 
@@ -10,10 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from wechat_article_scheduler import db
-from wechat_article_scheduler.adapters import get_adapter
 from wechat_article_scheduler.config import AppConfig, load_config
 from wechat_article_scheduler.events_cli import list_events
 from wechat_article_scheduler.plan import build_plan
@@ -31,25 +30,26 @@ from wechat_article_scheduler.web.scan_summary import (
 from wechat_article_scheduler.web.upload_summary import enrich_upload_response
 from wechat_article_scheduler.content_library import (
     discover_collection_configs,
-    list_collections,
     list_collections_summary,
-    list_content_items,
-    sync_discovered_collections,
 )
 from wechat_article_scheduler.cover_assets import (
     bind_covers_by_stem,
     build_dual_cover_previews,
     check_cover_path,
     index_cover_directory,
-    repair_invalid_cover_paths,
+    inspect_managed_cover,
+    InvalidCoverError,
+    managed_cover_bytes,
+    managed_cover_roots,
     scan_cover_assets,
 )
-from wechat_article_scheduler.cover_assets.crop_preview import enrich_cover_config
+from wechat_article_scheduler.cover_assets.index import MAX_COVER_BYTES
 from wechat_article_scheduler.preview_snapshot import (
     build_article_preview_package,
     latest_snapshot_path,
     save_preview_snapshot,
 )
+from wechat_article_scheduler.filesystem_safety import safe_directory_exists
 from wechat_article_scheduler.scheduler import run_due_jobs
 from wechat_article_scheduler.web.user_copy import (
     humanize_restore_result,
@@ -63,7 +63,7 @@ from wechat_article_scheduler.web.user_copy import (
     humanize_schedule_single_result,
 )
 from wechat_article_scheduler.web.schedule_display import format_scheduled_at, summarize_schedule
-from wechat_article_scheduler.web.workbench_mvp import build_workbench_hints
+from wechat_article_scheduler.web.workbench_hints import build_workbench_hints
 from wechat_article_scheduler.web.article_detail import build_article_detail
 from wechat_article_scheduler.web.article_preflight import build_article_preflight_summary
 from wechat_article_scheduler.web.queue_display import (
@@ -78,36 +78,13 @@ from wechat_article_scheduler.wechat_field_matrix import (
     list_field_matrix,
     matrix_summary,
 )
-from wechat_article_scheduler.adapters.browser_assist import (
-    SUPPORTED_BROWSER_ASSIST,
-    build_dry_run_plan,
-    cancel_browser_assist_session,
-    confirm_browser_login,
-    confirm_final_schedule,
-    confirm_schedule_setup,
-    get_browser_assist_session,
-    list_browser_assist_sessions,
-    record_browser_connection,
-    start_browser_assist_session,
-)
-from wechat_article_scheduler.adapters.manual_export import (
-    SUPPORTED_PLATFORMS,
-    export_article_to_outbox,
-    list_outbox_packages,
-)
-from wechat_article_scheduler.review.proof import (
+from wechat_article_scheduler.publish_proof import (
     ProofInput,
     get_proof_for_job,
     list_waiting_confirmation,
     mark_job_waiting_confirmation,
-    submit_publish_proof,
+    record_publish_proof,
 )
-from wechat_article_scheduler.review.proof_quick import (
-    build_quick_proof_input,
-    humanize_quick_proof_result,
-    quick_proof_allowed,
-)
-from wechat_article_scheduler.web.generation_policy import build_generation_policy_status
 from wechat_article_scheduler.web.drafts_display import (
     drafts_summary,
     get_wechat_draft,
@@ -124,10 +101,6 @@ from wechat_article_scheduler.publish_config import (
     parse_publish_config,
     publish_config_from_payload,
 )
-from wechat_article_scheduler.publish_policy import (
-    global_publish_policy,
-    resolve_effective_submit,
-)
 from wechat_article_scheduler.content_quality import article_content_hints
 from wechat_article_scheduler.web.publish_preflight import build_publish_preflight
 from wechat_article_scheduler.web.covers import (
@@ -138,10 +111,12 @@ from wechat_article_scheduler.web.covers import (
     resolve_cover_config,
 )
 from wechat_article_scheduler.web.uploads import handle_upload, save_cover_file
+from wechat_article_scheduler.web.security import install_local_request_boundary
+from wechat_article_scheduler.web.multipart_limits import CoverLimitedRoute
 from wechat_article_scheduler.web.bulk_manage import (
     build_delete_impact,
-    bulk_cancel_publish_jobs,
     cancel_publish_job,
+    clear_failed_publish_jobs,
     cleanup_orphan_covers,
     list_orphan_covers,
 )
@@ -155,10 +130,31 @@ from wechat_article_scheduler.web.trash import (
 )
 
 _TEMPLATE_PATH = Path(__file__).parent / "admin_template.html"
+
+
+async def _read_cover_upload(
+    upload: UploadFile,
+    *,
+    max_bytes: int = MAX_COVER_BYTES,
+) -> bytes:
+    """Read at most the shared compressed-cover limit plus one sentinel byte."""
+    payload = bytearray()
+    while len(payload) <= max_bytes:
+        chunk = await upload.read(min(64 * 1024, max_bytes + 1 - len(payload)))
+        if not chunk:
+            return bytes(payload)
+        payload.extend(chunk)
+        if len(payload) > max_bytes:
+            break
+    raise HTTPException(
+        status_code=413,
+        detail=f"封面上传数据不能超过 {MAX_COVER_BYTES // (1024 * 1024)} MB",
+    )
+
+
 _ADMIN_HTML = _TEMPLATE_PATH.read_text(encoding="utf-8") if _TEMPLATE_PATH.exists() else "<html><body>模板缺失</body></html>"
 _DETAIL_TEMPLATE_PATH = Path(__file__).parent / "article_detail_template.html"
 _DRAFTS_PAGE_TEMPLATE_PATH = Path(__file__).parent / "drafts_page_template.html"
-_EXPORT_OUTBOX_UI_JS = Path(__file__).parent / "export_outbox_ui.js"
 logger = logging.getLogger(__name__)
 
 
@@ -167,23 +163,14 @@ def _cover_asset_roots(config: AppConfig) -> list[Path]:
     out: list[Path] = []
     seen: set[str] = set()
     for root in roots:
-        resolved = root.resolve()
-        key = str(resolved)
+        absolute = root.absolute()
+        if root.exists() and not safe_directory_exists(root, allowed_roots=(root,)):
+            continue
+        key = str(absolute)
         if key not in seen:
             seen.add(key)
-            out.append(resolved)
+            out.append(absolute)
     return out
-
-
-def _is_under_any(path: Path, roots: list[Path]) -> bool:
-    resolved = path.resolve()
-    for root in roots:
-        try:
-            resolved.relative_to(root.resolve())
-            return True
-        except ValueError:
-            continue
-    return False
 
 
 def _job_publish_config(row: Any, config: AppConfig):
@@ -223,12 +210,6 @@ def _web_auto_runner_state(config: AppConfig) -> tuple[bool, str]:
     auto_count = _pending_auto_execute_job_count(config)
     if auto_count <= 0:
         return False, "暂无到点自动执行任务"
-    if (
-        config.wechat_mode == "real"
-        and config.wechat_enable_publish
-        and not getattr(config, "web_auto_publish", False)
-    ):
-        return False, "WEB_AUTO_PUBLISH=false，真实发布需手动执行到点"
     return True, f"已开启（{auto_count} 个到点自动执行任务）"
 
 
@@ -316,10 +297,6 @@ def _enrich_job_row(row: dict[str, Any], config: AppConfig) -> dict[str, Any]:
     pub_cfg = parse_publish_config(row.get("publish_config_json"), defaults=defaults_from_rules(config))
     row["publish_config"] = pub_cfg.normalized().__dict__
     row["publish_config_label"] = " · ".join(human_publish_config_summary(pub_cfg))
-    eff = resolve_effective_submit(app_config=config, job_config=pub_cfg)
-    row["publish_effective"] = eff
-    row["publish_effective_badge"] = eff["badge"]
-    row["publish_effective_label"] = eff["label"]
     return row
 
 
@@ -345,16 +322,13 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         description="本地管理后台（默认 mock）",
         lifespan=lifespan,
     )
+    app.router.route_class = CoverLimitedRoute
+    install_local_request_boundary(app)
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:
         """普通用户工作台首页（Desktop-first）。"""
         return _ADMIN_HTML
-
-    @app.get("/debug", response_class=HTMLResponse)
-    def debug_page() -> str:
-        """高级排错页：展示原始 JSON 与内部字段。"""
-        return _DEBUG_HTML
 
     @app.get("/favicon.ico", include_in_schema=False)
     def favicon() -> Response:
@@ -368,20 +342,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         )
         return Response(content=png, media_type="image/png")
 
-    @app.get("/assets/export-outbox-ui.js")
-    def export_outbox_ui_js() -> Response:
-        """作品卡与详情页共用的 export-outbox 成功 toast 脚本。"""
-        if not _EXPORT_OUTBOX_UI_JS.is_file():
-            raise HTTPException(status_code=404, detail="export-outbox-ui.js missing")
-        return Response(
-            content=_EXPORT_OUTBOX_UI_JS.read_bytes(),
-            media_type="application/javascript",
-            headers={"Cache-Control": "no-cache"},
-        )
-
     @app.get("/articles/{article_id}", response_class=HTMLResponse)
     def article_detail_page(article_id: int) -> str:
-        """单篇作品详情与预览（收敛 Round 11）。"""
+        """单篇作品详情与预览。"""
         if not _DETAIL_TEMPLATE_PATH.is_file():
             raise HTTPException(status_code=500, detail="详情页模板缺失")
         with db.connect(cfg.database_path) as conn:
@@ -399,19 +362,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="作品不存在")
         return detail
 
-    @app.get("/api/articles/{article_id}/publish-dry-run")
-    def article_publish_dry_run(article_id: int) -> dict[str, Any]:
-        """单篇发布 dry-run 摘要（只读、不联网、mock 安全）。"""
-        from wechat_article_scheduler.web.publish_dry_run import (
-            build_article_publish_dry_run,
-        )
-
-        with db.connect(cfg.database_path) as conn:
-            result = build_article_publish_dry_run(cfg, conn, article_id)
-        if not result.get("ok"):
-            raise HTTPException(status_code=404, detail=result.get("error", "作品不存在"))
-        return result
-
     @app.post("/api/articles/{article_id}/update-draft")
     async def article_update_draft(article_id: int) -> dict[str, Any]:
         """将当前作品内容同步到已有微信草稿（draft/update）。"""
@@ -421,488 +371,30 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         result.setdefault("human", humanize_update_result(result))
         return result
 
-    @app.post("/api/articles/{article_id}/export-outbox")
-    def article_export_outbox(article_id: int, platform: str = "generic") -> dict[str, Any]:
-        """导出 manual_export outbox 包（不联网、不标记已发布）。"""
-        with db.connect(cfg.database_path) as conn:
-            result = export_article_to_outbox(
-                cfg, conn, article_id, platform=(platform or "generic").strip()
-            )
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error", "导出失败"))
-        return result
-
-    @app.get("/api/outbox-packages")
-    def api_outbox_packages(limit: int = 30) -> dict[str, Any]:
-        items = list_outbox_packages(cfg, limit=min(max(limit, 1), 100))
-        return {"count": len(items), "items": items}
-
-    def _relative_project_path(path: Path) -> str:
-        try:
-            return str(path.relative_to(cfg.root))
-        except ValueError:
-            return str(path)
-
-    @app.get("/api/manual-export/platforms")
-    def api_manual_export_platforms() -> dict[str, Any]:
-        """manual_export 支持的平台列表（不联网）。"""
-        manual_dir = _relative_project_path(cfg.manual_export_outbox)
-        agent_dir = _relative_project_path(cfg.external_agent_task_outbox)
-        return {
-            "platforms": [
-                {"id": k, **v} for k, v in SUPPORTED_PLATFORMS.items()
-            ],
-            "outbox_dir": manual_dir,
-            "external_agent_outbox_dir": agent_dir,
-            "outbox_note": (
-                f"通用 outbox 导出写入 {manual_dir}（MANUAL_EXPORT_OUTBOX）；"
-                f"外部 Agent 任务包写入 {agent_dir}（EXTERNAL_AGENT_TASK_OUTBOX）"
-            ),
-        }
-
     @app.get("/api/wechat-field-matrix")
     def api_wechat_field_matrix() -> dict[str, Any]:
-        """微信公众号字段能力矩阵（Round 17）。"""
+        """微信公众号字段能力矩阵。"""
         return {
             "summary": matrix_summary(),
             "fields": list_field_matrix(),
             "gaps": field_gaps(),
         }
 
-    @app.get("/api/browser-assist-plan")
-    def api_browser_assist_plan(
-        article_id: str | None = None,
-        media_id: str | None = None,
-        platform: str = "wechat_official",
-    ) -> dict[str, Any]:
-        """browser_assist 干跑计划（人机确认，不自动发布）。"""
-        try:
-            return build_dry_run_plan(
-                platform=platform,
-                article_id=article_id,
-                media_id=media_id,
-                config=cfg,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/browser-assist/platforms")
-    def api_browser_assist_platforms() -> dict[str, Any]:
-        return {
-            "platforms": [{"id": k, **v} for k, v in SUPPORTED_BROWSER_ASSIST.items()],
-        }
-
-    @app.get("/api/browser-assist/sessions")
-    def api_browser_assist_sessions(active_only: bool = True) -> dict[str, Any]:
-        return list_browser_assist_sessions(cfg, active_only=active_only)
-
-    @app.get("/api/browser-assist/sessions/{session_id}")
-    def api_browser_assist_session(session_id: str) -> dict[str, Any]:
-        result = get_browser_assist_session(cfg, session_id)
-        if not result.get("ok"):
-            raise HTTPException(status_code=404, detail=result.get("error") or "会话不存在")
-        return result
-
-    @app.post("/api/browser-assist/sessions/start")
-    def api_browser_assist_session_start(payload: dict[str, Any]) -> dict[str, Any]:
-        job_id = payload.get("job_id")
-        if job_id is None:
-            raise HTTPException(status_code=400, detail="需要 job_id")
-        try:
-            jid = int(job_id)
-        except (TypeError, ValueError) as exc:
-            raise HTTPException(status_code=400, detail="job_id 无效") from exc
-        with db.connect(cfg.database_path) as conn:
-            result = start_browser_assist_session(
-                cfg,
-                conn,
-                jid,
-                export_task_package=not bool(payload.get("no_export_task")),
-            )
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error") or "启动失败")
-        return result
-
-    @app.post("/api/browser-assist/sessions/{session_id}/confirm-login")
-    def api_browser_assist_confirm_login(
-        session_id: str,
-        payload: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        body = payload or {}
-        with db.connect(cfg.database_path) as conn:
-            result = confirm_browser_login(
-                cfg,
-                conn,
-                session_id,
-                attestation_note=body.get("note"),
-                connection_report=body.get("connection_report")
-                if isinstance(body.get("connection_report"), dict)
-                else None,
-            )
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error") or "确认失败")
-        return result
-
-    @app.post("/api/browser-assist/sessions/{session_id}/record-connection")
-    def api_browser_assist_record_connection(
-        session_id: str,
-        payload: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        body = payload or {}
-        report = body.get("report")
-        if report is not None and not isinstance(report, dict):
-            raise HTTPException(status_code=400, detail="report 必须是 object")
-        with db.connect(cfg.database_path) as conn:
-            result = record_browser_connection(
-                cfg,
-                conn,
-                session_id,
-                report=report if isinstance(report, dict) else None,
-            )
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error") or "记录失败")
-        return result
-
-    @app.post("/api/browser-assist/sessions/{session_id}/confirm-schedule-setup")
-    def api_browser_assist_confirm_schedule_setup(
-        session_id: str,
-        payload: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        body = payload or {}
-        with db.connect(cfg.database_path) as conn:
-            result = confirm_schedule_setup(
-                cfg,
-                conn,
-                session_id,
-                note=body.get("note"),
-                scheduled_at=str(body.get("scheduled_at") or "").strip() or None,
-            )
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error") or "确认失败")
-        return result
-
-    @app.post("/api/browser-assist/sessions/{session_id}/confirm-final-schedule")
-    def api_browser_assist_confirm_final_schedule(
-        session_id: str,
-        payload: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        body = payload or {}
-        with db.connect(cfg.database_path) as conn:
-            result = confirm_final_schedule(
-                cfg,
-                conn,
-                session_id,
-                attestation_note=body.get("note"),
-            )
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error") or "确认失败")
-        return result
-
-    @app.post("/api/browser-assist/sessions/{session_id}/cancel")
-    def api_browser_assist_cancel_session(
-        session_id: str,
-        payload: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        body = payload or {}
-        with db.connect(cfg.database_path) as conn:
-            result = cancel_browser_assist_session(cfg, conn, session_id, reason=body.get("note"))
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error") or "取消失败")
-        return result
-
-    @app.get("/api/adapter-registry")
-    def api_adapter_registry(
-        platform: str | None = None,
-        adapter_type: str | None = None,
-    ) -> dict[str, Any]:
-        from wechat_article_scheduler.adapters.registry import list_adapter_capabilities
-
-        caps = list_adapter_capabilities(platform=platform, adapter_type=adapter_type)
-        return {"count": len(caps), "capabilities": caps}
-
-    @app.get("/api/local-blog/destinations")
-    def api_local_blog_destinations() -> dict[str, Any]:
-        from wechat_article_scheduler.adapters.local_blog.plans import list_destinations
-
-        items = list_destinations()
-        return {"count": len(items), "destinations": items}
-
-    @app.get("/api/local-blog-plan")
-    def api_local_blog_plan(
-        destination: str = "static_site",
-        article_id: str | None = None,
-        output_dir: str | None = None,
-    ) -> dict[str, Any]:
-        from wechat_article_scheduler.adapters.local_blog.plans import build_plan
-
-        try:
-            return build_plan(
-                destination=destination,
-                article_id=article_id,
-                output_dir=output_dir,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/webhook/channels")
-    def api_webhook_channels() -> dict[str, Any]:
-        from wechat_article_scheduler.adapters.webhook.plans import list_channels
-
-        items = list_channels()
-        return {"count": len(items), "channels": items}
-
-    @app.get("/api/video-package/platforms")
-    def api_video_package_platforms() -> dict[str, Any]:
-        from wechat_article_scheduler.content_packages.video_presearch import (
-            list_video_platforms,
-        )
-
-        items = list_video_platforms()
-        return {"count": len(items), "platforms": items}
-
-    @app.get("/api/video-package-plan")
-    def api_video_package_plan(
-        platform: str = "bilibili",
-        package_id: str | None = None,
-        title: str | None = None,
-        video_path: str | None = None,
-    ) -> dict[str, Any]:
-        from wechat_article_scheduler.content_packages.video_presearch import (
-            build_video_package_dry_run,
-        )
-
-        try:
-            return build_video_package_dry_run(
-                platform=platform,
-                package_id=package_id,
-                title=title,
-                video_path=video_path,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/audio-package/platforms")
-    def api_audio_package_platforms() -> dict[str, Any]:
-        from wechat_article_scheduler.content_packages.audio_presearch import (
-            list_audio_platforms,
-        )
-
-        items = list_audio_platforms()
-        return {"count": len(items), "platforms": items}
-
-    @app.get("/api/audio-package-plan")
-    def api_audio_package_plan(
-        platform: str = "podcast",
-        package_id: str | None = None,
-        title: str | None = None,
-        audio_path: str | None = None,
-    ) -> dict[str, Any]:
-        from wechat_article_scheduler.content_packages.audio_presearch import (
-            build_audio_package_dry_run,
-        )
-
-        try:
-            return build_audio_package_dry_run(
-                platform=platform,
-                package_id=package_id,
-                title=title,
-                audio_path=audio_path,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/short-video/platforms")
-    def api_short_video_platforms() -> dict[str, Any]:
-        from wechat_article_scheduler.content_packages.short_video_deferred import (
-            list_short_video_platforms,
-        )
-
-        items = list_short_video_platforms()
-        return {"count": len(items), "platforms": items}
-
-    @app.get("/api/short-video-plan")
-    def api_short_video_plan(
-        platform: str = "douyin",
-        article_id: str | None = None,
-    ) -> dict[str, Any]:
-        from wechat_article_scheduler.content_packages.short_video_deferred import (
-            build_short_video_deferred_plan,
-        )
-
-        try:
-            return build_short_video_deferred_plan(
-                platform=platform,
-                article_id=article_id,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/wechat-chain-summary")
-    def api_wechat_chain_summary() -> dict[str, Any]:
-        with db.connect(cfg.database_path) as conn:
-            from wechat_article_scheduler.wechat_chain_summary import (
-                build_wechat_chain_summary,
-            )
-
-            return build_wechat_chain_summary(cfg, conn)
-
-    @app.get("/api/webhook-plan")
-    def api_webhook_plan(
-        channel: str = "generic",
-        article_id: str | None = None,
-        event_type: str = "article.ready",
-    ) -> dict[str, Any]:
-        from wechat_article_scheduler.adapters.webhook.plans import build_plan
-
-        try:
-            return build_plan(
-                channel=channel,
-                article_id=article_id,
-                event_type=event_type,
-            )
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    @app.get("/api/manifest/sample-dry-run")
-    def api_manifest_sample_dry_run() -> dict[str, Any]:
-        from pathlib import Path
-
-        from wechat_article_scheduler.content_packages.from_manifest import (
-            manifest_dry_run_summary,
-        )
-        from wechat_article_scheduler.core.manifest_loader import load_manifest
-
-        sample = (
-            Path(__file__).resolve().parents[3]
-            / "manifests"
-            / "examples"
-            / "sample_publish_manifest.json"
-        )
-        if not sample.is_file():
-            raise HTTPException(status_code=404, detail="示例 manifest 不存在")
-        return manifest_dry_run_summary(load_manifest(sample))
-
-    @app.get("/api/projects/registry")
-    def api_projects_registry() -> dict[str, Any]:
-        from wechat_article_scheduler.core.multi_project_dry_run import (
-            projects_registry_summary,
-        )
-
-        return projects_registry_summary(cfg.root)
-
-    @app.get("/api/projects/dry-run")
-    def api_projects_dry_run() -> dict[str, Any]:
-        from wechat_article_scheduler.core.multi_project_dry_run import (
-            build_multi_project_dry_run,
-        )
-
-        return build_multi_project_dry_run(cfg.root)
-
-    @app.get("/api/publish-calendar/dry-run")
-    def api_publish_calendar_dry_run(
-        min_gap_minutes: int = 60,
-    ) -> dict[str, Any]:
-        from wechat_article_scheduler.core.cross_project_calendar import (
-            build_publish_calendar_dry_run,
-        )
-
-        return build_publish_calendar_dry_run(
-            cfg.root,
-            min_gap_minutes=min_gap_minutes,
-        )
-
-    @app.get("/api/publish-calendar/conflicts")
-    def api_publish_calendar_conflicts(
-        min_gap_minutes: int = 60,
-    ) -> dict[str, Any]:
-        from wechat_article_scheduler.core.cross_project_calendar import (
-            build_publish_calendar_dry_run,
-        )
-
-        summary = build_publish_calendar_dry_run(
-            cfg.root,
-            min_gap_minutes=min_gap_minutes,
-        )
-        return {
-            "ok": summary.get("ok"),
-            "conflict_count": summary.get("conflict_count"),
-            "hard_conflict_count": summary.get("hard_conflict_count"),
-            "conflicts": summary.get("conflicts") or [],
-            "event_count": summary.get("event_count"),
-            "mode": "dry_run",
-        }
-
-    @app.get("/api/unified-outbox/dry-run")
-    def api_unified_outbox_dry_run() -> dict[str, Any]:
-        from wechat_article_scheduler.core.unified_outbox_presearch import (
-            build_unified_outbox_dry_run,
-        )
-
-        return build_unified_outbox_dry_run(cfg.root)
-
-    @app.get("/api/unified-outbox/index")
-    def api_unified_outbox_index() -> dict[str, Any]:
-        from wechat_article_scheduler.core.unified_outbox_presearch import (
-            default_unified_outbox_config_path,
-            index_outbox_directories,
-            load_unified_outbox_config,
-        )
-
-        cfg_path = default_unified_outbox_config_path(cfg.root)
-        ucfg = load_unified_outbox_config(cfg_path)
-        scan_roots = [str(r) for r in (ucfg.get("scan_roots") or ["outbox"])]
-        return index_outbox_directories(cfg.root, scan_roots=scan_roots)
-
-    @app.get("/api/ops/health-dry-run")
-    def api_ops_health_dry_run() -> dict[str, Any]:
-        from wechat_article_scheduler.core.ops_health_presearch import (
-            build_ops_health_dry_run,
-        )
-
-        return build_ops_health_dry_run(cfg)
-
-    @app.get("/api/ops/runbook-checklist")
-    def api_ops_runbook_checklist() -> dict[str, Any]:
-        from wechat_article_scheduler.core.ops_health_presearch import (
-            build_ops_health_dry_run,
-        )
-
-        summary = build_ops_health_dry_run(cfg)
-        return {
-            "ok": summary.get("ok"),
-            "items": summary.get("runbook_checklist") or [],
-            "guardrails": summary.get("guardrails") or [],
-            "mode": "dry_run",
-        }
-
-    @app.get("/api/phase5/closure-summary")
-    def api_phase5_closure_summary() -> dict[str, Any]:
-        from wechat_article_scheduler.core.phase5_closure_summary import (
-            build_phase5_closure_summary,
-        )
-
-        return build_phase5_closure_summary(cfg)
-
     @app.get("/api/waiting-confirmation")
     def api_waiting_confirmation() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
             items = list_waiting_confirmation(conn, config=cfg)
-        gp = build_generation_policy_status()
         preview = items[:5]
         summary = (
             f"待人工确认 {len(items)} 条"
             if items
             else "暂无待人工确认任务"
         )
-        if items and quick_proof_allowed(cfg):
-            summary += f" · {gp.get('badge', 'MOCK')} 可快速占位确认"
         return {
             "count": len(items),
             "items": items,
             "preview": preview,
             "summary_label": summary,
-            "quick_proof_allowed": quick_proof_allowed(cfg),
-            "generation_policy": gp,
         }
 
     @app.get("/api/publish-jobs/{job_id}/proof")
@@ -913,73 +405,30 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             return {"ok": True, "proof": None}
         return {"ok": True, "proof": proof}
 
-    @app.post("/api/publish-jobs/{job_id}/proof")
-    def api_submit_publish_proof(job_id: int, body: dict[str, Any] = Body(default={})) -> dict[str, Any]:
-        use_quick = bool(body.get("quick_dry_run"))
-        if use_quick:
-            if not quick_proof_allowed(cfg):
-                raise HTTPException(
-                    status_code=403,
-                    detail="快速占位证明仅适用于演练模式（mock）",
-                )
-            proof = build_quick_proof_input(cfg, job_id)
-        else:
-            proof = ProofInput(
-                screenshot_path=body.get("screenshot_path"),
-                public_url=body.get("public_url"),
-                confirmed_by=body.get("confirmed_by"),
-                note=body.get("note"),
-            )
+    @app.post("/api/publish-jobs/{job_id}/export-agent-task")
+    def api_export_agent_task(job_id: int) -> dict[str, Any]:
+        """生成外部 Browser Agent 任务包，不启动浏览器或执行发布。"""
+        from wechat_article_scheduler.external_agent import export_task_package
+
         with db.connect(cfg.database_path) as conn:
-            result = submit_publish_proof(conn, job_id, proof)
+            result = export_task_package(cfg, conn, job_id)
         if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error", "提交失败"))
-        gp = build_generation_policy_status()
-        if use_quick:
-            result["dry_run_proof"] = True
-            result["human"] = humanize_quick_proof_result(
-                completed=1,
-                skipped=0,
-                badge=str(gp.get("badge") or "MOCK"),
-            )
+            raise HTTPException(status_code=400, detail=result.get("error", "任务包导出失败"))
         return result
 
-    @app.post("/api/waiting-confirmation/quick-proof-all")
-    def api_quick_proof_all_waiting() -> dict[str, Any]:
-        if not quick_proof_allowed(cfg):
-            raise HTTPException(
-                status_code=403,
-                detail="批量快速确认仅适用于演练模式（mock）",
-            )
-        gp = build_generation_policy_status()
-        badge = str(gp.get("badge") or "MOCK")
-        completed = 0
-        skipped = 0
+    @app.post("/api/publish-jobs/{job_id}/proof")
+    def api_record_publish_proof(job_id: int, body: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+        proof = ProofInput(
+            screenshot_path=body.get("screenshot_path"),
+            public_url=body.get("public_url"),
+            confirmed_by=body.get("confirmed_by"),
+            note=body.get("note"),
+        )
         with db.connect(cfg.database_path) as conn:
-            items = list_waiting_confirmation(conn, config=cfg)
-            for item in items:
-                jid = int(item["job_id"])
-                if item.get("has_proof"):
-                    skipped += 1
-                    continue
-                proof = build_quick_proof_input(cfg, jid)
-                result = submit_publish_proof(conn, jid, proof)
-                if result.get("ok"):
-                    completed += 1
-                else:
-                    skipped += 1
-        return {
-            "ok": True,
-            "completed": completed,
-            "skipped": skipped,
-            "dry_run_proof": True,
-            "generation_policy": gp,
-            "human": humanize_quick_proof_result(
-                completed=completed,
-                skipped=skipped,
-                badge=badge,
-            ),
-        }
+            result = record_publish_proof(conn, job_id, proof)
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error", "提交失败"))
+        return result
 
     @app.post("/api/publish-jobs/{job_id}/waiting-confirmation")
     def api_mark_waiting_confirmation(job_id: int) -> dict[str, Any]:
@@ -995,36 +444,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.get("/api/status")
     def status() -> dict[str, Any]:
-        from wechat_article_scheduler.web.generation_policy import (
-            build_generation_policy_status,
-        )
-        from wechat_article_scheduler.web.roadmap_state import (
-            build_roadmap_status_fields,
-        )
-
         return {
             "wechat_mode": cfg.wechat_mode,
             "dry_run": cfg.dry_run,
-            "wechat_enable_publish": cfg.wechat_enable_publish,
-            "publish_policy": global_publish_policy(cfg),
-            "generation_policy": build_generation_policy_status(),
+            "draft_only": True,
             "web_auto_run_due": cfg.web_auto_run_due,
-            "web_auto_publish": cfg.web_auto_publish,
-            "web_auto_publish_effective": bool(cfg.wechat_enable_publish and cfg.web_auto_publish),
             "web_auto_runner_active": bool(getattr(app.state, "web_auto_runner_active", False)),
             "web_auto_runner_reason": str(getattr(app.state, "web_auto_runner_reason", "")),
             "database": str(cfg.database_path),
-            **build_roadmap_status_fields(),
         }
-
-    @app.get("/api/agent-gate-status")
-    def agent_gate_status() -> dict[str, Any]:
-        """只读 agent_gate 轮次状态（与 CLI status 一致，不含密钥）。"""
-        from wechat_article_scheduler.web.agent_gate_status import (
-            build_agent_gate_status_api,
-        )
-
-        return build_agent_gate_status_api()
 
     @app.get("/api/overview")
     def overview() -> dict[str, Any]:
@@ -1052,6 +480,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             from wechat_article_scheduler.wechat_chain_summary import build_wechat_chain_summary
 
             chain_summary = build_wechat_chain_summary(cfg, conn)
+            waiting_items = list_waiting_confirmation(conn, limit=5, config=cfg)
         recent_jobs_out = []
         for r in recent_jobs:
             row = _enrich_job_row(dict(r), cfg)
@@ -1066,8 +495,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             chain_summary=chain_summary,
             publish_preflight=preflight,
         )
-        waiting_items = list_waiting_confirmation(conn, limit=5, config=cfg)
-        gp_wait = build_generation_policy_status()
         waiting_confirmation = {
             "count": int(job_counts.get("waiting_confirmation", 0)) or len(waiting_items),
             "preview": waiting_items,
@@ -1076,8 +503,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 if waiting_items
                 else ""
             ),
-            "quick_proof_allowed": quick_proof_allowed(cfg),
-            "generation_policy": gp_wait,
         }
         st = status()
         return {
@@ -1090,14 +515,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "workbench": workbench,
             "publish_preflight": preflight,
             "preflight_ready": preflight.get("ready", True),
-            "generation_policy": st.get("generation_policy"),
             "wechat_chain_summary": chain_summary,
             "waiting_confirmation": waiting_confirmation,
-            "docs": [
-                {"label": "README", "path": "README.md"},
-                {"label": "开发路线图", "path": "docs/rounds.md"},
-                {"label": "Web 控制台设计", "path": "docs/web_console_design.md"},
-            ],
         }
 
     @app.get("/api/articles")
@@ -1165,7 +584,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 raise HTTPException(status_code=404, detail="作品不存在或已在回收站")
             conn.commit()
         await _sync_web_auto_runner(app, cfg)
-        return {"ok": True, "article_id": article_id, "human": ["作品已移入回收站，相关待发布任务已取消"]}
+        return {"ok": True, "article_id": article_id, "human": ["作品已移入回收站，相关待创建草稿任务已取消"]}
 
     @app.post("/api/articles/{article_id}/restore")
     def restore_trashed_article(article_id: int) -> dict[str, Any]:
@@ -1226,20 +645,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 raise HTTPException(status_code=404, detail="任务不存在或无法取消")
             conn.commit()
         await _sync_web_auto_runner(app, cfg)
-        return {"ok": True, "job_id": job_id, "human": ["已取消该待发布任务"]}
-
-    @app.post("/api/jobs/bulk-cancel")
-    async def bulk_cancel_jobs(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
-        job_ids = [int(x) for x in (payload.get("job_ids") or [])]
-        with db.connect(cfg.database_path) as conn:
-            stats = bulk_cancel_publish_jobs(conn, job_ids=job_ids)
-            conn.commit()
-        await _sync_web_auto_runner(app, cfg)
-        return {
-            "ok": True,
-            **stats,
-            "human": [f"已取消 {stats['cancelled']} 个待发布任务"],
-        }
+        return {"ok": True, "job_id": job_id, "human": ["已取消该待创建草稿任务"]}
 
     @app.get("/api/covers/orphans")
     def covers_orphans() -> dict[str, Any]:
@@ -1265,13 +671,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         """按作品文件名 stem 自动绑定磁盘封面。"""
         with db.connect(cfg.database_path) as conn:
             result = bind_covers_by_stem(cfg, conn)
-        return {"ok": True, **result}
-
-    @app.post("/api/covers/repair")
-    async def covers_repair_paths() -> dict[str, Any]:
-        """清除指向不存在文件的 cover_path。"""
-        with db.connect(cfg.database_path) as conn:
-            result = repair_invalid_cover_paths(cfg, conn)
         return {"ok": True, **result}
 
     @app.get("/api/jobs")
@@ -1329,52 +728,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         stats = sync_remote_drafts(cfg)
         return {"ok": not stats.get("blocked"), "stats": stats}
 
-    @app.get("/api/field-capabilities")
-    def api_field_capabilities() -> list[dict[str, Any]]:
-        from wechat_article_scheduler.field_settings import list_backend_field_capabilities
-
-        return list_backend_field_capabilities()
-
-    @app.post("/api/remote-delete/preview")
-    async def api_remote_delete_preview(payload: dict[str, Any]) -> dict[str, Any]:
-        media_ids = payload.get("media_ids") or []
-        if not isinstance(media_ids, list):
-            raise HTTPException(status_code=400, detail="media_ids 须为数组")
-        from wechat_article_scheduler.remote_delete import build_delete_manifest
-
-        with db.connect(cfg.database_path) as conn:
-            manifest = build_delete_manifest(conn, [str(m) for m in media_ids])
-        return {"ok": True, "manifest": manifest}
-
-    @app.post("/api/remote-delete/execute")
-    async def api_remote_delete_execute(payload: dict[str, Any]) -> dict[str, Any]:
-        from wechat_article_scheduler.remote_delete import execute_remote_delete
-
-        media_ids = payload.get("media_ids") or []
-        if not isinstance(media_ids, list) or not media_ids:
-            raise HTTPException(status_code=400, detail="media_ids 不能为空")
-        result = execute_remote_delete(
-            cfg,
-            [str(m) for m in media_ids],
-            dry_run=bool(payload.get("dry_run")),
-            resume_run_id=payload.get("resume_run_id"),
-            max_items=payload.get("max_items"),
-            confirmed=bool(payload.get("confirmed")),
-        )
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("error", "删除失败"))
-        return result
-
-    @app.get("/api/operation-runs/{run_id}")
-    def api_operation_run(run_id: str) -> dict[str, Any]:
-        from wechat_article_scheduler.operation_runs import get_operation_run
-
-        with db.connect(cfg.database_path) as conn:
-            row = get_operation_run(conn, run_id)
-        if row is None:
-            raise HTTPException(status_code=404, detail="运行记录不存在")
-        return row
-
     @app.get("/api/drafts/{draft_id}")
     def api_draft_detail(draft_id: int) -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
@@ -1411,20 +764,26 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "human": humanize_retry_jobs_result({"retried": count}),
         }
 
+    @app.post("/api/jobs/clear-failed")
+    def clear_failed_jobs(payload: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+        if payload.get("confirmed") is not True:
+            raise HTTPException(status_code=400, detail="必须明确确认清除本地失败队列")
+        with db.connect(cfg.database_path) as conn:
+            result = clear_failed_publish_jobs(conn)
+            conn.commit()
+        return {
+            "ok": True,
+            **result,
+            "human": [
+                f"已清除本地失败队列 {result['deleted']} 条；"
+                "不会删除文章、微信草稿或远端内容"
+            ],
+        }
+
     @app.get("/api/publish-preflight")
     def publish_preflight() -> dict[str, Any]:
         with db.connect(cfg.database_path) as conn:
             return build_publish_preflight(cfg, conn)
-
-    @app.get("/api/schedule-summary")
-    def schedule_summary(limit: int = 10) -> dict[str, Any]:
-        with db.connect(cfg.database_path) as conn:
-            return summarize_schedule(conn, limit=limit)
-
-    @app.get("/api/events")
-    def events(limit: int = 30) -> list[dict[str, Any]]:
-        rows = list_events(cfg, limit=limit)
-        return [dict(r) for r in rows]
 
     @app.post("/api/upload")
     async def upload(
@@ -1433,7 +792,12 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     ) -> dict[str, Any]:
         """批量上传作品文件与封面图（multipart）。"""
         article_payloads = [(f.filename or "unnamed", await f.read()) for f in articles]
-        cover_payloads = [(f.filename or "unnamed", await f.read()) for f in covers]
+        cover_payloads: list[tuple[str, bytes]] = []
+        remaining_cover_bytes = MAX_COVER_BYTES
+        for cover in covers:
+            data = await _read_cover_upload(cover, max_bytes=remaining_cover_bytes)
+            cover_payloads.append((cover.filename or "unnamed", data))
+            remaining_cover_bytes -= len(data)
         result = handle_upload(cfg, articles=article_payloads, covers=cover_payloads)
         with db.connect(cfg.database_path) as conn:
             return enrich_upload_response(result, cfg, conn)
@@ -1449,8 +813,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             row = conn.execute("SELECT id, title FROM articles WHERE id = ?", (article_id,)).fetchone()
             if row is None:
                 raise HTTPException(status_code=404, detail="作品不存在")
-        data = await cover.read()
-        dest = save_cover_file(cfg, cover.filename or f"cover_{article_id}.png", data)
+        data = await _read_cover_upload(cover)
+        try:
+            dest = save_cover_file(cfg, cover.filename or f"cover_{article_id}.png", data)
+        except InvalidCoverError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         cfg_json: str | None = None
         if cover_config_json:
             try:
@@ -1503,7 +870,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
             try:
                 if cover is not None and cover.filename:
-                    data = await cover.read()
+                    data = await _read_cover_upload(cover)
                     stats = batch_set_cover_from_bytes(
                         cfg,
                         conn,
@@ -1514,19 +881,21 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                     )
                 elif copy_from_article_id is not None:
                     stats = batch_set_cover_from_article(
+                        cfg,
                         conn,
                         article_ids,
                         source_article_id=copy_from_article_id,
                         cover_config_json=cfg_json,
                     )
                 elif cover_asset_path:
-                    asset = Path(cover_asset_path)
-                    if not asset.is_file():
+                    check = inspect_managed_cover(cfg, cover_asset_path)
+                    if not check["ok"]:
                         raise HTTPException(status_code=400, detail="封面素材路径无效")
                     stats = batch_set_cover_from_path(
+                        cfg,
                         conn,
                         article_ids,
-                        cover_path=str(asset),
+                        cover_path=str(check["resolved_path"]),
                         cover_config_json=cfg_json,
                     )
                 else:
@@ -1561,29 +930,13 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         if row is None:
             raise HTTPException(status_code=404, detail="文章不存在")
         cover_path = (row["cover_path"] or "").strip()
-        if not cover_path or not Path(cover_path).is_file():
+        if not inspect_managed_cover(cfg, cover_path)["ok"]:
             raise HTTPException(status_code=404, detail="封面不存在")
-        result = build_dual_cover_previews(cover_path, row["cover_config_json"])
-        if not result.get("ok"):
-            raise HTTPException(status_code=400, detail=result.get("message", "预览失败"))
-        return result
-
-    @app.post("/api/cover-preview/dual")
-    async def cover_preview_dual(
-        cover_path: str = Form(...),
-        cover_config_json: str | None = Form(default=None),
-    ) -> dict[str, Any]:
-        """按路径与裁剪配置生成双比例预览（批量封面弹窗可用）。"""
-        path = Path(cover_path)
-        if not path.is_file():
-            raise HTTPException(status_code=400, detail="封面路径无效")
-        allowed_roots = _cover_asset_roots(cfg) + [cfg.covers_dir.resolve()]
-        if not _is_under_any(path.resolve(), allowed_roots):
-            raise HTTPException(status_code=400, detail="封面路径不在允许目录")
-        cfg_json = None
-        if cover_config_json:
-            cfg_json = enrich_cover_config(cover_config_json)
-        result = build_dual_cover_previews(path, cfg_json)
+        result = build_dual_cover_previews(
+            cover_path,
+            row["cover_config_json"],
+            allowed_roots=managed_cover_roots(cfg),
+        )
         if not result.get("ok"):
             raise HTTPException(status_code=400, detail=result.get("message", "预览失败"))
         return result
@@ -1596,20 +949,23 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 "SELECT cover_path FROM articles WHERE id = ?", (article_id,)
             ).fetchone()
         cover_path = (row["cover_path"] if row else None) or ""
-        path = Path(cover_path)
-        if not cover_path or not path.is_file():
+        check = inspect_managed_cover(cfg, cover_path)
+        if not check["ok"]:
             raise HTTPException(status_code=404, detail="封面不存在")
-        return FileResponse(str(path))
+        data = managed_cover_bytes(cfg, str(check["resolved_path"]))
+        media_type = "image/png" if Path(cover_path).suffix.lower() == ".png" else "image/jpeg"
+        return Response(content=data, media_type=media_type)
 
     @app.get("/media/cover-asset")
     def media_cover_asset(path: str) -> FileResponse:
         """返回封面素材库中的素材（供控制台裁剪预览）。"""
-        asset = Path(path).resolve()
-        if not _is_under_any(asset, _cover_asset_roots(cfg)):
+        check = inspect_managed_cover(cfg, path)
+        if not check["ok"]:
             raise HTTPException(status_code=400, detail="封面素材路径无效")
-        if not asset.is_file():
-            raise HTTPException(status_code=404, detail="封面素材不存在")
-        return FileResponse(str(asset))
+        asset = Path(str(check["resolved_path"]))
+        data = managed_cover_bytes(cfg, asset)
+        media_type = "image/png" if asset.suffix.lower() == ".png" else "image/jpeg"
+        return Response(content=data, media_type=media_type)
 
     @app.get("/api/scan-preflight")
     def api_scan_preflight() -> dict[str, Any]:
@@ -1649,7 +1005,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         gate = pf.get("plan_gate") or pf.get("run_once_gate") or {}
         if gate.get("blocked"):
             reasons = list(gate.get("reasons") or [])
-            human = ["发布前检查未通过，无法生成排期"]
+            human = ["草稿创建前检查未通过，无法生成排期"]
             human.extend(reasons[:3])
             return {
                 "ok": False,
@@ -1718,7 +1074,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         gate = pf.get("run_once_gate") or {}
         if gate.get("blocked"):
             reasons = list(gate.get("reasons") or [])
-            human = ["发布前检查未通过，无法执行到点发布"]
+            human = ["草稿创建前检查未通过，无法执行到点任务"]
             human.extend(reasons[:3])
             return {
                 "ok": False,
@@ -1777,48 +1133,34 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.get("/api/collections")
     def collections_api() -> dict[str, Any]:
-        """合集列表（含作品计数，同步 collection.yaml）。"""
+        """只读合集列表（含数据库计数与尚未注册的 YAML 定义）。"""
         with db.connect(cfg.database_path) as conn:
-            sync_discovered_collections(cfg, conn)
-            conn.commit()
             rows = list_collections_summary(conn)
-        discovered = len(discover_collection_configs(cfg.root))
+        discovered_configs = discover_collection_configs(cfg.root)
+        by_slug = {str(row["slug"]): row for row in rows}
+        for item in discovered_configs:
+            by_slug.setdefault(
+                item.slug,
+                {
+                    "id": None,
+                    "slug": item.slug,
+                    "name": item.name,
+                    "description": item.description,
+                    "config_json": item.to_config_json(),
+                    "article_count": 0,
+                },
+            )
+        rows = [by_slug[key] for key in sorted(by_slug)]
+        discovered = len(discovered_configs)
         return {
             "discovered_yaml": discovered,
             "collections": rows,
             "human": [f"已注册 {len(rows)} 个合集（YAML 定义 {discovered} 个）"],
         }
 
-    @app.get("/api/content-library")
-    def content_library_view(
-        collection: str | None = None,
-        limit: int = 50,
-    ) -> dict[str, Any]:
-        with db.connect(cfg.database_path) as conn:
-            sync_discovered_collections(cfg, conn)
-            conn.commit()
-            items = list_content_items(
-                conn,
-                limit=limit,
-                collection_slug=collection,
-            )
-            collections = list_collections_summary(conn)
-        return {
-            "collections": collections,
-            "items": [
-                {
-                    "article_id": i.article_id,
-                    "title": i.title,
-                    "collection_slug": i.collection_slug,
-                    "tags": list(i.tags),
-                }
-                for i in items
-            ],
-        }
-
     @app.get("/api/articles/{article_id}/render-preview")
-    def article_render_preview(article_id: int, save_snapshot: bool = False) -> dict[str, Any]:
-        """公众号效果预览（与 draft/add 同源 HTML；可选落盘快照）。"""
+    def article_render_preview(article_id: int) -> dict[str, Any]:
+        """公众号效果只读预览（落盘仅允许显式 POST）。"""
         with db.connect(cfg.database_path) as conn:
             row = conn.execute(
                 """
@@ -1830,9 +1172,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         if row is None:
             raise HTTPException(status_code=404, detail="文章不存在")
         package = build_article_preview_package(cfg, row, article_id=article_id)
-        if save_snapshot:
-            path = save_preview_snapshot(cfg, package)
-            package["snapshot_path"] = str(path.relative_to(cfg.root))
         latest = latest_snapshot_path(cfg, article_id)
         if latest is not None:
             package["latest_snapshot"] = str(latest.relative_to(cfg.root))
@@ -1859,140 +1198,4 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "article_id": article_id,
         }
 
-    @app.get("/api/drafts/preview/{article_id}")
-    def draft_preview(article_id: int) -> JSONResponse:
-        """Mock/Real 适配器草稿预览（不写入微信）。"""
-        with db.connect(cfg.database_path) as conn:
-            row = conn.execute(
-                "SELECT id, title, summary, body FROM articles WHERE id = ?",
-                (article_id,),
-            ).fetchone()
-        if row is None:
-            raise HTTPException(status_code=404, detail="文章不存在")
-        adapter = get_adapter(cfg)
-        preview = {
-            "article_id": article_id,
-            "title": row["title"],
-            "summary": row["summary"],
-            "body_preview": (row["body"] or "")[:500],
-            "mode": cfg.wechat_mode,
-            "note": "预览模式：mock 会生成本地 media_id；real 模式需显式调用 create_draft 才会联网",
-        }
-        if cfg.wechat_mode == "mock":
-            draft = adapter.create_draft(
-                title=row["title"],
-                summary=row["summary"] or "",
-                body=row["body"],
-            )
-            preview["mock_media_id"] = draft.media_id
-            preview["raw"] = draft.raw_response
-        return JSONResponse(preview)
-
     return app
-
-
-_DEBUG_HTML = """<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="utf-8"/><title>高级排错</title>
-<style>body{font-family:system-ui,sans-serif;padding:20px;max-width:960px;margin:0 auto}
-pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}</style></head>
-<body>
-<h1>高级排错（开发者/Agent）</h1>
-<p>此处展示内部字段与原始 JSON，普通用户无需查看。<a href="/">返回工作台</a></p>
-<h2>状态</h2><pre id="status">加载中…</pre>
-<h2>概况</h2><pre id="overview">加载中…</pre>
-<h2>微信字段能力矩阵</h2><pre id="fields">加载中…</pre>
-<h2>browser_assist 干跑计划（微信）</h2><pre id="browser-assist">加载中…</pre>
-<h2>知乎 browser_assist 评估</h2><pre id="browser-assist-zhihu">加载中…</pre>
-<h2>豆瓣 browser_assist 评估</h2><pre id="browser-assist-douban">加载中…</pre>
-<h2>Bilibili browser_assist 评估</h2><pre id="browser-assist-bilibili">加载中…</pre>
-<h2>小红书 browser_assist 评估</h2><pre id="browser-assist-xhs">加载中…</pre>
-<h2>微信视频号 browser_assist 评估</h2><pre id="browser-assist-channels">加载中…</pre>
-<h2>Adapter Registry</h2><pre id="adapter-registry">加载中…</pre>
-<h2>publish_manifest 干跑（示例）</h2><pre id="manifest-dry-run">加载中…</pre>
-<h2>Phase5 多项目 registry</h2><pre id="projects-registry">加载中…</pre>
-<h2>Phase5 多项目 manifest 干跑</h2><pre id="projects-dry-run">加载中…</pre>
-<h2>Phase5 跨项目发布日历</h2><pre id="publish-calendar">加载中…</pre>
-<h2>Phase5 日历冲突检测</h2><pre id="publish-calendar-conflicts">加载中…</pre>
-<h2>Phase5 统一 outbox 索引</h2><pre id="unified-outbox-index">加载中…</pre>
-<h2>Phase5 统一 outbox dry-run</h2><pre id="unified-outbox-dry-run">加载中…</pre>
-<h2>Phase5 运维健康 dry-run</h2><pre id="ops-health">加载中…</pre>
-<h2>Phase5 runbook 检查清单</h2><pre id="ops-runbook">加载中…</pre>
-<h2>Phase5 收口摘要</h2><pre id="phase5-closure">加载中…</pre>
-<h2>local_blog 评估（静态站）</h2><pre id="local-blog-static">加载中…</pre>
-<h2>local_blog 评估（WordPress）</h2><pre id="local-blog-wp">加载中…</pre>
-<h2>Webhook 评估（generic）</h2><pre id="webhook-plan">加载中…</pre>
-<h2>Phase3 视频内容包预研</h2><pre id="video-package">加载中…</pre>
-<h2>微信闭环链路摘要</h2><pre id="wechat-chain">加载中…</pre>
-<h2>抖音 deferred 评估</h2><pre id="short-video-douyin">加载中…</pre>
-<h2>快手 deferred 评估</h2><pre id="short-video-kuaishou">加载中…</pre>
-<h2>Phase4 播客音频预研</h2><pre id="audio-package-podcast">加载中…</pre>
-<h2>Phase4 网易云 deferred</h2><pre id="audio-package-netease">加载中…</pre>
-<h2>待人工确认队列</h2><pre id="waiting">加载中…</pre>
-<h2>outbox 导出包</h2><pre id="outbox">加载中…</pre>
-<script>
-Promise.all([
-  fetch('/api/status'),
-  fetch('/api/overview'),
-  fetch('/api/wechat-field-matrix'),
-  fetch('/api/browser-assist-plan'),
-  fetch('/api/browser-assist-plan?platform=zhihu'),
-  fetch('/api/browser-assist-plan?platform=douban'),
-  fetch('/api/browser-assist-plan?platform=bilibili'),
-  fetch('/api/browser-assist-plan?platform=xiaohongshu'),
-  fetch('/api/browser-assist-plan?platform=wechat_channels'),
-  fetch('/api/adapter-registry'),
-  fetch('/api/manifest/sample-dry-run'),
-  fetch('/api/projects/registry'),
-  fetch('/api/projects/dry-run'),
-  fetch('/api/publish-calendar/dry-run'),
-  fetch('/api/publish-calendar/conflicts'),
-  fetch('/api/unified-outbox/index'),
-  fetch('/api/unified-outbox/dry-run'),
-  fetch('/api/ops/health-dry-run'),
-  fetch('/api/ops/runbook-checklist'),
-  fetch('/api/phase5/closure-summary'),
-  fetch('/api/local-blog-plan?destination=static_site'),
-  fetch('/api/local-blog-plan?destination=wordpress'),
-  fetch('/api/webhook-plan?channel=generic'),
-  fetch('/api/video-package-plan?platform=bilibili'),
-  fetch('/api/wechat-chain-summary'),
-  fetch('/api/short-video-plan?platform=douyin'),
-  fetch('/api/short-video-plan?platform=kuaishou'),
-  fetch('/api/audio-package-plan?platform=podcast'),
-  fetch('/api/audio-package-plan?platform=netease_music'),
-  fetch('/api/waiting-confirmation'),
-  fetch('/api/outbox-packages'),
-]).then(async ([a,b,c,d,e,f,g,h,i,j,k,pr,pd,pc,pcc,uoi,uod,oh,orb,p5,l,m,n,o,p,q,r,s,t,u,v])=>{
-  document.getElementById('status').textContent = JSON.stringify(await a.json(), null, 2);
-  document.getElementById('overview').textContent = JSON.stringify(await b.json(), null, 2);
-  document.getElementById('fields').textContent = JSON.stringify(await c.json(), null, 2);
-  document.getElementById('browser-assist').textContent = JSON.stringify(await d.json(), null, 2);
-  document.getElementById('browser-assist-zhihu').textContent = JSON.stringify(await e.json(), null, 2);
-  document.getElementById('browser-assist-douban').textContent = JSON.stringify(await f.json(), null, 2);
-  document.getElementById('browser-assist-bilibili').textContent = JSON.stringify(await g.json(), null, 2);
-  document.getElementById('browser-assist-xhs').textContent = JSON.stringify(await h.json(), null, 2);
-  document.getElementById('browser-assist-channels').textContent = JSON.stringify(await i.json(), null, 2);
-  document.getElementById('adapter-registry').textContent = JSON.stringify(await j.json(), null, 2);
-  document.getElementById('manifest-dry-run').textContent = JSON.stringify(await k.json(), null, 2);
-  document.getElementById('projects-registry').textContent = JSON.stringify(await pr.json(), null, 2);
-  document.getElementById('projects-dry-run').textContent = JSON.stringify(await pd.json(), null, 2);
-  document.getElementById('publish-calendar').textContent = JSON.stringify(await pc.json(), null, 2);
-  document.getElementById('publish-calendar-conflicts').textContent = JSON.stringify(await pcc.json(), null, 2);
-  document.getElementById('unified-outbox-index').textContent = JSON.stringify(await uoi.json(), null, 2);
-  document.getElementById('unified-outbox-dry-run').textContent = JSON.stringify(await uod.json(), null, 2);
-  document.getElementById('ops-health').textContent = JSON.stringify(await oh.json(), null, 2);
-  document.getElementById('ops-runbook').textContent = JSON.stringify(await orb.json(), null, 2);
-  document.getElementById('phase5-closure').textContent = JSON.stringify(await p5.json(), null, 2);
-  document.getElementById('local-blog-static').textContent = JSON.stringify(await l.json(), null, 2);
-  document.getElementById('local-blog-wp').textContent = JSON.stringify(await m.json(), null, 2);
-  document.getElementById('webhook-plan').textContent = JSON.stringify(await n.json(), null, 2);
-  document.getElementById('video-package').textContent = JSON.stringify(await o.json(), null, 2);
-  document.getElementById('wechat-chain').textContent = JSON.stringify(await p.json(), null, 2);
-  document.getElementById('short-video-douyin').textContent = JSON.stringify(await q.json(), null, 2);
-  document.getElementById('short-video-kuaishou').textContent = JSON.stringify(await r.json(), null, 2);
-  document.getElementById('audio-package-podcast').textContent = JSON.stringify(await s.json(), null, 2);
-  document.getElementById('audio-package-netease').textContent = JSON.stringify(await t.json(), null, 2);
-  document.getElementById('waiting').textContent = JSON.stringify(await u.json(), null, 2);
-  document.getElementById('outbox').textContent = JSON.stringify(await v.json(), null, 2);
-});
-</script></body></html>"""

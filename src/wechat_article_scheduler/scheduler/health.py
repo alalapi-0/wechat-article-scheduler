@@ -1,4 +1,4 @@
-"""调度器健康检查（Round 14 / round_069）。"""
+"""调度器健康检查。"""
 
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ def build_scheduler_health(config: AppConfig) -> dict[str, Any]:
                 }
         ok = stale_running == 0
         summary = (
-            f"待发布 {pending}（到点 {pending_due}），发布中 {running}，"
+            f"待创建草稿 {pending}（到点 {pending_due}），创建中 {running}，"
             f"失败 {failed}，退避等待 {retry_waiting}"
         )
         if stale_running:

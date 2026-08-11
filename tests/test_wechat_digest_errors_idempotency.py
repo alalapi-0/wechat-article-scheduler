@@ -1,4 +1,4 @@
-"""收敛 Round 3：摘要 120 字、微信错误码可读说明、草稿创建幂等。"""
+"""摘要 120 字、微信错误码可读说明、草稿创建幂等。"""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import pytest
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters.base import DraftResult
 from wechat_article_scheduler.adapters.wechat_http import WechatApiError
+from wechat_article_scheduler.draft_update import draft_content_fingerprint
 from wechat_article_scheduler.parser import clamp_summary
 from wechat_article_scheduler.scheduler import run_due_jobs
 from wechat_article_scheduler.scheduler.draft_idempotency import find_reusable_draft_media_id
@@ -35,7 +36,7 @@ def test_format_job_failure_wechat_api_error() -> None:
     assert "40001" in payload or "token" in payload or "凭证" in payload
 
 
-def test_run_once_reuses_draft_on_same_content_hash(
+def test_run_once_reuses_same_mode_draft_with_matching_fingerprint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = tmp_path
@@ -50,9 +51,6 @@ def test_run_once_reuses_draft_on_same_content_hash(
             create_calls += 1
             return DraftResult(media_id=f"mock-{create_calls}", raw_response={})
 
-        def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-            return {"skipped": True, "media_id": media_id}
-
     monkeypatch.setattr(
         "wechat_article_scheduler.scheduler.domain.get_adapter",
         lambda cfg: CountingAdapter(),  # noqa: ARG005
@@ -66,12 +64,30 @@ def test_run_once_reuses_draft_on_same_content_hash(
             """
         )
         aid = int(conn.execute("SELECT id FROM articles").fetchone()[0])
+        prior_job_id = int(
+            conn.execute(
+                """
+                INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
+                VALUES (?, ?, 'done', 'mock')
+                """,
+                (aid, past),
+            ).lastrowid
+        )
+        fingerprint = draft_content_fingerprint(
+            title="T", summary="S", body="body", cover_path=None
+        )
         conn.execute(
             """
-            INSERT INTO wechat_drafts (article_id, media_id, status, payload_json)
-            VALUES (?, 'existing-mid', 'created', '{}')
+            INSERT INTO wechat_drafts (
+                article_id, media_id, status, payload_json,
+                adapter_mode, publish_job_id
+            ) VALUES (?, 'existing-mid', 'created', ?, 'mock', ?)
             """,
-            (aid,),
+            (
+                aid,
+                f'{{"content_fingerprint":"{fingerprint}"}}',
+                prior_job_id,
+            ),
         )
         conn.execute(
             """
@@ -97,10 +113,10 @@ def test_run_once_reuses_draft_on_same_content_hash(
             (aid,),
         ).fetchone()["c"]
     assert evt is not None
-    assert draft_rows == 1
+    assert draft_rows == 2
 
 
-def test_find_reusable_draft_requires_matching_hash(tmp_path: Path) -> None:
+def test_find_reusable_draft_requires_matching_fingerprint_and_mode(tmp_path: Path) -> None:
     db_path = tmp_path / "find.sqlite3"
     db.init_db(db_path)
     with db.connect(db_path) as conn:
@@ -111,10 +127,50 @@ def test_find_reusable_draft_requires_matching_hash(tmp_path: Path) -> None:
             """
         )
         aid = int(conn.execute("SELECT id FROM articles").fetchone()[0])
+        mock_job_id = int(
+            conn.execute(
+                """
+                INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
+                VALUES (?, datetime('now'), 'done', 'mock')
+                """,
+                (aid,),
+            ).lastrowid
+        )
         conn.execute(
-            "INSERT INTO wechat_drafts (article_id, media_id, status) VALUES (?, 'm1', 'created')",
-            (aid,),
+            """
+            INSERT INTO wechat_drafts (
+                article_id, media_id, status, payload_json,
+                adapter_mode, publish_job_id
+            ) VALUES (?, 'm1', 'created',
+                      '{"content_fingerprint":"fp-a"}', 'mock', ?)
+            """,
+            (aid, mock_job_id),
         )
         conn.commit()
-        assert find_reusable_draft_media_id(conn, article_id=aid, content_hash="hash-a") == "m1"
-        assert find_reusable_draft_media_id(conn, article_id=aid, content_hash="other") is None
+        assert (
+            find_reusable_draft_media_id(
+                conn,
+                article_id=aid,
+                content_fingerprint="fp-a",
+                adapter_mode="mock",
+            )
+            == "m1"
+        )
+        assert (
+            find_reusable_draft_media_id(
+                conn,
+                article_id=aid,
+                content_fingerprint="fp-a",
+                adapter_mode="real",
+            )
+            is None
+        )
+        assert (
+            find_reusable_draft_media_id(
+                conn,
+                article_id=aid,
+                content_fingerprint="other",
+                adapter_mode="mock",
+            )
+            is None
+        )

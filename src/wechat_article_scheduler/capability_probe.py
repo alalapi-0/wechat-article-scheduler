@@ -179,22 +179,13 @@ def human_capability_summary(cached: dict[str, Any]) -> dict[str, str]:
     pub = cached.get(CAPABILITY_PUBLISHED_LIST, {})
     state = pub.get("state", "unknown")
     if state == "unauthorized":
-        return {
-            "published_list": "未授权：无法读取已发布文章列表",
-            "published_delete": "已发布删除功能已禁用（需列表权限）",
-        }
+        return {"published_list": "未授权：无法读取已发布文章列表"}
     if state == "empty":
-        return {
-            "published_list": "已授权，当前无已发布文章",
-            "published_delete": "已发布删除可用（列表为空）",
-        }
+        return {"published_list": "已授权，当前无已发布文章"}
     if state == "authorized":
         cnt = pub.get("item_count")
         label = f"已授权，约 {cnt} 条" if cnt is not None else "已授权"
-        return {"published_list": label, "published_delete": "已发布删除需二次确认"}
+        return {"published_list": label}
     if state == "error":
-        return {
-            "published_list": pub.get("message", "探测失败"),
-            "published_delete": "已发布删除功能已禁用（探测失败）",
-        }
-    return {"published_list": "尚未探测", "published_delete": "已发布删除功能已禁用（未探测）"}
+        return {"published_list": pub.get("message", "探测失败")}
+    return {"published_list": "尚未探测"}

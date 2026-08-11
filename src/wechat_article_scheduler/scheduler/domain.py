@@ -1,11 +1,11 @@
-"""调度领域：单条发布任务的状态流转与执行。"""
+"""调度领域：单条草稿任务的状态流转与执行。"""
 
 from __future__ import annotations
 
 import json
 import logging
 import sqlite3
-from pathlib import Path
+from typing import Any
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters import get_adapter
@@ -21,7 +21,6 @@ from wechat_article_scheduler.wechat_errors import format_job_failure
 from wechat_article_scheduler.publish_config import (
     defaults_from_rules,
     parse_publish_config,
-    should_submit_publish,
 )
 from wechat_article_scheduler.scheduler.claim import clear_job_claim, schedule_failure_retry
 from wechat_article_scheduler.draft_update import (
@@ -31,11 +30,24 @@ from wechat_article_scheduler.draft_update import (
 from wechat_article_scheduler.scheduler.policies import safe_payload
 from wechat_article_scheduler.weekly_plan import (
     STATE_REMOTE_DRAFT_READY,
-    STATE_SUBMITTED,
     mark_article_schedule_state,
 )
 
 logger = logging.getLogger(__name__)
+
+VALID_ADAPTER_MODES = frozenset({"mock", "real"})
+
+
+class AdapterModeMismatchError(RuntimeError):
+    """A queued job cannot run under a process configured for another adapter."""
+
+    def __init__(self, *, job_mode: str, process_mode: str) -> None:
+        self.job_mode = job_mode
+        self.process_mode = process_mode
+        super().__init__(
+            f"任务模式 {job_mode or '<empty>'} 与当前进程模式 "
+            f"{process_mode or '<empty>'} 不一致"
+        )
 
 
 def _row_get(row: sqlite3.Row, key: str) -> str | None:
@@ -46,20 +58,33 @@ def _row_get(row: sqlite3.Row, key: str) -> str | None:
         return None
 
 
+def require_matching_adapter_mode(job: sqlite3.Row, config: AppConfig) -> str:
+    """Return the queued mode, or fail before constructing an adapter."""
+    job_mode = str(_row_get(job, "adapter_mode") or "").strip().lower()
+    process_mode = str(config.wechat_mode or "").strip().lower()
+    if (
+        job_mode not in VALID_ADAPTER_MODES
+        or process_mode not in VALID_ADAPTER_MODES
+        or job_mode != process_mode
+    ):
+        raise AdapterModeMismatchError(job_mode=job_mode, process_mode=process_mode)
+    return job_mode
+
+
 def execute_due_job(
     conn: sqlite3.Connection,
     job: sqlite3.Row,
     *,
     config: AppConfig,
-    adapter_mode: str,
-    published_dir: Path,
     stats: dict[str, int],
+    adapter: Any | None = None,
 ) -> None:
     """执行一条已到期的 pending 任务（非 DRY_RUN）。"""
     job_id = int(job["job_id"])
     article_id = int(job["article_id"])
     retry_count = int(job["retry_count"] or 0)
-    adapter = get_adapter(config)
+    job_mode = require_matching_adapter_mode(job, config)
+    adapter = adapter or get_adapter(config)
 
     try:
         raw_summary = (job["summary"] or "").strip() or (job["title"] or "")
@@ -91,9 +116,18 @@ def execute_due_job(
         )
         source_kind = (_row_get(job, "source_kind") or "local").strip().lower()
         remote_media_id = (_row_get(job, "remote_media_id") or "").strip()
-        content_hash = _row_get(job, "content_hash")
+        fingerprint = draft_content_fingerprint(
+            title=job["title"] or "",
+            summary=job["summary"] or "",
+            body=job["body"] or "",
+            cover_path=_row_get(job, "cover_path"),
+            config=config,
+        )
         reused_media = find_reusable_draft_media_id(
-            conn, article_id=article_id, content_hash=content_hash
+            conn,
+            article_id=article_id,
+            content_fingerprint=fingerprint,
+            adapter_mode=job_mode,
         )
         draft: DraftResult
         if source_kind == "remote_draft" and remote_media_id:
@@ -111,6 +145,21 @@ def execute_due_job(
             stats["remote_draft_reused"] = stats.get("remote_draft_reused", 0) + 1
         elif reused_media:
             draft = draft_result_from_reuse(reused_media)
+            conn.execute(
+                """
+                INSERT INTO wechat_drafts (
+                    article_id, media_id, status, payload_json,
+                    adapter_mode, publish_job_id
+                ) VALUES (?, ?, 'created', ?, ?, ?)
+                """,
+                (
+                    article_id,
+                    reused_media,
+                    attach_fingerprint_to_payload(draft, fingerprint),
+                    job_mode,
+                    job_id,
+                ),
+            )
             db.log_event(
                 conn,
                 entity_type="publish_job",
@@ -130,21 +179,21 @@ def execute_due_job(
                 cover_path=_row_get(job, "cover_path"),
                 options=draft_opts,
             )
-            fp = draft_content_fingerprint(
-                title=job["title"] or "",
-                summary=job["summary"] or "",
-                body=job["body"] or "",
-                cover_path=_row_get(job, "cover_path"),
-            )
             conn.execute(
                 """
-                INSERT INTO wechat_drafts (article_id, media_id, status, payload_json)
-                VALUES (?, ?, 'created', ?)
+                INSERT INTO wechat_drafts (
+                    article_id, media_id, status, payload_json,
+                    adapter_mode, publish_job_id
+                ) VALUES (?, ?, 'created', ?, ?, ?)
                 """,
-                (article_id, draft.media_id, attach_fingerprint_to_payload(draft, fp)),
+                (
+                    article_id,
+                    draft.media_id,
+                    attach_fingerprint_to_payload(draft, fingerprint),
+                    job_mode,
+                    job_id,
+                ),
             )
-        force_publish = should_submit_publish(app_config=config, job_config=pub_cfg)
-        pub = adapter.submit_publish(draft.media_id, force=force_publish)
         conn.execute(
             """
             UPDATE publish_jobs
@@ -157,49 +206,18 @@ def execute_due_job(
             """,
             (job_id,),
         )
-        draft_only = bool(pub.get("skipped"))
-        if draft_only and pub_cfg.publish_action == "publish" and not force_publish:
-            db.log_event(
-                conn,
-                entity_type="publish_job",
-                entity_id=job_id,
-                event_type="publish_skipped_draft_only",
-                payload=safe_payload(
-                    {
-                        "reason": "历史正式发布配置已降级为草稿创建；后台发布需人工确认",
-                        "publish_action": pub_cfg.publish_action,
-                    }
-                ),
-            )
-        if draft_only:
-            mark_article_schedule_state(conn, article_id, STATE_REMOTE_DRAFT_READY)
-            conn.execute(
-                "UPDATE articles SET updated_at = datetime('now') WHERE id = ?",
-                (article_id,),
-            )
-            stats["drafted"] = stats.get("drafted", 0) + 1
-        else:
-            mark_article_schedule_state(conn, article_id, STATE_SUBMITTED)
-            conn.execute(
-                "UPDATE articles SET status = 'published', updated_at = datetime('now') WHERE id = ?",
-                (article_id,),
-            )
-            src = Path(job["source_path"])
-            if src.exists():
-                dest = published_dir / src.name
-                if dest.exists():
-                    dest = published_dir / f"{src.stem}_{article_id}{src.suffix}"
-                src.rename(dest)
-                conn.execute(
-                    "UPDATE articles SET source_path = ? WHERE id = ?",
-                    (str(dest), article_id),
-                )
+        mark_article_schedule_state(conn, article_id, STATE_REMOTE_DRAFT_READY)
+        conn.execute(
+            "UPDATE articles SET updated_at = datetime('now') WHERE id = ?",
+            (article_id,),
+        )
+        stats["drafted"] = stats.get("drafted", 0) + 1
         db.log_event(
             conn,
             entity_type="publish_job",
             entity_id=job_id,
-            event_type="draft_created" if draft_only else "job_done",
-            payload=safe_payload(pub),
+            event_type="draft_created",
+            payload=safe_payload(draft.raw_response),
         )
         stats["processed"] += 1
     except Exception as exc:  # noqa: BLE001 — CLI 需汇总失败数

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from pathlib import Path
 from datetime import datetime, timezone
 
 from typing import TYPE_CHECKING
@@ -13,6 +14,7 @@ from wechat_article_scheduler.content_library.models import (
     ContentItem,
     Tag,
 )
+from wechat_article_scheduler.cover_assets.index import InvalidCoverError, secure_cover_bytes
 
 if TYPE_CHECKING:
     from wechat_article_scheduler.content_library.collection_config import CollectionConfig
@@ -203,9 +205,16 @@ def apply_collection_defaults(
         candidate = Path(cfg.default_cover)
         if not candidate.is_absolute():
             candidate = root / candidate
-        if candidate.is_file():
+        try:
+            secure_cover_bytes(
+                candidate,
+                allowed_roots=(root / "articles" / "covers", root / "cover_assets", root / "assets" / "covers"),
+            )
+        except InvalidCoverError:
+            pass
+        else:
             updates.append("cover_path = ?")
-            params.append(str(candidate.resolve()))
+            params.append(str(candidate.absolute()))
     if updates:
         params.append(article_id)
         conn.execute(

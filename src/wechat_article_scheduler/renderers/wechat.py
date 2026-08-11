@@ -9,6 +9,7 @@ from __future__ import annotations
 import html
 import re
 from html.parser import HTMLParser
+from urllib.parse import urlsplit
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$")
 _LIST_ITEM_RE = re.compile(r"^[-*]\s+(.+)$")
@@ -19,6 +20,18 @@ _INLINE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)")
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 _ITALIC_RE = re.compile(r"(?<!\*)\*([^*]+?)\*(?!\*)")
 _HTML_START_RE = re.compile(r"^\s*<([a-zA-Z][\w:-]*)\b")
+
+
+def _safe_href(raw: str) -> str | None:
+    value = html.unescape(raw or "").strip()
+    if not value or any(ord(ch) < 32 for ch in value) or value.startswith("//"):
+        return None
+    parsed = urlsplit(value)
+    if parsed.scheme and parsed.scheme.lower() not in {"http", "https"}:
+        return None
+    if parsed.netloc and not parsed.scheme:
+        return None
+    return value
 
 _P_STYLE = "margin: 0 0 1em; line-height: 1.8; font-size: 16px; color: #222;"
 _NOTE_STYLE = "margin: 0 0 1em; line-height: 1.6; font-size: 13px; color: #888;"
@@ -40,6 +53,7 @@ class _InlineHTMLToWechat(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=False)
         self.parts: list[str] = []
+        self.anchor_stack: list[bool] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag.lower() == "a":
@@ -48,12 +62,15 @@ class _InlineHTMLToWechat(HTMLParser):
                 if key.lower() == "href" and value:
                     href = value
                     break
-            if href:
-                self.parts.append(f'<a href="{html.escape(href, quote=True)}">')
+            safe = _safe_href(href)
+            self.anchor_stack.append(bool(safe))
+            if safe:
+                self.parts.append(f'<a href="{html.escape(safe, quote=True)}">')
 
     def handle_endtag(self, tag: str) -> None:
         if tag.lower() == "a":
-            self.parts.append("</a>")
+            if self.anchor_stack and self.anchor_stack.pop():
+                self.parts.append("</a>")
 
     def handle_data(self, data: str) -> None:
         self.parts.append(html.escape(data))
@@ -110,8 +127,11 @@ def _inline_markdown(text: str) -> str:
             label = match.group(3)
             if "<" not in label and ">" not in label:
                 label = html.escape(label)
-            href = html.escape(match.group(4), quote=True)
-            out.append(f'<a href="{href}">{label}</a>')
+            href = _safe_href(match.group(4))
+            if href:
+                out.append(f'<a href="{html.escape(href, quote=True)}">{label}</a>')
+            else:
+                out.append(label)
         pos = match.end()
     out.append(base[pos:])
     return "".join(out)
@@ -270,6 +290,6 @@ def render_wechat_html(markdown_text: str) -> str:
 def render_wechat_html_safe(markdown_text: str) -> tuple[str, str | None]:
     try:
         return render_wechat_html(markdown_text), None
-    except Exception as exc:  # noqa: BLE001 - 预览/发布前转换必须兜底
+    except Exception as exc:  # noqa: BLE001 - 预览/草稿转换必须兜底
         safe = html.escape((markdown_text or "").strip())
         return (f'<p style="{_P_STYLE}">{safe}</p>' if safe else ""), str(exc)

@@ -1,7 +1,8 @@
-"""Round 66 / 收敛 Round 11：文章详情与预览页面。"""
+"""文章详情与预览页面。"""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -60,8 +61,7 @@ def test_detail_api_and_page(app_config: AppConfig) -> None:
     assert "返回工作台" in page.text
     assert "render-preview" in page.text
     assert str(aid) in page.text
-    assert "export-drop" in page.text
-    assert "exportOutboxSlot" in page.text
+    assert "btnExportAgent" in page.text
 
 
 def test_detail_page_404(app_config: AppConfig) -> None:
@@ -97,6 +97,42 @@ def test_detail_with_job_and_long_summary(app_config: AppConfig) -> None:
     assert digest_check["ok"] is False
 
 
+def test_real_completed_draft_can_start_local_publish_confirmation(
+    app_config: AppConfig,
+) -> None:
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        aid = _insert_article(conn)
+        jid = int(
+            conn.execute(
+                "INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode) "
+                "VALUES (?, datetime('now'), 'done', 'real')",
+                (aid,),
+            ).lastrowid
+        )
+        conn.execute(
+            """
+            INSERT INTO wechat_drafts (
+                article_id, media_id, status, payload_json,
+                adapter_mode, publish_job_id
+            ) VALUES (?, 'real_detail_media', 'created', '{}', 'real', ?)
+            """,
+            (aid, jid),
+        )
+        conn.commit()
+
+    detail = client.get(f"/api/articles/{aid}").json()
+    assert detail["publish_confirmation"]["eligible"] is True
+    assert detail["publish_confirmation"]["can_start"] is True
+    assert detail["publish_proof"] is None
+
+    waiting = client.post(f"/api/publish-jobs/{jid}/waiting-confirmation")
+    assert waiting.status_code == 200
+    updated = client.get(f"/api/articles/{aid}").json()
+    assert updated["publish_confirmation"]["can_start"] is False
+    assert updated["publish_proof"]["needs_proof"] is True
+
+
 def test_suggest_detail_actions_cover(app_config: AppConfig) -> None:
     row = {"status": "published", "cover_path": ""}
     wb = suggest_detail_actions(row=row, job=None, checks=[], config=app_config)
@@ -108,5 +144,14 @@ def test_suggest_detail_actions_done_job_with_draft(app_config: AppConfig) -> No
     job = {"status": "done", "scheduled_at_label": "2026年06月07日 20:09"}
     wb = suggest_detail_actions(row=row, job=job, checks=[], config=app_config)
     assert wb["primary_action"] == "draft_done"
-    assert "草稿已创建" in wb["headline"]
-    assert "尚未安排发布时间" not in wb["headline"]
+    assert "演练草稿已完成" in wb["headline"]
+    assert "未写入公众号后台" in wb["headline"]
+
+    real = suggest_detail_actions(
+        row=row,
+        job=job,
+        checks=[],
+        config=replace(app_config, wechat_mode="real"),
+    )
+    assert "草稿已创建" in real["headline"]
+    assert "人工发布" in real["headline"]

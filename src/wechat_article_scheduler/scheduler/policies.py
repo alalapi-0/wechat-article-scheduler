@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
-
 from wechat_article_scheduler.config import AppConfig
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 slug: demo
 name: 演示合集
-description: Round 63 多合集扫描示例（小步扩展，兼容根 inbox）
+description: 多合集扫描与排期示例（兼容根 inbox）
 volume_label: 卷
 title_template: "【{title}】"
 sort_rule: source_name

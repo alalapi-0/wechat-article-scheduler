@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""真实微信 API 批量验证（只验证草稿创建；不提交 freepublish）。
+"""真实微信 API 批量验证（只验证草稿创建，不执行最终发表）。
 
 从环境变量 / .env 读取凭证，不打印 secret。报告写入 reports/real_api_runs/。
 """
@@ -56,14 +56,6 @@ def _load_sample(path: Path) -> dict[str, str]:
     return {"id": path.stem, "path": str(path.relative_to(ROOT)), "title": title, "summary": summary, "body": body}
 
 
-def _redact_response(data: Any) -> Any:
-    if isinstance(data, dict):
-        return {k: ("***" if k in ("access_token", "secret") else _redact_response(v)) for k, v in data.items()}
-    if isinstance(data, list):
-        return [_redact_response(x) for x in data]
-    return data
-
-
 def _quality_status(*, ok: bool, body: str, notes: list[str]) -> str:
     if not ok:
         if not body.strip():
@@ -72,29 +64,6 @@ def _quality_status(*, ok: bool, body: str, notes: list[str]) -> str:
     if notes:
         return "pass_with_issues"
     return "pass"
-
-
-def _auto_review_metadata(*, auto_approve: bool) -> dict[str, str]:
-    now = datetime.now(timezone.utc).isoformat()
-    if auto_approve:
-        return {
-            "review_status": "auto_approved",
-            "review_mode": "auto",
-            "reviewer": "agent",
-            "review_reason": "auto-approved for end-to-end real API pipeline test",
-            "reviewed_at": now,
-            "source": "real_api",
-            "mock": "false",
-        }
-    return {
-        "review_status": "pending",
-        "review_mode": "manual",
-        "reviewer": "",
-        "review_reason": "",
-        "reviewed_at": "",
-        "source": "real_api",
-        "mock": "false",
-    }
 
 
 @dataclass
@@ -109,7 +78,6 @@ class SampleResult:
     rendered_preview: str = ""
     quality_notes: list[str] = field(default_factory=list)
     quality_status: str = ""
-    review: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -127,11 +95,7 @@ class RunReport:
     provider: str = "wechat_official"
     model: str = "draft/add + material/thumb"
     wechat_mode: str = ""
-    enable_publish: bool = False
     mock_used: bool = False
-    auto_approve: bool = False
-    auto_approved_count: int = 0
-    allow_publish: bool = False
     samples_requested: int = 0
     success_count: int = 0
     failure_count: int = 0
@@ -150,7 +114,7 @@ def _quality_notes(title: str, body: str) -> list[str]:
     if title and body.lstrip().startswith("#"):
         first = body.lstrip().splitlines()[0].lstrip("#").strip()
         if first == title.strip():
-            notes.append("正文首行与标题重复（发布时会去重）")
+            notes.append("正文首行与标题重复（创建草稿时会去重）")
     if "&lt;" in body:
         notes.append("疑似转义 HTML 源码")
     if len(body) > 20000:
@@ -178,27 +142,11 @@ def credential_status(cfg: Any) -> CredentialStatus:
     return status
 
 
-def _env_auto_approve(default: bool = False) -> bool:
-    import os
-
-    raw = os.getenv("AUTO_APPROVE_GENERATIONS")
-    if raw is not None:
-        return raw.strip().lower() in {"1", "true", "yes", "on"}
-    mode = (os.getenv("REVIEW_MODE") or "").strip().lower()
-    if mode == "auto":
-        return True
-    if (os.getenv("SKIP_HUMAN_REVIEW") or "").strip().lower() in {"1", "true", "yes", "on"}:
-        return True
-    return default
-
-
 def run_check(
     *,
     samples: int,
     dry_run: bool,
     token_only: bool,
-    allow_publish: bool = False,
-    auto_approve: bool | None = None,
 ) -> RunReport:
     _load_dotenv()
     sys.path.insert(0, str(ROOT / "src"))
@@ -207,20 +155,20 @@ def run_check(
 
     cfg = load_config()
     started = datetime.now(timezone.utc).isoformat()
-    approve = _env_auto_approve(default=False) if auto_approve is None else auto_approve
     creds = credential_status(cfg)
     report = RunReport(
         started_at=started,
         wechat_mode=cfg.wechat_mode,
-        enable_publish=bool(cfg.wechat_enable_publish),
         mock_used=cfg.wechat_mode != "real",
-        auto_approve=approve,
-        allow_publish=allow_publish,
         samples_requested=samples,
         credentials=creds,
         dry_run=dry_run,
         token_only=token_only,
     )
+
+    if dry_run:
+        report.blocking_reason = "DRY_RUN：仅验证本地配置，不调用微信 API"
+        return report
 
     if not creds.ready:
         report.blocking_reason = (
@@ -229,12 +177,6 @@ def run_check(
             else "无法执行真实 API 验证"
         )
         return report
-    if allow_publish:
-        cfg.wechat_enable_publish = True
-    else:
-        cfg.wechat_enable_publish = False
-    report.enable_publish = bool(cfg.wechat_enable_publish)
-
     adapter = get_adapter(cfg)
     try:
         adapter.get_access_token()
@@ -243,9 +185,7 @@ def run_check(
         report.blocking_reason = f"access_token 失败: {exc}"
         return report
 
-    if token_only or dry_run:
-        if dry_run:
-            report.blocking_reason = "DRY_RUN：仅验证配置与 token"
+    if token_only:
         return report
 
     paths = sorted(FIXTURES_DIR.glob("*.md"))[:samples]
@@ -282,23 +222,10 @@ def run_check(
             )
             result.media_id = draft.media_id[:16] + "..." if len(draft.media_id) > 16 else draft.media_id
             result.content_len = len(sample["body"])
-            submit = adapter.submit_publish(draft.media_id, force=False)
-            if submit.get("skipped"):
-                result.ok = True
-            else:
-                result.ok = False
-                result.error = "意外提交了发布（本脚本只应验证 draft/add 并跳过 freepublish/submit）"
+            result.ok = True
         except Exception as exc:  # noqa: BLE001
             result.error = str(exc)[:500]
         result.quality_status = _quality_status(ok=result.ok, body=sample["body"], notes=notes)
-        if result.ok and approve:
-            result.review = _auto_review_metadata(auto_approve=True)
-            report.auto_approved_count += 1
-        elif approve:
-            result.review = _auto_review_metadata(auto_approve=True)
-            result.review["review_reason"] = (
-                "auto-approved for pipeline test despite API/parse failure"
-            )
         if result.ok:
             report.success_count += 1
         else:
@@ -308,10 +235,11 @@ def run_check(
     return report
 
 
-def _write_report(report: RunReport) -> Path:
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+def _write_report(report: RunReport, *, reports_dir: Path | None = None) -> Path:
+    output_dir = reports_dir or REPORTS_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    base = REPORTS_DIR / f"run_{stamp}"
+    base = output_dir / f"run_{stamp}"
     payload = asdict(report)
     base.with_suffix(".json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
@@ -324,10 +252,6 @@ def _write_report(report: RunReport) -> Path:
         f"- provider: {report.provider}",
         f"- wechat_mode: {report.wechat_mode}",
         f"- mock_used: {report.mock_used}",
-        f"- auto_approve: {report.auto_approve}",
-        f"- auto_approved_count: {report.auto_approved_count}",
-        f"- allow_publish: {report.allow_publish} (ignored; draft-only check)",
-        f"- enable_publish: {report.enable_publish}",
         f"- token_ok: {report.token_ok}",
         f"- samples: {report.samples_requested}",
         f"- success: {report.success_count}",
@@ -361,8 +285,6 @@ def _write_report(report: RunReport) -> Path:
             lines.append(f"- quality_status: {r.quality_status}")
         if r.quality_notes:
             lines.append(f"- quality: {', '.join(r.quality_notes)}")
-        if r.review:
-            lines.append(f"- review_status: {r.review.get('review_status', '')}")
         lines.append("")
     base.with_suffix(".md").write_text("\n".join(lines), encoding="utf-8")
     return base
@@ -372,11 +294,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="真实微信 API 草稿创建验证（不提交发布）")
     parser.add_argument("--samples", type=int, default=3, help="草稿样本数量（默认 3）")
     parser.add_argument("--token-only", action="store_true", help="仅验证 access_token")
-    parser.add_argument("--dry-run", action="store_true", help="不调用 draft/add")
+    parser.add_argument("--dry-run", action="store_true", help="仅检查本地配置，不调用微信 API")
     parser.add_argument(
-        "--auto-approve",
-        action="store_true",
-        help="自动标记 review_status=auto_approved（也可用 AUTO_APPROVE_GENERATIONS=true）",
+        "--report-dir",
+        type=Path,
+        default=None,
+        help="报告输出目录（测试可指向临时目录）",
     )
     parser.add_argument(
         "--skip-if-blocked",
@@ -389,14 +312,12 @@ def main() -> int:
         samples=max(1, args.samples),
         dry_run=args.dry_run,
         token_only=args.token_only,
-        allow_publish=False,
-        auto_approve=True if args.auto_approve else None,
     )
-    out = _write_report(report)
+    out = _write_report(report, reports_dir=args.report_dir)
     print(f"report: {out.with_suffix('.json')}")
     print(f"mode={report.wechat_mode} mock={report.mock_used} token_ok={report.token_ok}")
     print(f"success={report.success_count} failure={report.failure_count}")
-    if report.wechat_mode == "real" and not report.allow_publish and report.success_count > 0:
+    if report.wechat_mode == "real" and report.success_count > 0:
         print(
             "cleanup: 真实草稿-only 测试会在公众号后台留下草稿；"
             "测试后请登录后台手动删除测试草稿，并对照工作台「微信草稿」区的 media_id 核对"

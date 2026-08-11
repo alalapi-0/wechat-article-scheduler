@@ -1,4 +1,4 @@
-"""发布正文规范化测试（Round 48）。"""
+"""草稿正文规范化测试。"""
 
 from __future__ import annotations
 

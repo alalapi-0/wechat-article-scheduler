@@ -76,8 +76,13 @@ def test_run_once_processes_due_job(tmp_path: Path) -> None:
     with db.connect(db_path) as conn:
         job = conn.execute("SELECT status FROM publish_jobs").fetchone()
         art = conn.execute("SELECT status, schedule_state FROM articles").fetchone()
-        draft = conn.execute("SELECT media_id FROM wechat_drafts").fetchone()
+        draft = conn.execute(
+            "SELECT media_id, adapter_mode, publish_job_id FROM wechat_drafts"
+        ).fetchone()
+        job_id = conn.execute("SELECT id FROM publish_jobs").fetchone()["id"]
         assert job["status"] == "done"
         assert art["status"] == "imported"
         assert art["schedule_state"] == "remote_draft_ready"
         assert draft["media_id"].startswith("mock_media_")
+        assert draft["adapter_mode"] == "mock"
+        assert draft["publish_job_id"] == job_id

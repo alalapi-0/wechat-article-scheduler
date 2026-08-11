@@ -6,10 +6,11 @@ CHECKLIST_TEMPLATE = """# 微信公众号草稿检查清单
 
 ## 登录与门控
 
-- [ ] 已阅读 docs/wechat_chrome_session_runbook.md
-- [ ] 已使用 wechat-chrome-session，而不是 playwright --isolated 或普通 chrome-devtools
-- [ ] list_pages 已找到 mp.weixin.qq.com 的现有标签页
-- [ ] 已取得同一标签页的 DOM snapshot 和截图
+- [ ] 用户已批准使用当前可见的既有登录会话
+- [ ] 未假装新建或隔离浏览器已经登录
+- [ ] 已确认当前页面属于 mp.weixin.qq.com
+- [ ] 已取得当前页面的可见快照或截图
+- [ ] 若无可用的已登录会话，已报告 BLOCKED 并停止
 - [ ] 已基于可见页面判断登录状态（不得读取 cookie/session/token）
 - [ ] 若登录已过期，已等待用户在可见 Chrome 页面自行扫码（不得代填密码）
 - [ ] 用户已点击「已登录，继续」
@@ -31,16 +32,15 @@ CHECKLIST_TEMPLATE = """# 微信公众号草稿检查清单
 - [ ] 原创声明已核对（若适用）
 - [ ] 合集设置正确
 
-## 发布前准备与人工发表边界
+## 只读核对边界
 
 - [ ] 已确认本地 scheduled_at 仅表示“按时创建草稿”
-- [ ] 已填写后台目标定时时间
-- [ ] 已点击保存草稿
-- [ ] 已重新打开同一草稿核验字段是否持久化
-- [ ] 已记录 schedule_persisted=yes/no
+- [ ] 只读比对了后台可见字段与本地期望值
+- [ ] 未修改标题、正文、封面、合集、留言或任何其他字段
+- [ ] 未点击保存草稿
 - [ ] 未点击正式发表、群发或任何创建真实定时任务的最终确认按钮
 - [ ] 未点击最终发布
-- [ ] 已截图或记录 proof
+- [ ] 已填写 inspection_report.md
 """
 
 

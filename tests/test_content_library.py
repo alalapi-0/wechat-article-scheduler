@@ -1,4 +1,4 @@
-"""Round 2：内容库集合、标签与审核状态。"""
+"""内容库集合、标签与审核状态。"""
 
 from __future__ import annotations
 

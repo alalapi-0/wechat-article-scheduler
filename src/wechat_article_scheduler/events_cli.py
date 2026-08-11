@@ -1,4 +1,4 @@
-"""Round 2：查询审计事件。"""
+"""查询审计事件。"""
 
 from __future__ import annotations
 

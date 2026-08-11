@@ -1,4 +1,4 @@
-"""Round 61：封面资产扫描、绑定与孤儿清理。"""
+"""封面资产扫描、绑定与孤儿清理。"""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from wechat_article_scheduler.cover_assets.manager import (
     scan_cover_assets,
 )
 from tests.conftest import make_test_config
+from tests.test_web_upload import PNG
 
 
 @pytest.fixture
@@ -29,8 +30,8 @@ def app_config(tmp_path: Path) -> AppConfig:
 
 
 def test_bind_covers_by_stem(app_config: AppConfig) -> None:
-    cover = app_config.covers_dir / "chapter1.jpg"
-    cover.write_bytes(b"\xff\xd8\xff" + b"\x00" * 8)
+    cover = app_config.covers_dir / "chapter1.png"
+    cover.write_bytes(PNG)
     with db.connect(app_config.database_path) as conn:
         conn.execute(
             "INSERT INTO articles (source_path, title, summary, body, content_hash, status) "
@@ -61,27 +62,70 @@ def test_repair_invalid_cover_path(app_config: AppConfig) -> None:
 def test_orphan_covers_across_directories(app_config: AppConfig) -> None:
     orphan = app_config.root / "cover_assets" / "unused.png"
     orphan.parent.mkdir(parents=True, exist_ok=True)
-    orphan.write_bytes(b"\x89PNG")
+    orphan.write_bytes(PNG)
     with db.connect(app_config.database_path) as conn:
         items = list_orphan_covers(app_config, conn)
     assert any(i["name"] == "unused.png" for i in items)
 
 
-def test_cleanup_orphan_covers(app_config: AppConfig) -> None:
-    orphan = app_config.covers_dir / "gone.jpg"
-    orphan.write_bytes(b"\xff\xd8\xff" + b"\x00" * 8)
+def test_global_managed_default_is_not_orphan(app_config: AppConfig) -> None:
+    default = app_config.covers_dir / "global-default.png"
+    default.write_bytes(PNG)
+    app_config.wechat_default_thumb_path = str(default)
+    with db.connect(app_config.database_path) as conn:
+        assert list_orphan_covers(app_config, conn) == []
 
-    def _unlink(cfg: AppConfig, rel: str) -> bool:
-        path = cfg.root / rel if not Path(rel).is_absolute() else Path(rel)
-        if path.is_file():
-            path.unlink()
-            return True
-        return False
+
+def test_orphan_listing_does_not_use_path_iteration(
+    app_config: AppConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    orphan = app_config.covers_dir / "unused.png"
+    orphan.write_bytes(PNG)
+    monkeypatch.setattr(Path, "iterdir", lambda _path: (_ for _ in ()).throw(AssertionError("iterdir")))
+    with db.connect(app_config.database_path) as conn:
+        assert [item["name"] for item in list_orphan_covers(app_config, conn)] == ["unused.png"]
+
+
+def test_cleanup_orphan_covers(app_config: AppConfig) -> None:
+    orphan = app_config.covers_dir / "gone.png"
+    orphan.write_bytes(PNG)
+
+    from wechat_article_scheduler.web.trash import safe_unlink
 
     with db.connect(app_config.database_path) as conn:
-        out = cleanup_orphan_covers(app_config, conn, unlink=_unlink)
+        out = cleanup_orphan_covers(app_config, conn, unlink=safe_unlink)
     assert out["removed"] == 1
     assert not orphan.exists()
+
+
+def test_cleanup_orphan_covers_uses_held_directory_after_replacement(
+    app_config: AppConfig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from wechat_article_scheduler import filesystem_safety as fs
+    from wechat_article_scheduler.web.trash import safe_unlink
+
+    covers = app_config.covers_dir
+    detached = covers.parent / "detached-covers"
+    orphan = covers / "gone.png"
+    orphan.write_bytes(PNG)
+    original_list = fs.DirectoryHandle.list_names
+    swapped = {"done": False}
+
+    def list_then_replace(handle):
+        names = original_list(handle)
+        if handle.path == covers.absolute() and not swapped["done"]:
+            swapped["done"] = True
+            covers.rename(detached)
+            covers.mkdir()
+            (covers / "gone.png").write_bytes(PNG)
+        return names
+
+    monkeypatch.setattr(fs.DirectoryHandle, "list_names", list_then_replace)
+    with db.connect(app_config.database_path) as conn:
+        out = cleanup_orphan_covers(app_config, conn, unlink=safe_unlink)
+    assert out["removed"] == 1
+    assert not (detached / "gone.png").exists()
+    assert (covers / "gone.png").read_bytes() == PNG
 
 
 def test_covers_scan_api(app_config: AppConfig) -> None:
@@ -96,7 +140,7 @@ def test_covers_scan_api(app_config: AppConfig) -> None:
 
 
 def test_scan_cover_assets_report(app_config: AppConfig) -> None:
-    (app_config.covers_dir / "a.jpg").write_bytes(b"\xff\xd8\xff" + b"\x00" * 8)
+    (app_config.covers_dir / "a.png").write_bytes(PNG)
     with db.connect(app_config.database_path) as conn:
         conn.execute(
             "INSERT INTO articles (source_path, title, summary, body, content_hash, status) "

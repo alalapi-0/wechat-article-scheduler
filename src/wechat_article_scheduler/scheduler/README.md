@@ -1,5 +1,4 @@
-# scheduler
+# 本地草稿调度器
 
-本目录作为未来调度域的模块化骨架。
-
-为避免破坏既有 CLI 导入，本轮通过兼容层继续复用 `src/wechat_article_scheduler/scheduler.py` 的实现。
+本包是调度器的唯一实现：`runtime.py` 负责领取与执行到期任务，`domain.py` 负责创建或
+复用公众号草稿，`claim.py` 处理租约、重试和失败状态。调度器不会执行最终发表。

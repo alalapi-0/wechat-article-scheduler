@@ -1,4 +1,4 @@
-"""草稿创建排期展示辅助（Round 40）。"""
+"""草稿创建排期展示辅助。"""
 
 from __future__ import annotations
 

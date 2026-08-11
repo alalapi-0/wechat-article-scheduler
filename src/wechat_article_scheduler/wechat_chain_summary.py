@@ -1,4 +1,4 @@
-"""微信公众号闭环链路摘要（round_091 工作台辅助）。"""
+"""微信公众号草稿工作流摘要。"""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""每周续排游标（Round 133）：避免 draft-only 完成后重复排同一批。"""
+"""每周续排游标：避免草稿任务完成后重复排同一批。"""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from typing import Any
 STATE_IMPORTED = "imported"
 STATE_SCHEDULED_LOCAL = "scheduled_local"
 STATE_REMOTE_DRAFT_READY = "remote_draft_ready"
+# 旧库兼容状态；现行调度器不会写入最终发布状态。
 STATE_SUBMITTED = "submitted"
 
 # 已完成排期、不应再被 plan 选中的状态

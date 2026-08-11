@@ -9,7 +9,7 @@ from wechat_article_scheduler.publish_preview import render_for_publish
 
 
 class MockWechatAdapter(WechatAdapter):
-    """本地模拟草稿与发布，便于开发与测试。"""
+    """本地模拟草稿操作，便于开发与测试。"""
 
     _MOCK_REMOTE_DRAFTS: tuple[dict, ...] = (
         {"media_id": "mock_remote_draft_001", "title": "[演练] 远端草稿 1", "update_time": 1700000001},
@@ -76,24 +76,6 @@ class MockWechatAdapter(WechatAdapter):
             },
         )
 
-    def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-        if not force:
-            return {
-                "errcode": 0,
-                "errmsg": "ok",
-                "skipped": True,
-                "reason": "draft_only",
-                "media_id": media_id,
-                "mode": "mock",
-            }
-        return {
-            "errcode": 0,
-            "errmsg": "ok",
-            "publish_id": f"mock_pub_{uuid.uuid4().hex[:12]}",
-            "media_id": media_id,
-            "mode": "mock",
-        }
-
     def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
         items = []
         for spec in self._MOCK_REMOTE_DRAFTS[offset : offset + count]:
@@ -121,6 +103,3 @@ class MockWechatAdapter(WechatAdapter):
             "errmsg": "api unauthorized",
             "mode": "mock",
         }
-
-    def delete_draft(self, media_id: str) -> dict:
-        return {"errcode": 0, "errmsg": "ok", "media_id": media_id, "mode": "mock"}

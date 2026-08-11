@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.cover_assets.index import inspect_managed_cover
 from wechat_article_scheduler.web.uploads import save_cover_file
 
 
@@ -81,13 +82,15 @@ def apply_cover_to_articles(
     conn: Any,
     article_ids: list[int],
     *,
+    config: AppConfig,
     cover_path: str,
     cover_config_json: str | None = None,
 ) -> dict[str, int]:
     """为多篇作品写入相同封面路径与可选位置配置。"""
-    path = Path(cover_path)
-    if not cover_path or not path.is_file():
+    check = inspect_managed_cover(config, cover_path)
+    if not check["ok"]:
         raise FileNotFoundError("封面文件不存在")
+    path = Path(str(check["resolved_path"]))
     valid_ids = _active_article_ids(conn, article_ids)
     skipped = len(article_ids) - len(valid_ids)
     for aid in valid_ids:
@@ -115,12 +118,14 @@ def batch_set_cover_from_bytes(
     return apply_cover_to_articles(
         conn,
         article_ids,
+        config=config,
         cover_path=str(dest),
         cover_config_json=cover_config_json,
     )
 
 
 def batch_set_cover_from_path(
+    config: AppConfig,
     conn: Any,
     article_ids: list[int],
     *,
@@ -130,12 +135,14 @@ def batch_set_cover_from_path(
     return apply_cover_to_articles(
         conn,
         article_ids,
+        config=config,
         cover_path=cover_path,
         cover_config_json=cover_config_json,
     )
 
 
 def batch_set_cover_from_article(
+    config: AppConfig,
     conn: Any,
     article_ids: list[int],
     *,
@@ -154,6 +161,7 @@ def batch_set_cover_from_article(
     return apply_cover_to_articles(
         conn,
         article_ids,
+        config=config,
         cover_path=cover_path,
         cover_config_json=cover_config_json,
     )

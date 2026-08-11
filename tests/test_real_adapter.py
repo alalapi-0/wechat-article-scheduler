@@ -5,9 +5,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from wechat_article_scheduler.adapters.real import RealWechatAdapter
 from wechat_article_scheduler.adapters.wechat_http import TokenCache, WechatApiError
+from tests.test_web_upload import PNG
+
+
+def _write_png(path: Path) -> Path:
+    path.write_bytes(PNG)
+    return path
 
 
 def test_token_url_redacts_secret() -> None:
@@ -33,7 +40,7 @@ def test_token_cache_reuses_token() -> None:
 
 def test_upload_thumb_jpg_multipart_metadata(tmp_path: Path) -> None:
     jpg_path = tmp_path / "cover.jpg"
-    jpg_path.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 64)
+    Image.new("RGB", (1, 1), (255, 0, 0)).save(jpg_path, format="JPEG")
     captured: dict = {}
 
     def fake_get(url: str, **kwargs) -> dict:  # noqa: ARG001
@@ -46,17 +53,19 @@ def test_upload_thumb_jpg_multipart_metadata(tmp_path: Path) -> None:
     adapter = RealWechatAdapter(
         "wxapp",
         "wxsec",
-        default_thumb_path=str(jpg_path),
+        default_thumb_path=str(_write_png(tmp_path / "default.png")),
+        managed_roots=(tmp_path,),
         http_get=fake_get,
         http_post_multipart_fn=fake_multipart,
     )
-    assert adapter.upload_thumb_media() == "thumb_jpg"
+    assert adapter.upload_thumb_media(str(jpg_path)) == "thumb_jpg"
+    assert adapter.upload_thumb_media(str(jpg_path)) == "thumb_jpg"
     part = captured["files"]["media"]
     assert part[0] == "thumb.jpg"
     assert part[2] == "image/jpeg"
 
 
-def test_create_draft_strips_duplicate_markdown_title() -> None:
+def test_create_draft_strips_duplicate_markdown_title(tmp_path: Path) -> None:
     posts: list[tuple[str, dict]] = []
 
     def fake_get(url: str, **kwargs) -> dict:  # noqa: ARG001
@@ -74,6 +83,7 @@ def test_create_draft_strips_duplicate_markdown_title() -> None:
     adapter = RealWechatAdapter(
         "wxapp",
         "wxsec",
+        default_thumb_path=str(_write_png(tmp_path / "default.png")),
         http_get=fake_get,
         http_post_json_fn=fake_post_json,
         http_post_multipart_fn=fake_multipart,
@@ -91,7 +101,7 @@ def test_create_draft_strips_duplicate_markdown_title() -> None:
     assert "正文" in article["content"]
 
 
-def test_create_draft_with_mock_http() -> None:
+def test_create_draft_with_mock_http(tmp_path: Path) -> None:
     posts: list[tuple[str, dict]] = []
 
     def fake_get(url: str, **kwargs) -> dict:  # noqa: ARG001
@@ -111,6 +121,7 @@ def test_create_draft_with_mock_http() -> None:
     adapter = RealWechatAdapter(
         "wxapp",
         "wxsec",
+        default_thumb_path=str(_write_png(tmp_path / "default.png")),
         http_get=fake_get,
         http_post_json_fn=fake_post_json,
         http_post_multipart_fn=fake_multipart,
@@ -122,31 +133,90 @@ def test_create_draft_with_mock_http() -> None:
     assert draft_calls[0][1]["articles"][0]["title"] == "标题"
 
 
-def test_submit_publish_skipped_when_disabled() -> None:
-    adapter = RealWechatAdapter("wx", "sec", enable_publish=False)
-    out = adapter.submit_publish("media_x")
-    assert out.get("skipped") is True
+def test_missing_cover_rejected_before_any_http(tmp_path: Path) -> None:
+    calls: list[str] = []
 
+    def unexpected_get(*args, **kwargs) -> dict:  # noqa: ANN002, ANN003, ARG001
+        calls.append("token")
+        return {"access_token": "unexpected", "expires_in": 7200}
 
-def test_submit_publish_calls_api() -> None:
-    def fake_get(url: str, **kwargs) -> dict:  # noqa: ARG001
-        return {"access_token": "T", "expires_in": 7200}
-
-    def fake_post_json(url: str, body: dict, **kwargs) -> dict:  # noqa: ARG001
-        if "freepublish/submit" in url:
-            assert body["media_id"] == "m1"
-            return {"errcode": 0, "publish_id": "pub_1"}
-        return {"errcode": 0}
+    def unexpected_post(*args, **kwargs) -> dict:  # noqa: ANN002, ANN003, ARG001
+        calls.append("post")
+        return {"media_id": "unexpected"}
 
     adapter = RealWechatAdapter(
-        "wx",
-        "sec",
-        http_get=fake_get,
-        http_post_json_fn=fake_post_json,
-        http_post_multipart_fn=lambda *a, **k: {"media_id": "thumb"},
+        "wxapp",
+        "wxsec",
+        default_thumb_path=str(tmp_path / "missing-default.png"),
+        managed_roots=(tmp_path,),
+        http_get=unexpected_get,
+        http_post_json_fn=unexpected_post,
+        http_post_multipart_fn=unexpected_post,
     )
-    out = adapter.submit_publish("m1")
-    assert out["publish_id"] == "pub_1"
+
+    with pytest.raises(RuntimeError, match="无法安全读取"):
+        adapter.create_draft(
+            title="标题",
+            summary="摘要",
+            body="正文",
+            cover_path=str(tmp_path / "missing-article.png"),
+        )
+
+    assert calls == []
+
+
+def test_unspecified_article_cover_uses_valid_default(tmp_path: Path) -> None:
+    default_cover = _write_png(tmp_path / "default.png")
+    multipart_calls = {"count": 0}
+
+    def fake_get(*args, **kwargs) -> dict:  # noqa: ANN002, ANN003, ARG001
+        return {"access_token": "ATOKEN", "expires_in": 7200}
+
+    def fake_multipart(*args, **kwargs) -> dict:  # noqa: ANN002, ANN003, ARG001
+        multipart_calls["count"] += 1
+        return {"media_id": "default_thumb"}
+
+    adapter = RealWechatAdapter(
+        "wxapp",
+        "wxsec",
+        default_thumb_path=str(default_cover),
+        http_get=fake_get,
+        http_post_multipart_fn=fake_multipart,
+    )
+
+    assert adapter.upload_thumb_media() == "default_thumb"
+    assert adapter.upload_thumb_media() == "default_thumb"
+    assert multipart_calls["count"] == 1
+
+
+@pytest.mark.parametrize("suffix", [".gif", ".webp"])
+def test_unsupported_cover_rejected_before_any_http(tmp_path: Path, suffix: str) -> None:
+    calls: list[str] = []
+    cover = tmp_path / f"cover{suffix}"
+    cover.write_bytes(b"unsupported-image")
+
+    def unexpected_http(*args, **kwargs) -> dict:  # noqa: ANN002, ANN003, ARG001
+        calls.append("http")
+        return {"access_token": "unexpected", "expires_in": 7200}
+
+    adapter = RealWechatAdapter(
+        "wxapp",
+        "wxsec",
+        managed_roots=(tmp_path,),
+        http_get=unexpected_http,
+        http_post_json_fn=unexpected_http,
+        http_post_multipart_fn=unexpected_http,
+    )
+
+    with pytest.raises(RuntimeError, match="仅支持 JPG/JPEG/PNG"):
+        adapter.create_draft(
+            title="标题",
+            summary="摘要",
+            body="正文",
+            cover_path=str(cover),
+        )
+
+    assert calls == []
 
 
 def test_missing_credentials_raises() -> None:

@@ -1,4 +1,4 @@
-"""批量管理与删除影响预览（Round 52）。"""
+"""批量管理与删除影响预览。"""
 
 from __future__ import annotations
 
@@ -12,7 +12,10 @@ from wechat_article_scheduler.cover_assets.manager import (
     cleanup_orphan_covers as _cleanup_orphan_covers,
     list_orphan_covers as _list_orphan_covers,
 )
-from wechat_article_scheduler.web.trash import safe_unlink
+from wechat_article_scheduler.web.trash import (
+    reset_article_schedule_state_if_unplanned,
+    safe_unlink,
+)
 
 _ACTIVE_ARTICLE = "(deleted_at IS NULL OR deleted_at = '')"
 
@@ -50,7 +53,7 @@ def build_delete_impact(conn: sqlite3.Connection, article_ids: list[int]) -> dic
     if articles:
         lines.append(f"将 {len(articles)} 篇作品移入回收站")
     if pending_jobs:
-        lines.append(f"其中 {pending_jobs} 个待发布任务将被取消")
+        lines.append(f"其中 {pending_jobs} 个待创建草稿任务将被取消")
     if not articles:
         lines.append("没有可删除的选中作品")
     return {
@@ -76,6 +79,7 @@ def cancel_publish_job(conn: sqlite3.Connection, job_id: int) -> bool:
         """,
         (int(job_id),),
     )
+    reset_article_schedule_state_if_unplanned(conn, int(row["article_id"]))
     db.log_event(
         conn,
         entity_type="publish_job",
@@ -86,15 +90,10 @@ def cancel_publish_job(conn: sqlite3.Connection, job_id: int) -> bool:
     return True
 
 
-def bulk_cancel_publish_jobs(
-    conn: sqlite3.Connection, *, job_ids: list[int] | None = None
-) -> dict[str, int]:
-    ids = [int(x) for x in (job_ids or [])]
-    ok = 0
-    for jid in ids:
-        if cancel_publish_job(conn, jid):
-            ok += 1
-    return {"requested": len(ids), "cancelled": ok}
+def clear_failed_publish_jobs(conn: sqlite3.Connection) -> dict[str, int]:
+    """Atomically delete only local publish jobs currently marked as failed."""
+    cursor = conn.execute("DELETE FROM publish_jobs WHERE status = 'failed'")
+    return {"deleted": int(cursor.rowcount)}
 
 
 def list_orphan_covers(cfg: AppConfig, conn: sqlite3.Connection) -> list[dict[str, str]]:

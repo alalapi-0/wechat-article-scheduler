@@ -1,18 +1,17 @@
-"""普通用户文案映射（Round 20+ 单一来源）。
+"""普通用户文案映射。
 
 展示层翻译：不改数据库字段名或 API 内部枚举，仅用于 Web 普通视图。
 """
 
 from __future__ import annotations
 
-from wechat_article_scheduler.publish_config import PublishConfig, human_publish_action_label
+from wechat_article_scheduler.publish_config import PublishConfig, human_publish_config_summary
 
-# 普通视图禁止直接出现的裸内部词（Round 20 基线检查）
+# 普通视图禁止直接出现的裸内部词。
 FORBIDDEN_ORDINARY_TERMS: tuple[str, ...] = (
     "publish_jobs",
     "payload_json",
     "skipped_future",
-    "wechat_enable_publish",
     "imported",
     "pending",
     "mock",
@@ -38,15 +37,15 @@ JOB_STATUS: dict[str, str] = {
 EVENT_TYPE: dict[str, str] = {
     "scan_imported": "收录文章",
     "scan_reupload_reconciled": "重新上传已绑定",
-    "plan_created": "创建发布计划",
-    "job_started": "开始发布",
-    "job_done": "发布完成",
-    "waiting_confirmation": "进入待人工确认",
-    "proof_submitted": "已提交发布证明",
-    "publish_skipped_draft_only": "自动发布已跳过（仅创建草稿）",
-    "outbox_exported": "已导出 outbox 包",
+    "plan_created": "创建草稿计划",
+    "job_started": "开始创建草稿",
+    "job_done": "草稿任务完成",
+    "waiting_confirmation": "进入人工发布确认",
+    "proof_submitted": "已记录人工发布证明",
+    "publish_skipped_draft_only": "旧事件：自动发布已跳过（仅创建草稿）",
+    "outbox_exported": "旧事件：已导出任务包",
     "draft_created": "微信草稿已创建",
-    "job_failed": "发布失败",
+    "job_failed": "草稿创建失败",
     "digest_warning": "摘要提醒",
     "dry_run": "演练执行",
 }
@@ -63,11 +62,6 @@ def humanize_restore_result(*, count: int = 1) -> list[str]:
     if count <= 1:
         return ["作品已从回收站恢复", RESTORE_SCHEDULE_HINT]
     return [f"已恢复 {count} 篇作品", RESTORE_SCHEDULE_HINT]
-
-PUBLISH_SWITCH: dict[bool, str] = {
-    False: "不会自动发布",
-    True: "历史开关已降级：仍只创建草稿",
-}
 
 DRY_RUN_LABELS: dict[bool, str] = {
     False: "正常执行",
@@ -92,7 +86,7 @@ EMPTY_MESSAGES: dict[str, str] = {
     "jobs": "还没有待创建草稿作品。先在上方上传作品，再点「安排草稿创建时间」。",
     "events": "还没有操作记录。完成上传、排期或执行后，这里会显示你刚才做了什么。",
     "articles": "作品库还是空的。把文章（md/txt/html）和封面图拖到上传区，或点「选择文件」即可收录。",
-    "overview": "欢迎使用本地发布工作台。建议按三步开始：先上传作品，再安排时间，最后到点执行。",
+    "overview": "欢迎使用本地草稿工作台。建议按三步开始：先上传作品，再安排时间，最后到点执行。",
 }
 
 
@@ -116,9 +110,9 @@ def article_workflow_hint(
         if job == "pending":
             return "待创建草稿（已排期）"
         if job == "running":
-            return "发布中"
+            return "创建草稿中"
         if job == "failed":
-            return "发布失败，可重新安排"
+            return "草稿创建失败，可重新安排"
         if job == "waiting_confirmation":
             return "待人工确认 · 需回填发布证明"
         if job == "done" and has_wechat_draft:
@@ -160,9 +154,9 @@ def humanize_scan_result(payload: dict[str, Any]) -> list[str]:
             for item in reconciled:
                 title = str(item.get("title") or "该作品")
                 if item.get("status_reset"):
-                    lines.append(f"《{title}》已在作品库中，已识别为重新上传并重置为待发布")
+                    lines.append(f"《{title}》已在作品库中，已识别为重新上传并重置为待创建草稿")
                 else:
-                    lines.append(f"《{title}》已在作品库中，可继续安排发布")
+                    lines.append(f"《{title}》已在作品库中，可继续安排草稿创建")
         else:
             lines.append("没有发现新的文章")
         if errors:
@@ -197,7 +191,7 @@ def humanize_schedule_single_result(payload: dict[str, Any]) -> list[str]:
     pub = payload.get("publish_config") or {}
     if pub:
         cfg = PublishConfig(**{k: pub[k] for k in pub if k in PublishConfig.__dataclass_fields__})
-        action = human_publish_action_label(cfg)
+        action = "、".join(human_publish_config_summary(cfg))
         if pub.get("auto_execute"):
             lines.append(f"草稿方式：{action}，到点自动执行")
         else:
@@ -216,7 +210,7 @@ def humanize_schedule_batch_result(stats: dict[str, Any]) -> list[str]:
     pub = stats.get("publish_config") or {}
     if pub:
         cfg = PublishConfig(**{k: pub[k] for k in pub if k in PublishConfig.__dataclass_fields__})
-        action = human_publish_action_label(cfg)
+        action = "、".join(human_publish_config_summary(cfg))
         if pub.get("auto_execute"):
             lines.append(f"统一设置：{action}，到点自动执行")
         else:
@@ -267,7 +261,6 @@ def export_labels_json() -> dict[str, Any]:
         "job_status": JOB_STATUS,
         "event_type": EVENT_TYPE,
         "mode": MODE_LABELS,
-        "publish_switch": {str(k): v for k, v in PUBLISH_SWITCH.items()},
         "dry_run": {str(k): v for k, v in DRY_RUN_LABELS.items()},
         "actions": ACTION_LABELS,
         "steps": list(STEP_LABELS),

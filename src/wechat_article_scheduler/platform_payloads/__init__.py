@@ -1,1 +1,0 @@
-"""Future platform payload module."""

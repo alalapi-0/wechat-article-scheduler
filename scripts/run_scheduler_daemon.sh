@@ -14,16 +14,13 @@ fi
 
 export WECHAT_MODE="${WECHAT_MODE:-mock}"
 
-if [[ -x "${ROOT}/.venv/bin/python" ]]; then
-  PY="${ROOT}/.venv/bin/python"
-elif command -v python3 >/dev/null 2>&1; then
-  PY="python3"
-else
-  echo "未找到 python3 或 .venv/bin/python" >&2
+PY="${ROOT}/.venv/bin/python"
+if [[ ! -x "${PY}" ]]; then
+  echo "未找到 ${PY}；请先按 README 初始化虚拟环境" >&2
   exit 1
 fi
 
 mkdir -p "${ROOT}/data/logs"
 echo "[$(date -Iseconds)] scheduler-daemon start mode=${WECHAT_MODE} root=${ROOT}" >> "${ROOT}/data/logs/scheduler-daemon.log"
 
-exec "${PY}" -m wechat_article_scheduler.cli scheduler "$@"
+exec "${PY}" -m wechat_article_scheduler.cli scheduler-daemon "$@"

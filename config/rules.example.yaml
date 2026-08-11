@@ -1,4 +1,5 @@
 # 去重与扫描规则（复制为 config/rules.yaml 后按需修改）
+# 同一设置也有环境变量时，环境变量优先；合集 collection.yaml 只覆盖合集排期。
 
 dedupe:
   # 按 content_hash 去重；若已存在相同 hash 的 imported 文章则跳过
@@ -21,20 +22,15 @@ schedule:
   # 可选：自动 plan 向前看多少天（合集 collection.yaml 可再覆盖 window_days）
   # window_days: 14
 
-# 合集级排期见 content/collections/*/collection.yaml 的 schedule 块（docs/collection_schedule_rules.md）
+# 合集级排期可在 content/collections/*/collection.yaml 的 schedule 块覆盖
 
 publish:
-  # draft = 按时创建草稿；publish = 历史值，当前只表示草稿后需人工后台发布
-  default_action: draft
+  # 到点是否由 Web/daemon 自动执行；执行结果始终是创建或更新草稿
   auto_execute: false
   need_open_comment: false
   only_fans_can_comment: false
   author: ""
   content_source_url: ""
-
-manual_export:
-  # 通用 outbox 导出根目录（可用 MANUAL_EXPORT_OUTBOX 覆盖；测试隔离时建议单独子目录）
-  outbox_dir: "outbox"
 
 external_agent:
   enabled: true
@@ -44,13 +40,5 @@ external_agent:
   include_cover: true
   include_prompt: true
   include_checklist: true
-  include_proof_template: true
+  include_inspection_report: true
   redact_sensitive_values: true
-
-internal_browser_agent:
-  enabled: false
-  note: "This project does not implement internal browser automation by default."
-
-internal_llm_agent:
-  enabled: false
-  note: "This project does not require LLM for normal WeChat draft workflow."

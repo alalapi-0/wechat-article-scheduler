@@ -1,4 +1,4 @@
-"""用户指定发布时间：单篇与批量错峰排期。"""
+"""用户指定草稿创建时间：单篇与批量错峰排期。"""
 
 from __future__ import annotations
 
@@ -30,12 +30,12 @@ def parse_scheduled_at(raw: str) -> datetime:
     """解析 ISO 或 flatpickr 常见格式。"""
     text = (raw or "").strip()
     if not text:
-        raise ValueError("请填写发布时间")
+        raise ValueError("请填写草稿创建时间")
     normalized = text.replace(" ", "T") if "T" not in text and " " in text else text
     try:
         return datetime.fromisoformat(normalized)
     except ValueError as exc:
-        raise ValueError("发布时间格式无效，请重新选择") from exc
+        raise ValueError("草稿创建时间格式无效，请重新选择") from exc
 
 
 def _upsert_pending_job(
@@ -47,6 +47,9 @@ def _upsert_pending_job(
     publish_config: PublishConfig | None = None,
 ) -> bool:
     """创建或更新 pending 任务。返回 True 表示新建，False 表示更新。"""
+    mode = (adapter_mode or "").strip().lower()
+    if mode not in {"mock", "real"}:
+        raise ValueError("任务 adapter_mode 仅支持 mock 或 real")
     iso = scheduled_at.isoformat(timespec="seconds")
     config_json = publish_config_to_json(publish_config) if publish_config else None
     pending = conn.execute(
@@ -58,19 +61,25 @@ def _upsert_pending_job(
             conn.execute(
                 """
                 UPDATE publish_jobs
-                SET scheduled_at = ?, publish_config_json = ?, updated_at = datetime('now')
+                SET scheduled_at = ?, adapter_mode = ?, publish_config_json = ?,
+                    retry_count = 0, next_retry_at = NULL,
+                    claim_token = NULL, claimed_at = NULL,
+                    updated_at = datetime('now')
                 WHERE id = ?
                 """,
-                (iso, config_json, pending["id"]),
+                (iso, mode, config_json, pending["id"]),
             )
         else:
             conn.execute(
                 """
                 UPDATE publish_jobs
-                SET scheduled_at = ?, updated_at = datetime('now')
+                SET scheduled_at = ?, adapter_mode = ?,
+                    retry_count = 0, next_retry_at = NULL,
+                    claim_token = NULL, claimed_at = NULL,
+                    updated_at = datetime('now')
                 WHERE id = ?
                 """,
-                (iso, pending["id"]),
+                (iso, mode, pending["id"]),
             )
         return False
     if config_json is not None:
@@ -80,7 +89,7 @@ def _upsert_pending_job(
             (article_id, scheduled_at, status, adapter_mode, publish_config_json)
             VALUES (?, ?, 'pending', ?, ?)
             """,
-            (article_id, iso, adapter_mode, config_json),
+            (article_id, iso, mode, config_json),
         )
     else:
         conn.execute(
@@ -88,7 +97,7 @@ def _upsert_pending_job(
             INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
             VALUES (?, ?, 'pending', ?)
             """,
-            (article_id, iso, adapter_mode),
+            (article_id, iso, mode),
         )
     return True
 
@@ -101,7 +110,7 @@ def assign_article_schedule(
     now: datetime | None = None,
     publish_config: PublishConfig | None = None,
 ) -> dict[str, Any]:
-    """为单篇文章设定发布时间与发布配置。"""
+    """为单篇文章设定草稿创建时间与任务配置。"""
     when = ensure_future(scheduled_at, now=now)
     pub_cfg = publish_config or defaults_from_rules(config)
     with db.connect(config.database_path) as conn:
@@ -115,7 +124,7 @@ def assign_article_schedule(
         if row is None:
             raise ValueError("作品不存在")
         if row["status"] not in ("imported",):
-            raise ValueError("仅「已收录」作品可安排发布时间")
+            raise ValueError("仅「已收录」作品可安排草稿创建时间")
 
         created = _upsert_pending_job(
             conn,
@@ -151,7 +160,7 @@ def compute_batch_times(
     titles: list[tuple[int, str]],
     now: datetime | None = None,
 ) -> list[tuple[int, datetime]]:
-    """按标题排序后，从锚点时间起错峰生成发布时间。"""
+    """按标题排序后，从锚点时间起错峰生成草稿创建时间。"""
     if count <= 0:
         return []
     if interval < 1:
@@ -181,7 +190,7 @@ def assign_batch_schedule(
     now: datetime | None = None,
     publish_config: PublishConfig | None = None,
 ) -> dict[str, int]:
-    """批量错峰安排发布时间与统一发布配置。"""
+    """批量错峰安排草稿创建时间与统一草稿配置。"""
     pub_cfg = (publish_config or defaults_from_rules(config)).normalized()
     unique_ids = []
     seen: set[int] = set()

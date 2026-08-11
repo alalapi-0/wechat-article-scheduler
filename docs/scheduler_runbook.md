@@ -1,132 +1,70 @@
-# Scheduler 常驻运行手册（Round 70 / 收敛 Round 15）
+# Scheduler 常驻运行
 
-个人本地长期跑发布调度：**不依赖浏览器标签页**，由 CLI 进程或系统定时任务执行 `run-once` / `scheduler`。
+Scheduler 根据本地 publish_jobs.scheduled_at 到点创建或更新草稿。它不会把时间写进微信后台，也没有最终发布能力。
 
-## 模式说明（必读）
+同一数据库只能启用一个持续执行器：Web 自动执行、scheduler-daemon 或 cron 三选一。若使用 daemon 或 cron，请设置 WEB_AUTO_RUN_DUE=false，或不要同时运行 Web。手动 run-once 也应避开持续执行器正在处理任务的时刻。
 
-| 模式 | 环境 | 行为 |
-|------|------|------|
-| **演练（默认）** | `WECHAT_MODE=mock` | 不联网，模拟草稿/发布 |
-| **真实草稿** | `WECHAT_MODE=real` + `WECHAT_ENABLE_PUBLISH=false` | 真实 API 仅创建草稿 |
-| **真实发布** | `WECHAT_MODE=real` + `WECHAT_ENABLE_PUBLISH=true` | 到点可真正发文，需二次确认（Web） |
+## 模式
 
-常驻 scheduler **不会**把定时写进公众号后台；仍是本地 `publish_jobs.scheduled_at` 到点后调用 API。详见 `docs/scheduler_stability.md`。
+| 模式 | 行为 |
+|---|---|
+| WECHAT_MODE=mock | 默认，不联网，模拟草稿结果 |
+| WECHAT_MODE=real | 调用真实素材/草稿 API；需要凭证和有效封面 |
 
-## 快速命令
+任务会固定记录安排时的模式。若进程的 `WECHAT_MODE` 与任务模式不一致，调度器会记录 `adapter_mode_mismatch`、增加 `skipped_mode_mismatch`，并保持任务待执行；它不会自动把 mock 任务变成 real 任务。切换模式后，应在当前模式下重新安排任务。
 
-```bash
-# 项目根目录，已配置 .env
-export WECHAT_MODE=mock   # 默认；真实 API 测试再改 real
+先检查队列：
 
-python -m wechat_article_scheduler.cli scheduler-health
-python -m wechat_article_scheduler.cli run-once          # 单次扫到期任务
-python -m wechat_article_scheduler.cli scheduler        # 前台轮询（Ctrl+C 停止）
-python -m wechat_article_scheduler.cli scheduler-daemon # 同 scheduler，带启动说明
-bash scripts/run_scheduler_daemon.sh                    # 包装脚本（推荐 launchd/systemd 调用）
-bash scripts/cron_run_once.sh                           # 仅适合 cron 每分钟触发一次
-```
+    .venv/bin/python -m wechat_article_scheduler.cli scheduler-health
 
-日志默认写入 `LOG_FILE`（见 `.env`，通常 `data/logs/app.log`），轮转由 `LOG_MAX_BYTES` / `LOG_BACKUP_COUNT` 控制。
+单次执行：
 
-## 方式一：前台 / tmux（最简单）
+    .venv/bin/python -m wechat_article_scheduler.cli run-once
 
-```bash
-cd /path/to/wechat-article-scheduler
-source .venv/bin/activate
-export WECHAT_MODE=mock
-python -m wechat_article_scheduler.cli scheduler
-```
+前台常驻：
 
-**tmux 示例**（断开 SSH 仍运行）：
+    .venv/bin/python -m wechat_article_scheduler.cli scheduler-daemon
 
-```bash
-tmux new -s wechat-sched
-cd /path/to/wechat-article-scheduler && source .venv/bin/activate
-export WECHAT_MODE=mock
-python -m wechat_article_scheduler.cli scheduler
-# 分离：Ctrl+B 然后 D；恢复：tmux attach -t wechat-sched
-# 停止：attach 后 Ctrl+C
-```
+包装脚本：
 
-## 方式二：macOS launchd
+    bash scripts/run_scheduler_daemon.sh
+    bash scripts/cron_run_once.sh
 
-1. 复制并编辑示例：
+调度器有锁和 claim 恢复机制，但重复进程仍会造成无意义竞争。
 
-```bash
-cp deploy/examples/scheduler/com.wechat-article-scheduler.plist.example \
-   ~/Library/LaunchAgents/com.wechat-article-scheduler.plist
-# 将 __REPO_ROOT__ 替换为仓库绝对路径
-```
+## macOS launchd
 
-2. 加载 / 停止：
+先在仓库中执行 `mkdir -p data/logs`。把 deploy/examples/scheduler/com.wechat-article-scheduler.plist.example 复制为 ~/Library/LaunchAgents/com.wechat-article-scheduler.plist，并把 __REPO_ROOT__ 替换为仓库绝对路径。launchd 会在脚本启动前打开日志路径，因此该目录必须预先存在。示例默认 mock；本地 .env 中的 WECHAT_MODE 可覆盖它。
 
-```bash
-launchctl load ~/Library/LaunchAgents/com.wechat-article-scheduler.plist
-launchctl start com.wechat-article-scheduler
-launchctl stop com.wechat-article-scheduler
-launchctl unload ~/Library/LaunchAgents/com.wechat-article-scheduler.plist
-```
+加载并启动：
 
-3. 日志：`deploy/examples/scheduler` 中 plist 将 stdout/stderr 指向 `data/logs/scheduler.launchd.log`。
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.wechat-article-scheduler.plist
+    launchctl kickstart -k gui/$(id -u)/com.wechat-article-scheduler
 
-**注意**：同一时刻不要同时跑 launchd `scheduler` 与 cron `run-once`，会争用 `run_once` 锁（见稳定化文档）。
+停止并卸载：
 
-## 方式三：Linux systemd
+    launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.wechat-article-scheduler.plist
 
-```bash
-sudo cp deploy/examples/scheduler/wechat-article-scheduler.service.example \
-  /etc/systemd/system/wechat-article-scheduler.service
-# 编辑 User=、WorkingDirectory=、EnvironmentFile=
-sudo systemctl daemon-reload
-sudo systemctl enable --now wechat-article-scheduler
-sudo systemctl status wechat-article-scheduler
-sudo systemctl stop wechat-article-scheduler
-```
+## Linux systemd
 
-日志：`journalctl -u wechat-article-scheduler -f`
+复制 deploy/examples/scheduler/wechat-article-scheduler.service.example 到 /etc/systemd/system/，修改用户、WorkingDirectory 和 EnvironmentFile，然后由用户执行 systemctl daemon-reload 和 systemctl enable --now。
 
-## 方式四：cron（仅 run-once）
+## cron
 
-适合「每分钟扫一次到期任务」，**不要**与常驻 `scheduler` 双开。
+参考 deploy/examples/scheduler/cron-run-once.example，每分钟调用一次 scripts/cron_run_once.sh。启用前关闭 Web 自动执行，并且不要同时启动 daemon。
 
-```bash
-crontab -e
-# 参考 deploy/examples/scheduler/cron-run-once.example
-```
+## 诊断
 
-示例行（需改路径）：
+    .venv/bin/python -m wechat_article_scheduler.cli scheduler-health
+    .venv/bin/python -m wechat_article_scheduler.cli events --limit 30
+    .venv/bin/python -m wechat_article_scheduler.cli retry-failed
 
-```
-* * * * * /path/to/wechat-article-scheduler/scripts/cron_run_once.sh >> /path/to/wechat-article-scheduler/data/logs/cron.log 2>&1
-```
+| 现象 | 检查 |
+|---|---|
+| 到点未执行 | pending_due、进程/cron 是否运行、系统时区 |
+| skipped_locked | 是否存在 Web 自动执行、另一个 scheduler 或 cron |
+| stale_running | claim timeout 后是否自动恢复 |
+| 反复失败 | events、封面路径、real 凭证与微信 API 错误 |
+| 担心外部副作用 | 切回 WECHAT_MODE=mock，再用 dry-run 验证 |
 
-## 健康检查与故障处理
-
-| 现象 | 处理 |
-|------|------|
-| 任务不到点执行 | `scheduler-health` 看 `pending_due`；确认进程在跑或 cron 有执行 |
-| `skipped_locked` | 另一实例占用锁；停掉重复 scheduler/cron |
-| 任务卡在「发布中」 | 等待 `SCHEDULER_CLAIM_TIMEOUT_SECONDS` 自动恢复，或 `scheduler-health` 看 `stale_running` |
-| 失败反复 | `retry-failed` 或 Web 队列重试；查看 `events` / `job_retry_scheduled` |
-| 真实误发顾虑 | 保持 `WECHAT_MODE=mock` 或 `WECHAT_ENABLE_PUBLISH=false` |
-
-```bash
-python -m wechat_article_scheduler.cli scheduler-health
-python -m wechat_article_scheduler.cli events --limit 30
-python -m wechat_article_scheduler.cli retry-failed
-```
-
-## 与 Web 工作台的关系
-
-- Web `serve` 可开启「到点自动执行」（`WEB_AUTO_RUN_DUE`），与 CLI scheduler **二选一** 即可，避免重复跑。
-- 浏览器页面不是 scheduler 本体；关页不影响 CLI/launchd 调度。
-
-## 示例文件索引
-
-| 文件 | 用途 |
-|------|------|
-| `deploy/examples/scheduler/com.wechat-article-scheduler.plist.example` | macOS launchd |
-| `deploy/examples/scheduler/wechat-article-scheduler.service.example` | systemd unit |
-| `deploy/examples/scheduler/cron-run-once.example` | crontab 片段 |
-| `scripts/run_scheduler_daemon.sh` | 守护进程入口（供 plist/service 调用） |
-| `scripts/cron_run_once.sh` | cron 单次 run-once |
+日志位置由 LOG_FILE 控制，默认 data/logs/app.log。WEB_AUTO_RUN_DUE=true 时 Web 进程会处理勾选了 auto_execute 的到期任务；此时不要额外启动 daemon 或 cron。

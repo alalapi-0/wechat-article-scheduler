@@ -1,13 +1,14 @@
-"""封面裁剪与双比例预览（Round 62 / 收敛 Phase 1 Round 7）。"""
+"""封面裁剪与双比例预览。"""
 
 from __future__ import annotations
 
 import base64
 import io
 import json
-import struct
 from pathlib import Path
 from typing import Any
+
+from wechat_article_scheduler.cover_assets.index import InvalidCoverError, secure_cover_bytes
 
 ASPECT_HORIZONTAL = 2.35
 ASPECT_SQUARE = 1.0
@@ -130,45 +131,23 @@ def crop_for_aspect(
     return square_crop_from_focal(iw, ih, focal)
 
 
-def probe_image_size(path: Path) -> tuple[int, int] | None:
-    """读取图片尺寸；优先 Pillow，否则解析 PNG/JPEG 头。"""
-    if not path.is_file():
+def _cover_bytes(path: Path, allowed_roots: tuple[Path, ...]) -> bytes:
+    return secure_cover_bytes(path, allowed_roots=allowed_roots)
+
+
+def probe_image_size(
+    path: Path, *, allowed_roots: tuple[Path, ...]
+) -> tuple[int, int] | None:
+    """Read verified image dimensions from no-follow in-memory bytes."""
+    from PIL import Image
+
+    try:
+        data = _cover_bytes(path, allowed_roots)
+        with Image.open(io.BytesIO(data)) as image:
+            image.load()
+            return image.size
+    except (InvalidCoverError, OSError, ValueError):
         return None
-    if pillow_available():
-        from PIL import Image
-
-        with Image.open(path) as im:
-            return im.size
-    data = path.read_bytes()[:64]
-    if len(data) >= 24 and data[:8] == b"\x89PNG\r\n\x1a\n":
-        w, h = struct.unpack(">II", data[16:24])
-        return int(w), int(h)
-    if len(data) >= 2 and data[0:2] == b"\xff\xd8":
-        return _jpeg_size(path)
-    return None
-
-
-def _jpeg_size(path: Path) -> tuple[int, int] | None:
-    with path.open("rb") as f:
-        f.read(2)
-        while True:
-            marker = f.read(2)
-            if len(marker) < 2:
-                return None
-            if marker[0] != 0xFF:
-                return None
-            while marker[0] == 0xFF and marker[1] == 0xFF:
-                marker = f.read(1) + f.read(1)
-            kind = marker[1]
-            if kind in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
-                length = struct.unpack(">H", f.read(2))[0]
-                data = f.read(length - 2)
-                h, w = struct.unpack(">HH", data[1:5])
-                return int(w), int(h)
-            if kind in (0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD8, 0xD9):
-                continue
-            length = struct.unpack(">H", f.read(2))[0]
-            f.read(length - 2)
 
 
 def css_background_spec(crop: dict[str, float]) -> dict[str, str]:
@@ -184,12 +163,12 @@ def css_background_spec(crop: dict[str, float]) -> dict[str, str]:
     }
 
 
-def _render_jpeg_bytes(path: Path, crop: dict[str, float], *, max_edge: int = 640) -> bytes | None:
+def _render_jpeg_bytes(data: bytes, crop: dict[str, float], *, max_edge: int = 640) -> bytes | None:
     if not pillow_available():
         return None
     from PIL import Image
 
-    with Image.open(path) as im:
+    with Image.open(io.BytesIO(data)) as im:
         im = im.convert("RGB")
         iw, ih = im.size
         x0, y0, w, h = _norm_to_pixels(normalize_crop_dict(crop), iw, ih)
@@ -208,8 +187,18 @@ def build_preview_variant(
     crop: dict[str, float],
     aspect_label: str,
     aspect_value: float,
+    image_bytes: bytes | None = None,
+    allowed_roots: tuple[Path, ...] | None = None,
 ) -> dict[str, Any]:
-    size = probe_image_size(path)
+    data = image_bytes
+    if data is None:
+        try:
+            if allowed_roots is None:
+                raise InvalidCoverError("预览缺少明确的受管目录")
+            data = _cover_bytes(path, allowed_roots)
+        except InvalidCoverError:
+            data = None
+    size = probe_image_size(path) if data is None else _image_size_from_bytes(data)
     iw, ih = size if size else (1, 1)
     css = css_background_spec(crop)
     variant: dict[str, Any] = {
@@ -220,7 +209,7 @@ def build_preview_variant(
         "image_width": iw,
         "image_height": ih,
     }
-    jpeg = _render_jpeg_bytes(path, crop)
+    jpeg = _render_jpeg_bytes(data, crop) if data is not None else None
     if jpeg:
         variant["render_mode"] = "jpeg"
         variant["image_base64"] = base64.b64encode(jpeg).decode("ascii")
@@ -233,12 +222,18 @@ def build_preview_variant(
 def build_dual_cover_previews(
     cover_path: str | Path,
     cover_config_json: str | dict | None = None,
+    *,
+    allowed_roots: tuple[Path, ...],
 ) -> dict[str, Any]:
     """生成横向（2.35:1）与方形（1:1）预览规格/可选 JPEG。"""
     path = Path(cover_path)
     cfg = enrich_cover_config(cover_config_json)
     crop = cfg.get("crop") if isinstance(cfg.get("crop"), dict) else None
-    size = probe_image_size(path)
+    try:
+        image_bytes = _cover_bytes(path, allowed_roots)
+    except InvalidCoverError:
+        image_bytes = None
+    size = _image_size_from_bytes(image_bytes) if image_bytes is not None else None
     if size is None:
         return {
             "ok": False,
@@ -258,11 +253,24 @@ def build_dual_cover_previews(
             crop=h_crop,
             aspect_label=HORIZONTAL_LABEL,
             aspect_value=ASPECT_HORIZONTAL,
+            image_bytes=image_bytes,
         ),
         "square": build_preview_variant(
             path,
             crop=s_crop,
             aspect_label=SQUARE_LABEL,
             aspect_value=ASPECT_SQUARE,
+            image_bytes=image_bytes,
         ),
     }
+
+
+def _image_size_from_bytes(data: bytes) -> tuple[int, int] | None:
+    from PIL import Image
+
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            image.load()
+            return image.size
+    except (OSError, ValueError):
+        return None

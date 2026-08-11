@@ -6,16 +6,20 @@ from wechat_article_scheduler.adapters.base import WechatAdapter
 from wechat_article_scheduler.adapters.mock import MockWechatAdapter
 from wechat_article_scheduler.adapters.real import RealWechatAdapter
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.cover_assets.index import managed_cover_roots
 
 
 def get_adapter(config: AppConfig) -> WechatAdapter:
     """根据 WECHAT_MODE 返回适配器（默认 mock）。"""
-    mode = (config.wechat_mode or "mock").lower()
+    mode = str(config.wechat_mode).strip().lower()
     if mode == "real":
         return RealWechatAdapter(
             config.wechat_app_id,
             config.wechat_app_secret,
             default_thumb_path=config.wechat_default_thumb_path or None,
-            enable_publish=config.wechat_enable_publish,
+            managed_roots=managed_cover_roots(config),
+            project_root=config.root,
         )
-    return MockWechatAdapter()
+    if mode == "mock":
+        return MockWechatAdapter()
+    raise ValueError("WECHAT_MODE 仅支持 mock 或 real")

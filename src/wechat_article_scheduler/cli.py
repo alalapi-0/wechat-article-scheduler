@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import argparse
-import sys
 
 from wechat_article_scheduler import db
-from wechat_article_scheduler.config import load_config
+from wechat_article_scheduler.config import load_config, require_loopback_web_host
 from wechat_article_scheduler.logging_setup import setup_logging
 from wechat_article_scheduler.plan import build_plan as build_publish_plan
 from wechat_article_scheduler.scanner import scan_inbox
@@ -24,179 +23,22 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("init-db", help="初始化 SQLite 表结构")
     sub.add_parser("scan", help="扫描 articles/inbox 并导入")
-    sub.add_parser("plan", help="为已导入文章生成发布计划")
+    sub.add_parser("plan", help="为已导入文章生成草稿创建计划")
     sync_remote = sub.add_parser("sync-remote", help="同步公众号远端草稿到本地镜像（只读）")
     sync_remote.add_argument("--dry-run", action="store_true", help="仅演练不写库")
     sync_remote.add_argument("--max-pages", type=int, default=50, help="最大分页数")
-    sync_remote.add_argument("--resume-run-id", type=str, default=None, help="续跑审计 run_id")
-    sub.add_parser("run-once", help="执行所有已到期的发布任务")
-    sub.add_parser("scheduler", help="后台轮询调度（阻塞）")
+    sub.add_parser("run-once", help="执行所有已到期的草稿任务")
     sub.add_parser(
         "scheduler-daemon",
-        help="常驻调度（同 scheduler；见 docs/scheduler_runbook.md）",
+        help="常驻调度（见 docs/scheduler_runbook.md）",
     )
     sub.add_parser("scheduler-health", help="调度器健康检查（队列/锁/卡住任务）")
     sub.add_parser("field-matrix", help="输出微信公众号字段能力矩阵 JSON")
-    ba_plan = sub.add_parser(
-        "browser-assist-plan",
-        help="输出 browser_assist 干跑计划 JSON（人机确认，不自动发布）",
-    )
-    ba_plan.add_argument("--article-id", type=str, default=None)
-    ba_plan.add_argument("--media-id", type=str, default=None)
-    ba_plan.add_argument(
-        "--platform",
-        type=str,
-        default="wechat_official",
-        help="wechat_official | zhihu | douban | bilibili | xiaohongshu|xhs | wechat_channels|channels",
-    )
-
-    ba_sess = sub.add_parser(
-        "browser-assist-session",
-        help="browser_assist 手动登录门控与草稿检查会话（不自动发布）",
-    )
-    ba_sess.add_argument(
-        "action",
-        choices=[
-            "start",
-            "status",
-            "list",
-            "record-connection",
-            "confirm-login",
-            "confirm-schedule-setup",
-            "confirm-final-schedule",
-            "cancel",
-        ],
-        help="start=打开登录门控 | record-connection=记录接管页面验收 | confirm-login=用户确认已登录 | confirm-schedule-setup=兼容旧名，记录草稿检查完成 | confirm-final-schedule=兼容旧名，进入 proof",
-    )
-    ba_sess.add_argument("--job-id", type=int, default=None, help="start 时必填")
-    ba_sess.add_argument("--session-id", type=str, default=None)
-    ba_sess.add_argument("--note", type=str, default=None, help="用户 attestation 备注")
-    ba_sess.add_argument(
-        "--report-json",
-        type=str,
-        default=None,
-        help="连接验收报告 JSON（record-connection/confirm-login 可选）",
-    )
-    ba_sess.add_argument(
-        "--report-file",
-        type=str,
-        default=None,
-        help="连接验收报告 JSON 文件路径（record-connection/confirm-login 可选）",
-    )
-    ba_sess.add_argument(
-        "--scheduled-at",
-        type=str,
-        default=None,
-        help="confirm-schedule-setup 时记录后台目标定时时间（默认沿用任务 scheduled_at）",
-    )
-    ba_sess.add_argument(
-        "--no-export-task",
-        action="store_true",
-        help="start 时不自动生成外部 Agent 任务包",
-    )
-
-    sub.add_parser("adapter-registry", help="列出 adapter registry 能力声明 JSON")
-
-    mval = sub.add_parser("manifest-validate", help="校验 publish_manifest.json")
-    mval.add_argument(
-        "--manifest",
-        type=str,
-        required=True,
-        help="manifest 文件路径",
-    )
-
-    mdry = sub.add_parser(
-        "manifest-dry-run",
-        help="manifest 干跑预览（content_package，不写库）",
-    )
-    mdry.add_argument("--manifest", type=str, required=True)
-
-    mpdry = sub.add_parser(
-        "projects-dry-run",
-        help="多项目 projects.yaml 批量 manifest 干跑（不写库）",
-    )
-    mpdry.add_argument(
-        "--projects",
-        type=str,
-        default=None,
-        help="projects.yaml 路径（默认 config/projects.yaml 或 projects.example.yaml）",
-    )
-
-    pcal = sub.add_parser(
-        "publish-calendar-dry-run",
-        help="跨项目 manifest 发布日历 dry-run（冲突检测，不写库）",
-    )
-    pcal.add_argument("--projects", type=str, default=None)
-    pcal.add_argument(
-        "--min-gap-minutes",
-        type=int,
-        default=60,
-        help="同账号相邻排期最小间隔（分钟）",
-    )
-
-    uob = sub.add_parser(
-        "unified-outbox-dry-run",
-        help="统一 outbox 目录索引与 publish_manifest 汇总（只读）",
-    )
-    uob.add_argument("--config", type=str, default=None, help="unified_outbox.yaml 路径")
-    uob.add_argument("--projects", type=str, default=None)
-
-    ops = sub.add_parser(
-        "ops-health-dry-run",
-        help="长期运维 runbook 检查清单与健康指标 dry-run",
-    )
-    ops.add_argument("--config", type=str, default=None, help="ops_maintenance.yaml 路径")
-
-    p5 = sub.add_parser("phase5-closure-summary", help="Phase5 预研模块收口摘要（只读）")
-
-    lb = sub.add_parser(
-        "local-blog-plan",
-        help="local_blog 评估干跑 JSON（静态站/WordPress/本地目录，不真发）",
-    )
-    lb.add_argument(
-        "--destination",
-        type=str,
-        default="static_site",
-        help="static_site | wordpress | local_files",
-    )
-    lb.add_argument("--article-id", type=str, default=None)
-    lb.add_argument("--output-dir", type=str, default=None)
-
-    wh = sub.add_parser("webhook-plan", help="Webhook 评估干跑 JSON（不发起 HTTP）")
-    wh.add_argument("--channel", type=str, default="generic", help="generic | feishu | slack")
-    wh.add_argument("--article-id", type=str, default=None)
-    wh.add_argument("--event-type", type=str, default="article.ready")
-
-    vp = sub.add_parser(
-        "video-package-plan",
-        help="Phase3 视频内容包预研 dry-run（不上传）",
-    )
-    vp.add_argument("--platform", type=str, default="bilibili")
-    vp.add_argument("--package-id", type=str, default=None)
-    vp.add_argument("--title", type=str, default=None)
-    vp.add_argument("--video-path", type=str, default=None)
-
-    svp = sub.add_parser(
-        "short-video-plan",
-        help="抖音/快手 deferred 评估 dry-run（不上传）",
-    )
-    svp.add_argument("--platform", type=str, default="douyin", help="douyin | kuaishou | ks")
-    svp.add_argument("--article-id", type=str, default=None)
-
-    ap = sub.add_parser(
-        "audio-package-plan",
-        help="Phase4 音频/播客预研 dry-run（不上传）",
-    )
-    ap.add_argument("--platform", type=str, default="podcast")
-    ap.add_argument("--package-id", type=str, default=None)
-    ap.add_argument("--title", type=str, default=None)
-    ap.add_argument("--audio-path", type=str, default=None)
-
     sub.add_parser("wechat-chain-summary", help="微信公众号闭环链路摘要 JSON")
 
     mark_wc = sub.add_parser(
         "mark-waiting-confirmation",
-        help="将发布任务标为待人工确认（browser_assist/manual_export）",
+        help="将任务标为等待用户后台核对并回填 proof",
     )
     mark_wc.add_argument("--job-id", type=int, required=True)
 
@@ -207,18 +49,9 @@ def _build_parser() -> argparse.ArgumentParser:
     submit_proof.add_argument("--confirmed-by", type=str, default=None)
     submit_proof.add_argument("--note", type=str, default=None)
 
-    export_ob = sub.add_parser("export-outbox", help="导出作品为 manual_export outbox 包")
-    export_ob.add_argument("--article-id", type=int, required=True)
-    export_ob.add_argument(
-        "--platform",
-        type=str,
-        default="generic",
-        help="generic | zhihu | douban | bilibili | xiaohongshu | wechat_channels | douyin | kuaishou",
-    )
-
     export_agent = sub.add_parser(
         "export-agent-task",
-        help="为指定发布任务生成外部 Browser Agent 任务包（不启动浏览器、不发布）",
+        help="为指定草稿任务生成外部 Browser Agent 任务包（不启动浏览器、不发布）",
     )
     export_agent.add_argument("--job-id", type=int, required=True)
 
@@ -230,32 +63,32 @@ def _build_parser() -> argparse.ArgumentParser:
         "--status",
         type=str,
         default="draft_created",
-        help="draft_created | manual_settings_required | publish_jobs.status",
+        help="draft_created | publish_jobs.status",
     )
     export_agents.add_argument("--limit", type=int, default=20)
 
-    reject_p = sub.add_parser("reject", help="驳回文章 (Round 1)")
+    reject_p = sub.add_parser("reject", help="驳回文章")
     reject_p.add_argument("--article-id", type=int, required=True)
 
-    sub.add_parser("retry-failed", help="重试失败的发布任务 (Round 1)")
+    sub.add_parser("retry-failed", help="重试失败的草稿创建任务")
 
     upd_draft = sub.add_parser("update-draft", help="更新已有微信草稿 (draft/update)")
     upd_draft.add_argument("--article-id", type=int, required=True)
 
-    events_p = sub.add_parser("events", help="列出最近审计事件 (Round 2)")
+    events_p = sub.add_parser("events", help="列出最近审计事件")
     events_p.add_argument("--limit", type=int, default=20)
 
-    content_p = sub.add_parser("content", help="列出内容库集合与条目 (Round 2)")
+    content_p = sub.add_parser("content", help="列出内容库集合与条目")
     content_p.add_argument("--limit", type=int, default=20)
 
-    serve_p = sub.add_parser("serve", help="启动 FastAPI 管理后台 (Round 6)")
+    serve_p = sub.add_parser("serve", help="启动 FastAPI 管理后台")
     serve_p.add_argument("--host", default=None, help="监听地址，默认 WEB_HOST")
     serve_p.add_argument("--port", type=int, default=None, help="端口，默认 WEB_PORT")
 
-    snap_p = sub.add_parser("preview-snapshot", help="生成并保存公众号预览快照 (Round 60)")
+    snap_p = sub.add_parser("preview-snapshot", help="生成并保存公众号预览快照")
     snap_p.add_argument("--article-id", type=int, required=True)
 
-    cover_p = sub.add_parser("cover-scan", help="扫描封面素材库 (Round 61)")
+    cover_p = sub.add_parser("cover-scan", help="扫描封面素材库")
     cover_p.add_argument("--bind", action="store_true", help="按文件名 stem 自动绑定")
     cover_p.add_argument("--repair", action="store_true", help="清除无效 cover_path")
     return parser
@@ -288,7 +121,6 @@ def main(argv: list[str] | None = None) -> int:
             config,
             max_pages=args.max_pages,
             dry_run=args.dry_run,
-            run_id=args.resume_run_id,
         )
         print(f"远端同步完成: {stats}")
         return 0 if not stats.get("blocked") else 1
@@ -298,13 +130,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"执行完成: {stats}")
         return 0
 
-    if args.command in ("scheduler", "scheduler-daemon"):
-        if args.command == "scheduler-daemon":
-            print(
-                "常驻调度已启动（WECHAT_MODE=%s）。停止：Ctrl+C。"
-                " 手册：docs/scheduler_runbook.md"
-                % config.wechat_mode
-            )
+    if args.command == "scheduler-daemon":
+        print(
+            "常驻调度已启动（WECHAT_MODE=%s）。停止：Ctrl+C。"
+            " 手册：docs/scheduler_runbook.md"
+            % config.wechat_mode
+        )
         try:
             scheduler_loop(config)
         except KeyboardInterrupt:
@@ -337,342 +168,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    if args.command == "browser-assist-plan":
-        import json
-
-        from wechat_article_scheduler.adapters.browser_assist import build_dry_run_plan
-
-        try:
-            plan = build_dry_run_plan(
-                platform=args.platform,
-                article_id=args.article_id,
-                media_id=args.media_id,
-                config=config,
-            )
-        except ValueError as exc:
-            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
-            return 1
-        print(json.dumps(plan, ensure_ascii=False, indent=2))
-        return 0
-
-    if args.command == "browser-assist-session":
-        import json
-        from pathlib import Path
-
-        from wechat_article_scheduler.adapters.browser_assist import (
-            cancel_browser_assist_session,
-            confirm_browser_login,
-            confirm_final_schedule,
-            confirm_schedule_setup,
-            get_browser_assist_session,
-            list_browser_assist_sessions,
-            record_browser_connection,
-            start_browser_assist_session,
-        )
-
-        def _load_connection_report() -> tuple[dict[str, object] | None, dict[str, object] | None]:
-            if args.report_json and args.report_file:
-                return None, {"ok": False, "error": "--report-json 与 --report-file 只能选一个"}
-            text = args.report_json
-            if args.report_file:
-                path = Path(args.report_file)
-                if not path.is_file():
-                    return None, {"ok": False, "error": "--report-file 不存在"}
-                text = path.read_text(encoding="utf-8")
-            if not text:
-                return None, None
-            try:
-                loaded = json.loads(text)
-            except json.JSONDecodeError as exc:
-                return None, {"ok": False, "error": f"连接报告 JSON 解析失败：{exc}"}
-            if not isinstance(loaded, dict):
-                return None, {"ok": False, "error": "连接报告必须是 JSON object"}
-            return loaded, None
-
-        action = args.action
-        if action == "list":
-            result = list_browser_assist_sessions(config)
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return 0 if result.get("ok") else 1
-
-        if action in (
-            "status",
-            "record-connection",
-            "confirm-login",
-            "confirm-schedule-setup",
-            "confirm-final-schedule",
-            "cancel",
-        ):
-            if not args.session_id:
-                print(json.dumps({"ok": False, "error": "需要 --session-id"}, ensure_ascii=False))
-                return 1
-            report_payload, report_err = _load_connection_report()
-            if report_err:
-                print(json.dumps(report_err, ensure_ascii=False, indent=2))
-                return 1
-            db.init_db(config.database_path)
-            with db.connect(config.database_path) as conn:
-                if action == "status":
-                    result = get_browser_assist_session(config, args.session_id)
-                elif action == "record-connection":
-                    result = record_browser_connection(
-                        config,
-                        conn,
-                        args.session_id,
-                        report=report_payload,
-                    )
-                elif action == "confirm-login":
-                    result = confirm_browser_login(
-                        config,
-                        conn,
-                        args.session_id,
-                        attestation_note=args.note,
-                        connection_report=report_payload,
-                    )
-                elif action == "confirm-schedule-setup":
-                    result = confirm_schedule_setup(
-                        config,
-                        conn,
-                        args.session_id,
-                        note=args.note,
-                        scheduled_at=args.scheduled_at,
-                    )
-                elif action == "confirm-final-schedule":
-                    result = confirm_final_schedule(
-                        config, conn, args.session_id, attestation_note=args.note
-                    )
-                else:
-                    result = cancel_browser_assist_session(
-                        config, conn, args.session_id, reason=args.note
-                    )
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return 0 if result.get("ok") else 1
-
-        if action == "start":
-            if not args.job_id:
-                print(json.dumps({"ok": False, "error": "start 需要 --job-id"}, ensure_ascii=False))
-                return 1
-            db.init_db(config.database_path)
-            with db.connect(config.database_path) as conn:
-                result = start_browser_assist_session(
-                    config,
-                    conn,
-                    args.job_id,
-                    export_task_package=not args.no_export_task,
-                )
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return 0 if result.get("ok") else 1
-
-        return 1
-
-    if args.command == "adapter-registry":
-        import json
-
-        from wechat_article_scheduler.adapters.registry import list_adapter_capabilities
-
-        print(
-            json.dumps(
-                {"capabilities": list_adapter_capabilities()},
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
-        return 0
-
-    if args.command == "manifest-validate":
-        import json
-        from pathlib import Path
-
-        from wechat_article_scheduler.core.manifest_loader import validate_manifest_file
-
-        _data, result = validate_manifest_file(Path(args.manifest))
-        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
-        return 0 if result.ok else 1
-
-    if args.command == "manifest-dry-run":
-        import json
-        from pathlib import Path
-
-        from wechat_article_scheduler.content_packages.from_manifest import (
-            manifest_dry_run_summary,
-        )
-        from wechat_article_scheduler.core.manifest_loader import load_manifest
-
-        path = Path(args.manifest)
-        try:
-            summary = manifest_dry_run_summary(load_manifest(path))
-        except ValueError as exc:
-            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
-            return 1
-        summary["manifest_path"] = str(path.resolve())
-        print(json.dumps(summary, ensure_ascii=False, indent=2))
-        return 0
-
-    if args.command == "projects-dry-run":
-        import json
-        from pathlib import Path
-
-        from wechat_article_scheduler.config import ROOT
-        from wechat_article_scheduler.core.multi_project_dry_run import (
-            build_multi_project_dry_run,
-        )
-
-        projects_path = Path(args.projects) if args.projects else None
-        summary = build_multi_project_dry_run(ROOT, projects_path=projects_path)
-        print(json.dumps(summary, ensure_ascii=False, indent=2))
-        return 0 if summary.get("ok") else 1
-
-    if args.command == "publish-calendar-dry-run":
-        import json
-        from pathlib import Path
-
-        from wechat_article_scheduler.config import ROOT
-        from wechat_article_scheduler.core.cross_project_calendar import (
-            build_publish_calendar_dry_run,
-        )
-
-        projects_path = Path(args.projects) if args.projects else None
-        summary = build_publish_calendar_dry_run(
-            ROOT,
-            projects_path=projects_path,
-            min_gap_minutes=args.min_gap_minutes,
-        )
-        print(json.dumps(summary, ensure_ascii=False, indent=2))
-        return 0 if summary.get("ok") else 1
-
-    if args.command == "unified-outbox-dry-run":
-        import json
-        from pathlib import Path
-
-        from wechat_article_scheduler.config import ROOT
-        from wechat_article_scheduler.core.unified_outbox_presearch import (
-            build_unified_outbox_dry_run,
-        )
-
-        config_path = Path(args.config) if args.config else None
-        projects_path = Path(args.projects) if args.projects else None
-        summary = build_unified_outbox_dry_run(
-            ROOT,
-            config_path=config_path,
-            projects_path=projects_path,
-        )
-        print(json.dumps(summary, ensure_ascii=False, indent=2))
-        return 0 if summary.get("ok") else 1
-
-    if args.command == "ops-health-dry-run":
-        import json
-
-        from wechat_article_scheduler.core.ops_health_presearch import (
-            build_ops_health_dry_run,
-        )
-
-        summary = build_ops_health_dry_run(config)
-        print(json.dumps(summary, ensure_ascii=False, indent=2))
-        return 0 if summary.get("ok") else 1
-
-    if args.command == "phase5-closure-summary":
-        import json
-
-        from wechat_article_scheduler.core.phase5_closure_summary import (
-            build_phase5_closure_summary,
-        )
-
-        summary = build_phase5_closure_summary(config)
-        print(json.dumps(summary, ensure_ascii=False, indent=2))
-        return 0 if summary.get("ok") else 1
-
-    if args.command == "local-blog-plan":
-        import json
-
-        from wechat_article_scheduler.adapters.local_blog.plans import build_plan as build_local_blog_plan
-
-        try:
-            plan = build_local_blog_plan(
-                destination=args.destination,
-                article_id=args.article_id,
-                output_dir=args.output_dir,
-            )
-        except ValueError as exc:
-            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
-            return 1
-        print(json.dumps(plan, ensure_ascii=False, indent=2))
-        return 0
-
-    if args.command == "webhook-plan":
-        import json
-
-        from wechat_article_scheduler.adapters.webhook.plans import build_plan as build_webhook_plan
-
-        try:
-            plan = build_webhook_plan(
-                channel=args.channel,
-                article_id=args.article_id,
-                event_type=args.event_type,
-            )
-        except ValueError as exc:
-            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
-            return 1
-        print(json.dumps(plan, ensure_ascii=False, indent=2))
-        return 0
-
-    if args.command == "video-package-plan":
-        import json
-
-        from wechat_article_scheduler.content_packages.video_presearch import (
-            build_video_package_dry_run,
-        )
-
-        try:
-            plan = build_video_package_dry_run(
-                platform=args.platform,
-                package_id=args.package_id,
-                title=args.title,
-                video_path=args.video_path,
-            )
-        except ValueError as exc:
-            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
-            return 1
-        print(json.dumps(plan, ensure_ascii=False, indent=2))
-        return 0
-
-    if args.command == "short-video-plan":
-        import json
-
-        from wechat_article_scheduler.content_packages.short_video_deferred import (
-            build_short_video_deferred_plan,
-        )
-
-        try:
-            plan = build_short_video_deferred_plan(
-                platform=args.platform,
-                article_id=args.article_id,
-            )
-        except ValueError as exc:
-            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
-            return 1
-        print(json.dumps(plan, ensure_ascii=False, indent=2))
-        return 0
-
-    if args.command == "audio-package-plan":
-        import json
-
-        from wechat_article_scheduler.content_packages.audio_presearch import (
-            build_audio_package_dry_run,
-        )
-
-        try:
-            plan = build_audio_package_dry_run(
-                platform=args.platform,
-                package_id=args.package_id,
-                title=args.title,
-                audio_path=args.audio_path,
-            )
-        except ValueError as exc:
-            print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
-            return 1
-        print(json.dumps(plan, ensure_ascii=False, indent=2))
-        return 0
-
     if args.command == "wechat-chain-summary":
         import json
 
@@ -687,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "mark-waiting-confirmation":
         import json
 
-        from wechat_article_scheduler.review.proof import mark_job_waiting_confirmation
+        from wechat_article_scheduler.publish_proof import mark_job_waiting_confirmation
 
         with db.connect(config.database_path) as conn:
             result = mark_job_waiting_confirmation(conn, args.job_id)
@@ -697,10 +192,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "submit-proof":
         import json
 
-        from wechat_article_scheduler.review.proof import ProofInput, submit_publish_proof
+        from wechat_article_scheduler.publish_proof import ProofInput, record_publish_proof
 
         with db.connect(config.database_path) as conn:
-            result = submit_publish_proof(
+            result = record_publish_proof(
                 conn,
                 args.job_id,
                 ProofInput(
@@ -709,21 +204,6 @@ def main(argv: list[str] | None = None) -> int:
                     confirmed_by=args.confirmed_by,
                     note=args.note,
                 ),
-            )
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 0 if result.get("ok") else 1
-
-    if args.command == "export-outbox":
-        import json
-
-        from wechat_article_scheduler.adapters.manual_export import export_article_to_outbox
-
-        with db.connect(config.database_path) as conn:
-            result = export_article_to_outbox(
-                config,
-                conn,
-                args.article_id,
-                platform=args.platform or "generic",
             )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if result.get("ok") else 1
@@ -836,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
         from wechat_article_scheduler.web import create_app
 
         db.init_db(config.database_path)
-        host = args.host or config.web_host
+        host = require_loopback_web_host(args.host or config.web_host)
         port = args.port or config.web_port
         app = create_app(config)
         print(f"管理后台: http://{host}:{port}/ （mode={config.wechat_mode}）")

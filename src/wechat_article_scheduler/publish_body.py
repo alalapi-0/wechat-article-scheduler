@@ -1,4 +1,4 @@
-"""发布正文规范化：标题仅出现在微信 title 字段，正文去掉重复首标题。"""
+"""草稿正文规范化：标题仅出现在微信 title 字段，正文去掉重复首标题。"""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def _strip_markdown_duplicate_heading(title: str, body: str) -> str:
 
 def publish_body_for(title: str, body: str) -> str:
     """
-    返回用于发布/草稿的正文：若首段标题与文章 title 重复则移除。
+    返回用于微信草稿的正文：若首段标题与文章 title 重复则移除。
 
     不修改数据库中的原始 body；仅在 adapter 渲染前调用。
     """

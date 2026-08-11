@@ -1,4 +1,4 @@
-"""微信草稿记录展示（收敛 Round 13 / round_068）。"""
+"""微信草稿记录展示。"""
 
 from __future__ import annotations
 
@@ -63,11 +63,7 @@ def enrich_draft_row(row: dict[str, Any], config: AppConfig) -> dict[str, Any]:
     )
     out["article_detail_url"] = f"/articles/{row.get('article_id')}"
     out["payload_preview"] = _payload_preview(row.get("payload_json"))
-    article_status = (row.get("article_status") or "").strip().lower()
-    if article_status == "published":
-        out["next_hint"] = "作品已发布，可在作品详情查看最终状态"
-    else:
-        out["next_hint"] = "可在作品详情继续排期或更新草稿"
+    out["next_hint"] = "可在作品详情继续排期或更新草稿"
     return out
 
 
@@ -140,7 +136,7 @@ def drafts_summary(conn: Any, config: AppConfig) -> dict[str, Any]:
     ).fetchall()
     counts = {str(r["status"]): int(r["cnt"]) for r in by_status}
     mode = (config.wechat_mode or "mock").strip().lower()
-    draft_only = mode == "real" and not bool(config.wechat_enable_publish)
+    draft_only = mode == "real"
     note = (
         "当前为演练模式：列表中的 media_id 均为本地记录，不代表公众号后台真实草稿。"
         if mode == "mock"

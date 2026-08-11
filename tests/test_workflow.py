@@ -44,3 +44,19 @@ def test_reject_and_retry(tmp_path: Path) -> None:
     with db.connect(db_path) as conn:
         art = conn.execute("SELECT status FROM articles WHERE id = ?", (aid,)).fetchone()
         assert art["status"] == "rejected"
+
+
+def test_reject_never_moves_forged_project_file(tmp_path: Path) -> None:
+    protected = tmp_path / ".env"
+    protected.write_text("SECRET=keep", encoding="utf-8")
+    db_path = tmp_path / "forged.sqlite3"
+    db.init_db(db_path)
+    with db.connect(db_path) as conn:
+        aid = conn.execute(
+            "INSERT INTO articles (source_path,title,summary,body,content_hash,status) "
+            "VALUES (?, 't','','b','forged','imported')",
+            (str(protected),),
+        ).lastrowid
+        conn.commit()
+    assert reject_article(_cfg(tmp_path, db_path), int(aid)) is True
+    assert protected.read_text(encoding="utf-8") == "SECRET=keep"

@@ -1,8 +1,8 @@
-"""Round 69 / 收敛 Round 14：本地 scheduler 稳定化。"""
+"""本地 scheduler 稳定化。"""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -82,6 +82,90 @@ def test_recover_stale_running(sched_db: tuple[AppConfig, int]) -> None:
     assert ev == "job_stale_recovered"
 
 
+def test_stale_recovery_filters_mode_due_and_explicit_eligibility(sched_db: tuple[AppConfig, int]) -> None:
+    cfg, jid = sched_db
+    future = (datetime.now() + timedelta(hours=2)).isoformat(timespec="seconds")
+    with db.connect(cfg.database_path) as conn:
+        conn.execute(
+            "UPDATE publish_jobs SET status='running', adapter_mode='real', "
+            "updated_at=datetime('now','-2 hours') WHERE id=?",
+            (jid,),
+        )
+        other = conn.execute(
+            "INSERT INTO publish_jobs (article_id,scheduled_at,status,adapter_mode,retry_count,updated_at) "
+            "SELECT article_id,?,'running','mock',0,datetime('now','-2 hours') FROM publish_jobs WHERE id=?",
+            (future, jid),
+        ).lastrowid
+        conn.commit()
+        assert recover_stale_running_jobs(conn, cfg, eligible_job_ids=set()) == 0
+        states = conn.execute("SELECT status FROM publish_jobs ORDER BY id").fetchall()
+    assert [row["status"] for row in states] == ["running", "running"]
+
+
+def test_run_due_recovers_only_current_mode_eligible_stale_job(sched_db: tuple[AppConfig, int]) -> None:
+    cfg, jid = sched_db
+    with db.connect(cfg.database_path) as conn:
+        conn.execute(
+            "UPDATE publish_jobs SET status='running', updated_at=datetime('now','-2 hours') WHERE id=?",
+            (jid,),
+        )
+        real_id = conn.execute(
+            "INSERT INTO publish_jobs(article_id,scheduled_at,status,adapter_mode,retry_count,updated_at) "
+            "SELECT article_id,scheduled_at,'running','real',0,datetime('now','-2 hours') "
+            "FROM publish_jobs WHERE id=?",
+            (jid,),
+        ).lastrowid
+        retry_id = conn.execute(
+            "INSERT INTO publish_jobs(article_id,scheduled_at,status,adapter_mode,retry_count,next_retry_at,updated_at) "
+            "SELECT article_id,scheduled_at,'running','mock',0,datetime('now','+2 hours'),"
+            "datetime('now','-2 hours') FROM publish_jobs WHERE id=?",
+            (jid,),
+        ).lastrowid
+        conn.commit()
+    stats = run_due_jobs(cfg)
+    assert stats["recovered_stale"] == 1
+    with db.connect(cfg.database_path) as conn:
+        rows = conn.execute("SELECT id,status FROM publish_jobs ORDER BY id").fetchall()
+    assert {int(row["id"]): row["status"] for row in rows} == {
+        jid: "pending",
+        int(real_id): "running",
+        int(retry_id): "running",
+    }
+
+
+def test_offset_retry_stale_job_is_not_recovered_early(sched_db: tuple[AppConfig, int]) -> None:
+    cfg, jid = sched_db
+    future = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(timespec="seconds")
+    with db.connect(cfg.database_path) as conn:
+        conn.execute(
+            "UPDATE publish_jobs SET status='running', next_retry_at=?, "
+            "updated_at=datetime('now','-2 hours') WHERE id=?",
+            (future, jid),
+        )
+        conn.commit()
+    stats = run_due_jobs(cfg)
+    assert stats["recovered_stale"] == 0
+    with db.connect(cfg.database_path) as conn:
+        assert conn.execute("SELECT status FROM publish_jobs WHERE id=?", (jid,)).fetchone()[0] == "running"
+
+
+def test_nonstale_running_job_does_not_acquire_scheduler_lock(
+    sched_db: tuple[AppConfig, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg, jid = sched_db
+    with db.connect(cfg.database_path) as conn:
+        conn.execute(
+            "UPDATE publish_jobs SET status='running', updated_at=datetime('now') WHERE id=?",
+            (jid,),
+        )
+        conn.commit()
+    monkeypatch.setattr(
+        "wechat_article_scheduler.scheduler.runtime.acquire_run_lock",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("lock acquired")),
+    )
+    assert run_due_jobs(cfg)["recovered_stale"] == 0
+
+
 def test_run_lock_blocks_second_holder(sched_db: tuple[AppConfig, int]) -> None:
     cfg, _jid = sched_db
     with db.connect(cfg.database_path) as conn:
@@ -122,9 +206,6 @@ def test_failure_schedules_backoff(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     class BoomAdapter:
         def create_draft(self, **kwargs):  # noqa: ANN003, ANN201
             raise RuntimeError("演练失败")
-
-        def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-            return {"skipped": True}
 
     monkeypatch.setattr(
         "wechat_article_scheduler.scheduler.domain.get_adapter",

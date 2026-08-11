@@ -1,4 +1,4 @@
-"""Mock 适配器与发布正文规范化（Round 48）。"""
+"""Mock 适配器与草稿正文规范化。"""
 
 from __future__ import annotations
 

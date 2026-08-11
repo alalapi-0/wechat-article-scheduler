@@ -2,7 +2,7 @@
 # sudo systemctl daemon-reload && sudo systemctl enable --now wechat-article-scheduler
 
 [Unit]
-Description=WeChat Article Scheduler (local publish jobs)
+Description=WeChat Draft Scheduler (local draft jobs)
 After=network.target
 
 [Service]

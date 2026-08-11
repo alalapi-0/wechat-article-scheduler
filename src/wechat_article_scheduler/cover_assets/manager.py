@@ -1,13 +1,27 @@
-"""封面资产扫描、按 stem 绑定与孤儿清理（Round 61 / 收敛 Phase 1 Round 6）。"""
+"""封面资产扫描、按 stem 绑定与孤儿清理。"""
 
 from __future__ import annotations
 
 import sqlite3
+import os
 from pathlib import Path
 from typing import Any
 
 from wechat_article_scheduler.config import AppConfig
-from wechat_article_scheduler.cover_assets.index import check_cover_path, index_cover_directory
+from wechat_article_scheduler.cover_assets.index import (
+    InvalidCoverError,
+    MAX_COVER_BYTES,
+    SUPPORTED_COVER_EXTENSIONS,
+    index_cover_directory,
+    inspect_managed_cover,
+    managed_cover_roots,
+    secure_cover_snapshot,
+)
+from wechat_article_scheduler.filesystem_safety import (
+    UnsafePathError,
+    open_directory_handle,
+    read_regular_file,
+)
 
 _ACTIVE_ARTICLE = "(deleted_at IS NULL OR deleted_at = '')"
 
@@ -22,7 +36,7 @@ def managed_cover_directories(config: AppConfig) -> list[Path]:
     out: list[Path] = []
     seen: set[str] = set()
     for root in roots:
-        resolved = root.resolve()
+        resolved = Path(os.path.abspath(root))
         key = str(resolved)
         if key not in seen:
             seen.add(key)
@@ -30,32 +44,58 @@ def managed_cover_directories(config: AppConfig) -> list[Path]:
     return out
 
 
-def _resolve_under(root: Path, rel_or_abs: str) -> Path | None:
-    raw = Path(rel_or_abs)
-    candidate = raw if raw.is_absolute() else (root / raw)
-    try:
-        resolved = candidate.resolve()
-        resolved.relative_to(root.resolve())
-    except (OSError, ValueError):
-        return None
-    return resolved if resolved.is_file() else None
-
-
 def referenced_cover_paths(config: AppConfig, conn: sqlite3.Connection) -> set[Path]:
     refs: set[Path] = set()
-    root = config.root.resolve()
     rows = conn.execute(
         "SELECT cover_path FROM articles WHERE cover_path IS NOT NULL AND cover_path != ''"
     ).fetchall()
     for row in rows:
-        resolved = _resolve_under(root, row["cover_path"] or "")
-        if resolved is not None:
-            refs.add(resolved)
-    if config.wechat_default_thumb_path:
-        resolved = _resolve_under(root, config.wechat_default_thumb_path)
-        if resolved is not None:
-            refs.add(resolved)
+        check = inspect_managed_cover(config, row["cover_path"] or "")
+        if check["ok"]:
+            refs.add(Path(str(check["resolved_path"])))
+    try:
+        from wechat_article_scheduler.content_library.collection_config import discover_collection_configs
+        defaults = [item.default_cover for item in discover_collection_configs(config.root)]
+    except (OSError, ValueError):
+        defaults = []
+    for raw in defaults:
+        if not raw:
+            continue
+        candidate = Path(raw)
+        if not candidate.is_absolute():
+            candidate = config.root / candidate
+        check = inspect_managed_cover(config, candidate)
+        if check["ok"]:
+            refs.add(Path(str(check["resolved_path"])))
+    global_default = str(config.wechat_default_thumb_path or "").strip()
+    if global_default:
+        check = inspect_managed_cover(config, global_default)
+        if check["ok"]:
+            refs.add(Path(str(check["resolved_path"])))
     return refs
+
+
+def _cover_identity(config: AppConfig, raw: str | Path) -> tuple[int, int] | None:
+    candidate = Path(raw)
+    if not candidate.is_absolute():
+        candidate = config.root / candidate
+    try:
+        snapshot = read_regular_file(
+            candidate,
+            allowed_roots=managed_cover_roots(config),
+            max_bytes=MAX_COVER_BYTES,
+        )
+    except UnsafePathError:
+        return None
+    return snapshot.device, snapshot.inode
+
+
+def referenced_cover_identities(config: AppConfig, conn: sqlite3.Connection) -> set[tuple[int, int]]:
+    return {
+        identity
+        for path in referenced_cover_paths(config, conn)
+        if (identity := _cover_identity(config, path)) is not None
+    }
 
 
 def build_disk_stem_index(config: AppConfig) -> dict[str, str]:
@@ -104,7 +144,7 @@ def scan_cover_assets(config: AppConfig, conn: sqlite3.Connection) -> dict[str, 
         cover_path = (row["cover_path"] or "").strip()
         stem = Path(row["source_path"] or "").stem
         if cover_path:
-            if not Path(cover_path).is_file():
+            if not inspect_managed_cover(config, cover_path)["ok"]:
                 broken_bindings.append(
                     {
                         "article_id": aid,
@@ -134,12 +174,8 @@ def scan_cover_assets(config: AppConfig, conn: sqlite3.Connection) -> dict[str, 
                 )
 
     orphans = list_orphan_covers(config, conn)
-    default_check = check_cover_path(
-        None,
-        default_thumb=Path(config.wechat_default_thumb_path)
-        if config.wechat_default_thumb_path
-        else None,
-    )
+    from wechat_article_scheduler.cover_assets.index import check_configured_cover
+    default_check = check_configured_cover(config, None)
 
     human: list[str] = [
         f"素材库 {len(assets)} 张封面",
@@ -188,7 +224,7 @@ def bind_covers_by_stem(config: AppConfig, conn: sqlite3.Connection) -> dict[str
     skipped = 0
     for row in rows:
         cover_path = (row["cover_path"] or "").strip()
-        needs = not cover_path or not Path(cover_path).is_file()
+        needs = not cover_path or not inspect_managed_cover(config, cover_path)["ok"]
         if not needs:
             skipped += 1
             continue
@@ -225,7 +261,7 @@ def repair_invalid_cover_paths(config: AppConfig, conn: sqlite3.Connection) -> d
     cleared = 0
     for row in rows:
         path = (row["cover_path"] or "").strip()
-        if path and Path(path).is_file():
+        if path and inspect_managed_cover(config, path)["ok"]:
             continue
         conn.execute(
             """
@@ -247,25 +283,37 @@ def repair_invalid_cover_paths(config: AppConfig, conn: sqlite3.Connection) -> d
 
 def list_orphan_covers(config: AppConfig, conn: sqlite3.Connection) -> list[dict[str, str]]:
     """列出各素材目录中未被任何作品引用的封面文件。"""
-    refs = referenced_cover_paths(config, conn)
+    refs = referenced_cover_identities(config, conn)
     root = config.root.resolve()
     orphans: list[dict[str, str]] = []
     seen: set[str] = set()
     for covers_dir in managed_cover_directories(config):
-        if not covers_dir.is_dir():
+        try:
+            directory = open_directory_handle(covers_dir, allowed_roots=(covers_dir,))
+        except (OSError, UnsafePathError):
             continue
-        for path in sorted(covers_dir.iterdir()):
-            if not path.is_file():
-                continue
-            resolved = path.resolve()
-            if resolved in refs or str(resolved) in seen:
-                continue
-            seen.add(str(resolved))
-            try:
-                rel = str(resolved.relative_to(root))
-            except ValueError:
-                rel = str(path)
-            orphans.append({"path": rel, "name": path.name, "directory": str(covers_dir)})
+        try:
+            with directory as handle:
+                for name in handle.list_names():
+                    path = covers_dir / name
+                    if path.suffix.lower() not in SUPPORTED_COVER_EXTENSIONS:
+                        continue
+                    try:
+                        snapshot = handle.read_regular_file(name, max_bytes=MAX_COVER_BYTES)
+                        secure_cover_snapshot(snapshot, path.suffix)
+                    except (UnsafePathError, InvalidCoverError):
+                        continue
+                    identity = (snapshot.device, snapshot.inode)
+                    if identity in refs or str(path) in seen:
+                        continue
+                    seen.add(str(path))
+                    try:
+                        rel = str(path.relative_to(root))
+                    except ValueError:
+                        rel = str(path)
+                    orphans.append({"path": rel, "name": name, "directory": str(covers_dir)})
+        except (OSError, UnsafePathError):
+            continue
     return orphans
 
 
@@ -275,12 +323,52 @@ def cleanup_orphan_covers(
     *,
     unlink: Any,
 ) -> dict[str, Any]:
-    """删除未引用封面；unlink 为 safe_unlink(config, rel_path)。"""
-    items = list_orphan_covers(config, conn)
+    """删除未引用封面；unlink 必须支持受控目录句柄和文件快照。"""
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+    else:
+        conn.execute("UPDATE articles SET updated_at = updated_at WHERE 0")
+    items: list[dict[str, str]] = []
     removed = 0
-    for item in items:
-        if unlink(config, item["path"]):
-            removed += 1
+    root = config.root.resolve()
+    seen: set[str] = set()
+    for covers_dir in managed_cover_directories(config):
+        try:
+            directory = open_directory_handle(covers_dir, allowed_roots=(covers_dir,))
+        except (OSError, UnsafePathError):
+            continue
+        try:
+            with directory as handle:
+                for name in handle.list_names():
+                    path = covers_dir / name
+                    if path.suffix.lower() not in SUPPORTED_COVER_EXTENSIONS:
+                        continue
+                    try:
+                        snapshot = handle.read_regular_file(name, max_bytes=MAX_COVER_BYTES)
+                        secure_cover_snapshot(snapshot, path.suffix)
+                    except (UnsafePathError, InvalidCoverError):
+                        continue
+                    identity = (snapshot.device, snapshot.inode)
+                    if identity in referenced_cover_identities(config, conn) or str(path) in seen:
+                        continue
+                    seen.add(str(path))
+                    try:
+                        rel = str(path.relative_to(root))
+                    except ValueError:
+                        rel = str(path)
+                    item = {"path": rel, "name": name, "directory": str(covers_dir)}
+                    items.append(item)
+                    if identity in referenced_cover_identities(config, conn):
+                        continue
+                    if unlink(
+                        config,
+                        item["path"],
+                        directory_handle=handle,
+                        snapshot=snapshot,
+                    ):
+                        removed += 1
+        except (OSError, UnsafePathError):
+            continue
     return {
         "scanned": len(items),
         "removed": removed,

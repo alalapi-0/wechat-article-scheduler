@@ -1,10 +1,10 @@
-"""合集排期规则（Round 64 / 收敛 Phase 1 Round 9）。"""
+"""合集排期规则。"""
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from wechat_article_scheduler.config import AppConfig
@@ -67,21 +67,7 @@ def schedule_rules_for_collection(
         return base
     if coll.schedule_raw is not None:
         return schedule_rules_from_yaml_block(coll.schedule_raw, fallback=base)
-    raw = yaml_schedule_from_path(coll.yaml_path)
-    return schedule_rules_from_yaml_block(raw, fallback=base)
-
-
-def yaml_schedule_from_path(yaml_path: Any) -> dict[str, Any] | None:
-    import yaml
-
-    try:
-        data = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
-    except OSError:
-        return None
-    if not isinstance(data, dict):
-        return None
-    sched = data.get("schedule")
-    return sched if isinstance(sched, dict) else None
+    return base
 
 
 def schedule_rules_from_config_json(config_json: str | None, *, fallback: CollectionScheduleRules) -> CollectionScheduleRules:

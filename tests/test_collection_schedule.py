@@ -1,4 +1,4 @@
-"""Round 64：合集排期规则与 plan 集成。"""
+"""合集排期规则与 plan 集成。"""
 
 from __future__ import annotations
 

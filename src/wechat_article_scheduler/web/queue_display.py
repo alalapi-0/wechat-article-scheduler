@@ -1,4 +1,4 @@
-"""草稿队列展示与失败原因（收敛 Round 12 / round_067）。"""
+"""草稿队列展示与失败原因。"""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def _next_hint(*, status: str, is_due: bool, failure_reason: str) -> str:
     if status == "pending":
         return "已到草稿创建时间，可执行到点草稿创建" if is_due else "等待到点或手动执行"
     if status == "waiting_confirmation":
-        return "可快速提交占位证明，或打开作品详情填写"
+        return "请打开作品详情，提交用户实际发布后的公开链接或截图"
     if status == "failed":
         return "可点「重试」重新排队，或去作品详情检查"
     if status == "running":

@@ -1,4 +1,4 @@
-"""回收站与删除（Round 50–52）。"""
+"""回收站与删除。"""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.web.app import create_app
 from wechat_article_scheduler.web.trash import safe_unlink
+from tests.test_web_upload import PNG
 
 
 @pytest.fixture
@@ -89,8 +90,8 @@ def test_purge_removes_db_and_safe_files(app_config: AppConfig) -> None:
     client = TestClient(create_app(app_config))
     src = app_config.imported_dir / "gone.md"
     src.write_text("# t\n\nb", encoding="utf-8")
-    cover = app_config.covers_dir / "gone.jpg"
-    cover.write_bytes(b"\xff\xd8\xff" + b"\x00" * 8)
+    cover = app_config.covers_dir / "gone.png"
+    cover.write_bytes(PNG)
     with db.connect(app_config.database_path) as conn:
         cur = conn.execute(
             """
@@ -107,6 +108,45 @@ def test_purge_removes_db_and_safe_files(app_config: AppConfig) -> None:
     assert not cover.exists()
     with db.connect(app_config.database_path) as conn:
         assert conn.execute("SELECT id FROM articles WHERE id = ?", (aid,)).fetchone() is None
+
+
+def test_purge_never_deletes_forged_project_file(app_config: AppConfig) -> None:
+    db.init_db(app_config.database_path)
+    protected = app_config.root / ".env"
+    protected.write_text("SECRET=keep", encoding="utf-8")
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            "INSERT INTO articles (source_path,title,summary,body,content_hash,status,deleted_at) "
+            "VALUES (?, 't','','b','forged-delete','imported',datetime('now'))",
+            (str(protected),),
+        )
+        conn.commit()
+    response = TestClient(create_app(app_config)).post("/api/trash/purge")
+    assert response.status_code == 200
+    assert protected.read_text(encoding="utf-8") == "SECRET=keep"
+
+
+def test_purge_preserves_cover_referenced_by_relative_alias(app_config: AppConfig) -> None:
+    db.init_db(app_config.database_path)
+    cover = app_config.covers_dir / "shared.png"
+    cover.write_bytes(PNG)
+    relative = str(cover.relative_to(app_config.root))
+    with db.connect(app_config.database_path) as conn:
+        conn.execute(
+            "INSERT INTO articles (source_path,title,summary,body,content_hash,status,cover_path,deleted_at) "
+            "VALUES ('a.md','a','','b','alias-a','imported',?,datetime('now'))",
+            (relative,),
+        )
+        conn.execute(
+            "INSERT INTO articles (source_path,title,summary,body,content_hash,status,cover_path) "
+            "VALUES ('b.md','b','','b','alias-b','imported',?)",
+            (str(cover),),
+        )
+        conn.commit()
+    TestClient(create_app(app_config)).post("/api/trash/purge")
+    assert cover.is_file()
+    with db.connect(app_config.database_path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0] == 1
 
 
 def test_purge_does_not_remove_active_articles(app_config: AppConfig) -> None:
@@ -164,6 +204,14 @@ def test_purge_removes_jobs_and_drafts(app_config: AppConfig) -> None:
             "INSERT INTO wechat_drafts (article_id, media_id, status) VALUES (?, 'm1', 'created')",
             (aid,),
         )
+        draft_id = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+        conn.execute(
+            """
+            INSERT INTO events (entity_type, entity_id, event_type, payload_json)
+            VALUES ('wechat_draft', ?, 'draft_updated', '{}')
+            """,
+            (draft_id,),
+        )
         conn.execute(
             "UPDATE articles SET deleted_at = datetime('now') WHERE id = ?",
             (aid,),
@@ -177,6 +225,58 @@ def test_purge_removes_jobs_and_drafts(app_config: AppConfig) -> None:
         ).fetchone() is None
         assert conn.execute(
             "SELECT id FROM wechat_drafts WHERE article_id = ?", (aid,)
+        ).fetchone() is None
+        assert conn.execute(
+            "SELECT id FROM events WHERE entity_type = 'wechat_draft' AND entity_id = ?",
+            (draft_id,),
+        ).fetchone() is None
+
+
+def test_purge_removes_publish_proof_and_job_events(app_config: AppConfig) -> None:
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        aid = _insert_article(conn)
+        jid = int(
+            conn.execute(
+                """
+                INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
+                VALUES (?, datetime('now'), 'done', 'real')
+                """,
+                (aid,),
+            ).lastrowid
+        )
+        conn.execute(
+            """
+            INSERT INTO publish_proofs
+                (publish_job_id, article_id, public_url, confirmed_by, confirmed_at)
+            VALUES (?, ?, 'https://example.invalid/proof', 'user', datetime('now'))
+            """,
+            (jid, aid),
+        )
+        conn.execute(
+            """
+            INSERT INTO events (entity_type, entity_id, event_type, payload_json)
+            VALUES ('publish_job', ?, 'proof_submitted', '{}')
+            """,
+            (jid,),
+        )
+        conn.execute(
+            "UPDATE articles SET deleted_at = datetime('now') WHERE id = ?",
+            (aid,),
+        )
+        conn.commit()
+
+    response = client.post("/api/trash/purge")
+    assert response.status_code == 200
+    assert response.json()["purged"] == 1
+    with db.connect(app_config.database_path) as conn:
+        assert conn.execute(
+            "SELECT id FROM publish_proofs WHERE article_id = ?", (aid,)
+        ).fetchone() is None
+        assert conn.execute(
+            "SELECT id FROM events WHERE entity_type = 'publish_job' AND entity_id = ?",
+            (jid,),
         ).fetchone() is None
 
 
@@ -265,13 +365,64 @@ def test_cancel_publish_job_api(app_config: AppConfig) -> None:
     assert all(j.get("id") != jid for j in jobs)
 
 
+def test_cancelled_job_can_be_planned_again(app_config: AppConfig) -> None:
+    from wechat_article_scheduler.plan import build_plan
+
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        aid = _insert_article(conn)
+        jid = int(
+            conn.execute(
+                """
+                INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
+                VALUES (?, datetime('now'), 'pending', 'mock')
+                """,
+                (aid,),
+            ).lastrowid
+        )
+        conn.execute(
+            "UPDATE articles SET schedule_state = 'scheduled_local' WHERE id = ?",
+            (aid,),
+        )
+        conn.commit()
+
+    assert client.post(f"/api/jobs/{jid}/cancel").status_code == 200
+    assert build_plan(app_config)["planned"] == 1
+
+
+def test_trash_restore_can_be_planned_again(app_config: AppConfig) -> None:
+    from wechat_article_scheduler.plan import build_plan
+
+    db.init_db(app_config.database_path)
+    client = TestClient(create_app(app_config))
+    with db.connect(app_config.database_path) as conn:
+        aid = _insert_article(conn)
+        conn.execute(
+            """
+            INSERT INTO publish_jobs (article_id, scheduled_at, status, adapter_mode)
+            VALUES (?, datetime('now'), 'pending', 'mock')
+            """,
+            (aid,),
+        )
+        conn.execute(
+            "UPDATE articles SET schedule_state = 'scheduled_local' WHERE id = ?",
+            (aid,),
+        )
+        conn.commit()
+
+    assert client.post(f"/api/articles/{aid}/trash").status_code == 200
+    assert client.post(f"/api/articles/{aid}/restore").status_code == 200
+    assert build_plan(app_config)["planned"] == 1
+
+
 def test_orphan_cover_cleanup_skips_referenced(app_config: AppConfig) -> None:
     db.init_db(app_config.database_path)
     client = TestClient(create_app(app_config))
-    used = app_config.covers_dir / "used.jpg"
-    orphan = app_config.covers_dir / "orphan.jpg"
-    used.write_bytes(b"\xff\xd8\xff" + b"\x00" * 8)
-    orphan.write_bytes(b"\xff\xd8\xff" + b"\x00" * 8)
+    used = app_config.covers_dir / "used.png"
+    orphan = app_config.covers_dir / "orphan.png"
+    used.write_bytes(PNG)
+    orphan.write_bytes(PNG)
     with db.connect(app_config.database_path) as conn:
         conn.execute(
             """
@@ -283,7 +434,7 @@ def test_orphan_cover_cleanup_skips_referenced(app_config: AppConfig) -> None:
         conn.commit()
     listed = client.get("/api/covers/orphans").json()
     assert listed["count"] == 1
-    assert listed["orphans"][0]["name"] == "orphan.jpg"
+    assert listed["orphans"][0]["name"] == "orphan.png"
     out = client.post("/api/covers/cleanup-orphans").json()
     assert out["removed"] == 1
     assert used.exists()
@@ -291,7 +442,7 @@ def test_orphan_cover_cleanup_skips_referenced(app_config: AppConfig) -> None:
 
 
 def test_bulk_trash_only_affects_selected(app_config: AppConfig) -> None:
-    """Round 52：批量删除仅作用于选中作品。"""
+    """批量删除仅作用于选中作品。"""
     db.init_db(app_config.database_path)
     client = TestClient(create_app(app_config))
     with db.connect(app_config.database_path) as conn:

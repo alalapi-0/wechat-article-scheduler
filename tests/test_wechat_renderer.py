@@ -30,7 +30,7 @@ def test_wechat_renderer_turns_spacer_html_into_break() -> None:
 def test_wechat_renderer_blockquote_ordered_code_bold() -> None:
     from pathlib import Path
 
-    md = (Path(__file__).parent / "fixtures" / "wechat_render_round4.md").read_text(
+    md = (Path(__file__).parent / "fixtures" / "wechat_render_sample.md").read_text(
         encoding="utf-8"
     )
     html = render_wechat_html(md)
@@ -52,3 +52,13 @@ def test_render_for_publish_same_as_preview_html() -> None:
 
     title, body = "章", "# 章\n\n**重点**"
     assert render_for_publish(title, body) == build_publish_preview(title, "", body)["html_body"]
+
+
+def test_renderer_drops_executable_links_but_keeps_labels() -> None:
+    rendered = render_wechat_html(
+        '[bad](javascript:alert(1))\n\n[data](data:text/html,x)\n\n'
+        '<p><a href="JaVaScRiPt:alert(2)">html label</a></p>'
+    )
+    assert "javascript:" not in rendered.lower()
+    assert "data:text" not in rendered.lower()
+    assert "bad" in rendered and "data" in rendered and "html label" in rendered

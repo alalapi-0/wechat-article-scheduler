@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import hashlib
 from pathlib import Path
 from typing import Any, Callable
 
@@ -16,22 +17,20 @@ from wechat_article_scheduler.adapters.wechat_http import (
     http_post_multipart,
     redact_url,
 )
+from wechat_article_scheduler.cover_assets.index import (
+    InvalidCoverError,
+    inspect_cover_path,
+    secure_cover_bytes,
+)
 from wechat_article_scheduler.parser import clamp_summary
 from wechat_article_scheduler.publish_preview import render_for_publish
 
 logger = logging.getLogger(__name__)
 
-# 最小 1x1 PNG，用于未配置封面时的占位 thumb 上传
-_MIN_PNG = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
-    b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00"
-    b"\x01\x01\x01\x00\x18\xdd\x8d\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
-)
-
 
 class RealWechatAdapter(WechatAdapter):
     """
-    真实微信草稿/发布适配器。
+    真实微信草稿适配器。
 
     流程：获取 access_token → 上传封面 thumb → draft/add/draft/update。
     网络调用可注入 http_get/post 便于单元测试 mock。
@@ -43,7 +42,8 @@ class RealWechatAdapter(WechatAdapter):
         app_secret: str,
         *,
         default_thumb_path: str | None = None,
-        enable_publish: bool = True,
+        managed_roots: tuple[Path, ...] | None = None,
+        project_root: Path | None = None,
         token_cache: TokenCache | None = None,
         http_get: Callable[..., dict[str, Any]] | None = None,
         http_post_json_fn: Callable[..., dict[str, Any]] | None = None,
@@ -52,13 +52,14 @@ class RealWechatAdapter(WechatAdapter):
         self._app_id = app_id
         self._app_secret = app_secret
         self._default_thumb_path = default_thumb_path
-        self._enable_publish = enable_publish
+        self._managed_roots = managed_roots
+        self._project_root = project_root
         self._token_cache = token_cache or TokenCache()
         self._http_get = http_get or http_get_json
         self._http_post_json = http_post_json_fn or http_post_json
         self._http_post_multipart = http_post_multipart_fn or http_post_multipart
-        self._cached_thumb_media_id: str | None = None
         self._thumb_cache_by_path: dict[str, str] = {}
+        self._last_thumb_digest: str | None = None
 
     def _ensure_credentials(self) -> None:
         if not self._app_id or not self._app_secret:
@@ -90,21 +91,42 @@ class RealWechatAdapter(WechatAdapter):
         """返回缓存或新刷新的 access_token（禁止写入日志）。"""
         return self._token_cache.get_token(self._fetch_access_token)
 
-    def _resolve_thumb_path(self, cover_path: str | None) -> str | None:
-        """选择封面：优先单篇 cover_path，回退全局默认封面。"""
-        if cover_path and Path(cover_path).is_file():
-            return cover_path
-        if self._default_thumb_path and Path(self._default_thumb_path).is_file():
-            return self._default_thumb_path
-        return None
+    def _resolve_thumb_path(self, cover_path: str | None) -> str:
+        """选择并校验 JPG/JPEG/PNG 文章封面或默认封面。"""
+        chosen = (cover_path or "").strip()
+        if chosen:
+            if self._managed_roots is None:
+                raise RuntimeError("文章封面缺少明确的受管目录，已拒绝读取")
+            candidate = Path(chosen)
+            if not candidate.is_absolute():
+                if self._project_root is None:
+                    raise RuntimeError("相对封面路径缺少项目根目录，已拒绝读取")
+                candidate = self._project_root / candidate
+            try:
+                secure_cover_bytes(candidate, allowed_roots=self._managed_roots)
+            except InvalidCoverError as exc:
+                raise RuntimeError(str(exc)) from exc
+            check = inspect_cover_path(candidate)
+        else:
+            check = inspect_cover_path(self._default_thumb_path)
+        if not check["ok"]:
+            raise RuntimeError(str(check["message"]))
+        return str(check["resolved_path"])
 
-    def _load_thumb_bytes(self, thumb_path: str | None) -> bytes:
-        """读取封面图字节；未配置时使用内置最小 PNG。"""
-        if thumb_path:
-            path = Path(thumb_path)
-            if path.is_file():
-                return path.read_bytes()
-        return _MIN_PNG
+    def _load_thumb_bytes(self, thumb_path: str, *, using_default: bool) -> bytes:
+        """读取已解析的非空封面；读取失败时在联网前拒绝。"""
+        try:
+            roots = (
+                (Path(thumb_path).parent,)
+                if using_default or self._managed_roots is None
+                else self._managed_roots
+            )
+            thumb_bytes = secure_cover_bytes(Path(thumb_path), allowed_roots=roots)
+        except (OSError, InvalidCoverError) as exc:
+            raise RuntimeError(f"封面文件无法读取：{thumb_path}") from exc
+        if not thumb_bytes:
+            raise RuntimeError(f"封面文件为空：{thumb_path}")
+        return thumb_bytes
 
     def _thumb_multipart_part(
         self, thumb_bytes: bytes, thumb_path: str | None
@@ -124,17 +146,16 @@ class RealWechatAdapter(WechatAdapter):
         """
         上传封面 thumb 素材，返回 media_id。
 
-        按封面路径缓存 media_id，避免重复上传；未指定时使用全局默认封面/占位图。
+        按封面路径缓存 media_id，避免重复上传；未指定单篇封面时使用有效默认封面。
         """
         thumb_path = self._resolve_thumb_path(cover_path)
-        cache_key = thumb_path or "__default__"
+        thumb_bytes = self._load_thumb_bytes(thumb_path, using_default=not bool((cover_path or "").strip()))
+        cache_key = hashlib.sha256(thumb_bytes).hexdigest()
+        self._last_thumb_digest = cache_key
         if cache_key in self._thumb_cache_by_path:
             return self._thumb_cache_by_path[cache_key]
-        if thumb_path is None and self._cached_thumb_media_id:
-            return self._cached_thumb_media_id
         token = self.get_access_token()
         url = f"{API_BASE}/cgi-bin/material/add_material?access_token={token}&type=thumb"
-        thumb_bytes = self._load_thumb_bytes(thumb_path)
         filename, thumb_bytes, content_type = self._thumb_multipart_part(thumb_bytes, thumb_path)
         logger.info(
             "上传封面素材 thumb（%s，%d 字节）",
@@ -150,8 +171,6 @@ class RealWechatAdapter(WechatAdapter):
         if not media_id:
             raise WechatApiError(-1, "thumb media_id 缺失", endpoint="material/add_material")
         self._thumb_cache_by_path[cache_key] = media_id
-        if thumb_path is None:
-            self._cached_thumb_media_id = media_id
         return media_id
 
     def create_draft(
@@ -166,25 +185,40 @@ class RealWechatAdapter(WechatAdapter):
         """调用 draft/add 创建草稿。"""
         self._ensure_credentials()
         opts = options or DraftOptions()
+        article = self._build_article_fields(
+            title=title,
+            summary=summary,
+            body=body,
+            cover_path=cover_path,
+            options=opts,
+        )
         token = self.get_access_token()
         url = f"{API_BASE}/cgi-bin/draft/add?access_token={token}"
-        payload = {
-            "articles": [
-                self._build_article_fields(
-                    title=title,
-                    summary=summary,
-                    body=body,
-                    cover_path=cover_path,
-                    options=opts,
-                )
-            ]
-        }
+        payload = {"articles": [article]}
         logger.info("创建草稿: title=%r", title[:80])
         data = self._http_post_json(url, payload)
         media_id = str(data.get("media_id", ""))
         if not media_id:
             raise WechatApiError(-1, "draft media_id 缺失", endpoint="draft/add")
-        return DraftResult(media_id=media_id, raw_response=data)
+        raw = dict(data)
+        raw["content_fingerprint"] = self._exact_content_fingerprint(
+            title=title, summary=summary, body=body
+        )
+        return DraftResult(media_id=media_id, raw_response=raw)
+
+    def _exact_content_fingerprint(self, *, title: str, summary: str, body: str) -> str:
+        if self._last_thumb_digest is None:
+            raise RuntimeError("封面内容身份缺失，已拒绝记录草稿")
+        from wechat_article_scheduler.draft_update import (
+            draft_content_fingerprint_from_cover_digest,
+        )
+
+        return draft_content_fingerprint_from_cover_digest(
+            title=title,
+            summary=summary,
+            body=body,
+            cover_digest=self._last_thumb_digest,
+        )
 
     def _build_article_fields(
         self,
@@ -221,39 +255,28 @@ class RealWechatAdapter(WechatAdapter):
         """调用 draft/update 更新已有草稿（media_id 不变）。"""
         self._ensure_credentials()
         opts = options or DraftOptions()
+        article = self._build_article_fields(
+            title=title,
+            summary=summary,
+            body=body,
+            cover_path=cover_path,
+            options=opts,
+        )
         token = self.get_access_token()
         url = f"{API_BASE}/cgi-bin/draft/update?access_token={token}"
         payload = {
             "media_id": media_id,
             "index": int(index),
-            "articles": self._build_article_fields(
-                title=title,
-                summary=summary,
-                body=body,
-                cover_path=cover_path,
-                options=opts,
-            ),
+            "articles": article,
         }
         logger.info("更新草稿: media_id=%s title=%r", media_id[:16], title[:80])
         data = self._http_post_json(url, payload)
         out_id = str(data.get("media_id") or media_id)
-        return DraftResult(media_id=out_id, raw_response=data)
-
-    def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-        """历史接口：当前产品默认跳过 freepublish/submit，仅保留底层适配能力。"""
-        self._ensure_credentials()
-        if not self._enable_publish and not force:
-            return {
-                "errcode": 0,
-                "errmsg": "ok",
-                "skipped": True,
-                "reason": "WECHAT_ENABLE_PUBLISH=false",
-                "media_id": media_id,
-            }
-        token = self.get_access_token()
-        url = f"{API_BASE}/cgi-bin/freepublish/submit?access_token={token}"
-        logger.info("提交发布: media_id=%s", media_id[:16] + "...")
-        return self._http_post_json(url, {"media_id": media_id})
+        raw = dict(data)
+        raw["content_fingerprint"] = self._exact_content_fingerprint(
+            title=title, summary=summary, body=body
+        )
+        return DraftResult(media_id=out_id, raw_response=raw)
 
     def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
         """调用 draft/batchget 分页获取草稿列表。"""
@@ -270,11 +293,3 @@ class RealWechatAdapter(WechatAdapter):
         url = f"{API_BASE}/cgi-bin/freepublish/batchget?access_token={token}"
         logger.info("拉取已发布列表 offset=%s count=%s", offset, count)
         return self._http_post_json(url, {"offset": int(offset), "count": int(count), "no_content": 1})
-
-    def delete_draft(self, media_id: str) -> dict:
-        """调用 draft/delete 删除草稿（按稳定 media_id）。"""
-        self._ensure_credentials()
-        token = self.get_access_token()
-        url = f"{API_BASE}/cgi-bin/draft/delete?access_token={token}"
-        logger.info("删除远端草稿: media_id=%s", media_id[:16])
-        return self._http_post_json(url, {"media_id": media_id})

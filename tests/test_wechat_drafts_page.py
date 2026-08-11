@@ -1,4 +1,4 @@
-"""Round 68 / 收敛 Round 13：微信草稿管理页面。"""
+"""微信草稿管理页面。"""
 
 from __future__ import annotations
 

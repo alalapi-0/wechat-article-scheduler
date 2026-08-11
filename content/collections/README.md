@@ -10,4 +10,4 @@
 
 根目录 `articles/inbox/*.md` 仍进入**默认合集**，与旧行为兼容。
 
-详见 `docs/multi_collection_library.md`。
+使用流程见 `docs/user_manual.md`，组件边界见 `docs/architecture.md`。

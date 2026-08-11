@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.content_library.collection_scan import (
     scan_collection_inboxes,
     scan_legacy_inbox_root,
 )
-
-
-from wechat_article_scheduler.scan_support import allowed_extensions, reconcile_reupload
+from wechat_article_scheduler.filesystem_safety import ensure_directory
 
 
 def _merge_stats(target: dict[str, object], part: dict[str, object]) -> None:
@@ -49,8 +45,7 @@ def scan_inbox(config: AppConfig) -> dict[str, int | list | dict]:
         "collections": {},
     }
     inbox = config.inbox_dir
-    if not inbox.exists():
-        inbox.mkdir(parents=True, exist_ok=True)
+    ensure_directory(inbox, allowed_roots=(config.articles_dir,))
 
     with db.connect(config.database_path) as conn:
         legacy = scan_legacy_inbox_root(config, conn)
@@ -62,8 +57,3 @@ def scan_inbox(config: AppConfig) -> dict[str, int | list | dict]:
             stats["collections"] = coll_map
 
     return stats  # type: ignore[return-value]
-
-
-# 向后兼容别名
-_reconcile_reupload = reconcile_reupload
-_allowed_extensions = allowed_extensions

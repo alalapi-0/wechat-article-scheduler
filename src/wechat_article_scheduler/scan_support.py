@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from wechat_article_scheduler import db
+from wechat_article_scheduler.filesystem_safety import FileSnapshot, UnsafePathError, unlink_if_unchanged
 
 
 def allowed_extensions(rules: dict[str, Any]) -> set[str]:
@@ -21,13 +22,26 @@ def reconcile_reupload(
     existing_id: int,
     inbox_path: Path,
     reason: str,
+    source_snapshot: FileSnapshot,
 ) -> dict[str, object]:
+    if not unlink_if_unchanged(inbox_path, source_snapshot, allowed_roots=(inbox_path.parent,)):
+        raise UnsafePathError("重新上传文件在处理期间发生变化")
     row = conn.execute(
-        "SELECT id, title, status FROM articles WHERE id = ?",
+        "SELECT id, title, status, deleted_at FROM articles WHERE id = ?",
         (existing_id,),
     ).fetchone()
     status_reset = False
-    if row and row["status"] == "published":
+    if row and row["deleted_at"] is not None and row["deleted_at"] != "":
+        conn.execute(
+            """
+            UPDATE articles
+            SET status = 'imported', deleted_at = NULL, updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            (existing_id,),
+        )
+        status_reset = row["status"] == "published"
+    elif row and row["status"] == "published":
         conn.execute(
             "UPDATE articles SET status = 'imported', updated_at = datetime('now') WHERE id = ?",
             (existing_id,),
@@ -38,8 +52,6 @@ def reconcile_reupload(
             "UPDATE articles SET updated_at = datetime('now') WHERE id = ?",
             (existing_id,),
         )
-    if inbox_path.is_file():
-        inbox_path.unlink()
     db.log_event(
         conn,
         entity_type="article",

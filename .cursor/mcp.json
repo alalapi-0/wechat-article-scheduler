@@ -1,15 +1,5 @@
 {
   "mcpServers": {
-    "playwright": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest", "--isolated"]
-    },
-    "chrome-devtools": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"]
-    },
     "wechat-chrome-session": {
       "type": "stdio",
       "command": "npx",
@@ -22,11 +12,6 @@
         "--no-performance-crux"
       ]
     },
-    "context7": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"]
-    },
     "filesystem": {
       "type": "stdio",
       "command": "npx",
@@ -35,22 +20,6 @@
         "@modelcontextprotocol/server-filesystem",
         "${workspaceFolder}"
       ]
-    },
-    "github": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${env:GITHUB_TOKEN}"
-      }
-    },
-    "stitch": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["scripts/stitch_mcp_proxy.mjs"],
-      "env": {
-        "STITCH_API_KEY": "${env:STITCH_API_KEY}"
-      }
     }
   }
 }

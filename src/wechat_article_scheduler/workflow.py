@@ -1,30 +1,34 @@
-"""Round 1：驳回与失败重试。"""
+"""驳回与失败重试。"""
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.filesystem_safety import UnsafePathError, is_under, move_regular_file
 
 
 def reject_article(config: AppConfig, article_id: int) -> bool:
-    """将文章从发布流程中移除（标为 rejected）并移到 articles/rejected。"""
+    """将文章从草稿流程中移除（标为 rejected）并移到 articles/rejected。"""
     rejected_dir = config.rejected_dir
-    rejected_dir.mkdir(parents=True, exist_ok=True)
-
     with db.connect(config.database_path) as conn:
         row = conn.execute("SELECT id, source_path, status FROM articles WHERE id = ?", (article_id,)).fetchone()
         if row is None:
             return False
         src = Path(row["source_path"])
-        if src.exists():
-            dest = rejected_dir / src.name
-            if dest.exists():
-                dest = rejected_dir / f"{src.stem}_{article_id}{src.suffix}"
-            shutil.move(str(src), str(dest))
-            conn.execute("UPDATE articles SET source_path = ? WHERE id = ?", (str(dest), article_id))
+        if is_under(src, (config.root / "articles",)):
+            try:
+                dest = move_regular_file(
+                    src,
+                    rejected_dir,
+                    source_roots=(config.root / "articles",),
+                    destination_roots=(config.root / "articles",),
+                )
+            except UnsafePathError:
+                pass
+            else:
+                conn.execute("UPDATE articles SET source_path = ? WHERE id = ?", (str(dest), article_id))
         conn.execute(
             "UPDATE articles SET status = 'rejected', updated_at = datetime('now') WHERE id = ?",
             (article_id,),

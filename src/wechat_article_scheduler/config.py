@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
+from ipaddress import ip_address
+import os
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,19 @@ def _env_bool(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def require_loopback_web_host(value: str) -> str:
+    """仅允许无鉴权工作台监听本机回环地址。"""
+    host = value.strip()
+    if host.lower() == "localhost":
+        return host
+    try:
+        if ip_address(host).is_loopback:
+            return host
+    except ValueError:
+        pass
+    raise ValueError("WEB_HOST 仅允许 localhost 或回环 IP；工作台没有登录保护")
+
+
 @dataclass
 class AppConfig:
     """运行时配置（无密钥落盘）。"""
@@ -33,7 +47,6 @@ class AppConfig:
     schedule_window_days: int
     scheduler_poll_seconds: int
     max_articles_per_day: int
-    log_redact_secrets: bool
     log_file: Path | None
     log_max_bytes: int
     log_backup_count: int
@@ -46,13 +59,10 @@ class AppConfig:
     wechat_app_id: str
     wechat_app_secret: str
     wechat_default_thumb_path: str
-    wechat_enable_publish: bool
     web_auto_run_due: bool
-    web_auto_publish: bool
     web_host: str
     web_port: int
     rules: dict[str, Any]
-    manual_export_outbox: Path = Path("outbox")
     external_agent_task_export_enabled: bool = True
     external_agent_task_outbox: Path = Path("outbox/wechat_agent_tasks")
     external_agent_include_article_preview: bool = True
@@ -60,10 +70,8 @@ class AppConfig:
     external_agent_include_cover: bool = True
     external_agent_include_prompt: bool = True
     external_agent_include_checklist: bool = True
-    external_agent_include_proof_template: bool = True
+    external_agent_include_inspection_report: bool = True
     external_agent_redact_sensitive_values: bool = True
-    internal_browser_agent_enabled: bool = False
-    internal_llm_agent_enabled: bool = False
 
     @property
     def articles_dir(self) -> Path:
@@ -73,10 +81,6 @@ class AppConfig:
     @property
     def imported_dir(self) -> Path:
         return self.articles_dir / "imported"
-
-    @property
-    def published_dir(self) -> Path:
-        return self.articles_dir / "published"
 
     @property
     def rejected_dir(self) -> Path:
@@ -117,33 +121,13 @@ def load_config(env_file: Path | None = None) -> AppConfig:
 
     rules = load_rules(rules_path)
     schedule_rules = rules.get("schedule", {}) if isinstance(rules.get("schedule"), dict) else {}
-    manual_export_rules = (
-        rules.get("manual_export", {}) if isinstance(rules.get("manual_export"), dict) else {}
-    )
     external_agent_rules = (
         rules.get("external_agent", {}) if isinstance(rules.get("external_agent"), dict) else {}
     )
-    internal_browser_rules = (
-        rules.get("internal_browser_agent", {})
-        if isinstance(rules.get("internal_browser_agent"), dict)
-        else {}
-    )
-    internal_llm_rules = (
-        rules.get("internal_llm_agent", {})
-        if isinstance(rules.get("internal_llm_agent"), dict)
-        else {}
-    )
 
     wechat_mode = os.getenv("WECHAT_MODE", "mock").strip().lower()
-    manual_outbox = Path(
-        os.getenv(
-            "MANUAL_EXPORT_OUTBOX",
-            str(manual_export_rules.get("outbox_dir", "outbox")),
-        )
-    )
-    if not manual_outbox.is_absolute():
-        manual_outbox = ROOT / manual_outbox
-
+    if wechat_mode not in {"mock", "real"}:
+        raise ValueError("WECHAT_MODE 仅支持 mock 或 real")
     agent_outbox = Path(
         os.getenv(
             "EXTERNAL_AGENT_TASK_OUTBOX",
@@ -164,7 +148,6 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         max_articles_per_day=int(
             os.getenv("MAX_ARTICLES_PER_DAY", str(schedule_rules.get("max_per_day", 2)))
         ),
-        log_redact_secrets=_env_bool("LOG_REDACT_SECRETS", True),
         log_file=_resolve_optional_path(os.getenv("LOG_FILE", "data/logs/app.log"), ROOT),
         log_max_bytes=int(os.getenv("LOG_MAX_BYTES", "1048576")),
         log_backup_count=int(os.getenv("LOG_BACKUP_COUNT", "3")),
@@ -181,13 +164,10 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         wechat_app_id=os.getenv("WECHAT_APP_ID", "").strip(),
         wechat_app_secret=os.getenv("WECHAT_APP_SECRET", "").strip(),
         wechat_default_thumb_path=os.getenv("WECHAT_DEFAULT_THUMB_PATH", "").strip(),
-        wechat_enable_publish=_env_bool("WECHAT_ENABLE_PUBLISH", False),
         web_auto_run_due=_env_bool("WEB_AUTO_RUN_DUE", True),
-        web_auto_publish=_env_bool("WEB_AUTO_PUBLISH", False),
-        web_host=os.getenv("WEB_HOST", "127.0.0.1").strip(),
+        web_host=require_loopback_web_host(os.getenv("WEB_HOST", "127.0.0.1")),
         web_port=int(os.getenv("WEB_PORT", "8080")),
         rules=rules,
-        manual_export_outbox=manual_outbox,
         external_agent_task_export_enabled=_env_bool(
             "EXTERNAL_AGENT_TASK_EXPORT_ENABLED",
             bool(external_agent_rules.get("enabled", True)),
@@ -211,19 +191,11 @@ def load_config(env_file: Path | None = None) -> AppConfig:
         external_agent_include_checklist=bool(
             external_agent_rules.get("include_checklist", True)
         ),
-        external_agent_include_proof_template=bool(
-            external_agent_rules.get("include_proof_template", True)
+        external_agent_include_inspection_report=bool(
+            external_agent_rules.get("include_inspection_report", True)
         ),
         external_agent_redact_sensitive_values=bool(
             external_agent_rules.get("redact_sensitive_values", True)
-        ),
-        internal_browser_agent_enabled=_env_bool(
-            "INTERNAL_BROWSER_AGENT_ENABLED",
-            bool(internal_browser_rules.get("enabled", False)),
-        ),
-        internal_llm_agent_enabled=_env_bool(
-            "INTERNAL_LLM_AGENT_ENABLED",
-            bool(internal_llm_rules.get("enabled", False)),
         ),
     )
 

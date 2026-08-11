@@ -1,4 +1,4 @@
-"""微信公众号字段能力矩阵（Round 17 / round_072）。"""
+"""微信公众号草稿字段能力矩阵。"""
 
 from __future__ import annotations
 
@@ -86,8 +86,8 @@ WECHAT_FIELD_MATRIX: list[FieldCapability] = [
         "label": "封面素材",
         "api_support": "supported",
         "implemented": "yes",
-        "gap": "缺封面时用默认图或占位 PNG",
-        "handling": "material/add_material → thumb_media_id",
+        "gap": "真实模式必须提供可读取的文章封面或有效默认封面",
+        "handling": "material/add_material → thumb_media_id；缺失或无效时拒绝创建草稿",
         "code_refs": "adapters/real.py, articles.cover_path",
     },
     {
@@ -113,9 +113,9 @@ WECHAT_FIELD_MATRIX: list[FieldCapability] = [
         "label": "公众号后台定时发布",
         "api_support": "unsupported",
         "implemented": "partial",
-        "gap": "草稿 API 与 freepublish/submit 都不能写入后台时间；时间能否随“保存草稿”持久化需按当前后台实机核验",
-        "handling": "browser_assist 填写目标时间并保存草稿、重新打开核验；正式发表和安全验证由用户完成",
-        "code_refs": "docs/wechat_scheduled_publish_browser_test.md",
+        "gap": "草稿 API 不能写入公众号后台发布时间；后台保存行为需按当前页面实机核验",
+        "handling": "外部 Agent 任务包仅只读核对；目标时间、保存草稿、最终发表与安全验证均由用户完成",
+        "code_refs": "external_agent/task_package.py, docs/wechat_chrome_session_runbook.md",
     },
     {
         "field_id": "draft_create",
@@ -136,13 +136,13 @@ WECHAT_FIELD_MATRIX: list[FieldCapability] = [
         "code_refs": "draft_update.py",
     },
     {
-        "field_id": "freepublish",
-        "label": "API 正式发布",
+        "field_id": "final_publish",
+        "label": "最终发表",
         "api_support": "supported",
         "implemented": "no",
-        "gap": "当前产品目标放弃自动正式发布；当前账号截图显示“发布草稿”无权限",
-        "handling": "Agent 完成发布前字段准备并保存草稿；用户点击最终发表并完成安全验证",
-        "code_refs": "adapters/real.py, web/publish_preflight",
+        "gap": "平台能力与当前账号权限需单独核验；本项目有意不实现最终发表",
+        "handling": "工作台只准备并保存草稿；用户在公众号后台完成最终发表与安全验证",
+        "code_refs": "AGENTS.md, project.yaml",
     },
     {
         "field_id": "show_cover_pic",

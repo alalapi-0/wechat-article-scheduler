@@ -3,71 +3,47 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>作品详情 · 发布工作台</title>
-<link rel="icon" href="/favicon.ico" type="image/png" />
+<title>作品详情 · 微信草稿工作台</title>
+<link rel="icon" href="/favicon.ico" type="image/png"/>
 <style>
   :root {
-    --bg: #f4f5f7; --surface: #fff; --text: #1a1a1a; --muted: #6b7280;
-    --line: #e5e7eb; --accent: #07c160; --accent-soft: #e8f8ef;
-    --warn: #fff8e6; --err: #fde8e8;
+    --bg:#f4f5f7; --surface:#fff; --text:#1a1a1a; --muted:#6b7280;
+    --line:#e5e7eb; --accent:#07c160; --accent-soft:#e8f8ef;
+    --warn:#fff8e6; --err:#fde8e8;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, "PingFang SC", sans-serif; background: var(--bg); color: var(--text); }
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--line); }
-  .top a { color: var(--accent); text-decoration: none; font-size: 14px; }
-  .wrap { max-width: 920px; margin: 0 auto; padding: 22px 24px 48px; }
-  h1 { margin: 0 0 6px; font-size: 24px; }
-  .meta { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: #0a7a3e; }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
-  .card h2 { margin: 0 0 10px; font-size: 15px; }
-  .next { background: var(--accent-soft); border-color: #c8ead4; }
-  .next ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
-  .checks li { margin: 4px 0; font-size: 13px; }
-  .checks .bad { color: #b45309; }
-  .cover { max-width: 320px; max-height: 140px; border-radius: 8px; object-fit: cover; margin-top: 8px; }
-  .preview-body { font-size: 16px; line-height: 1.75; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--line); }
-  .preview-body p { margin: 0 0 1em; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .chips span { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #eef2f7; color: var(--muted); }
-  .warn { padding: 8px 10px; border-radius: 8px; background: var(--warn); color: #8a6d00; font-size: 13px; margin-top: 8px; }
-  .preflight-bar { padding: 10px 12px; border-radius: 10px; font-size: 13px; margin: 0 0 14px; }
-  .preflight-bar.ok { background: var(--accent-soft); color: #0a7a3e; border: 1px solid #c8ead4; }
-  .preflight-bar.warn { background: var(--warn); color: #8a6d00; border: 1px solid #e8d48a; }
-  .preflight-bar.err { background: var(--err); color: #b91c1c; border: 1px solid #f5c2c2; }
-  .next.preflight-blocked { border-color: #f5c2c2; background: #fff5f5; }
-  .export-outbox-toast { text-align: left; line-height: 1.5; margin-bottom: 12px; }
-  .export-outbox-toast .export-toast-title { font-size: 14px; margin-bottom: 6px; }
-  .export-outbox-toast .export-toast-warn {
-    margin: 8px 0; padding: 8px 10px; border-radius: 8px;
-    background: var(--warn); color: #8a6d00; font-size: 13px;
-    background: #fff8e6; border: 1px solid #e8d48a;
-  }
-  .export-outbox-toast .export-toast-path { font-size: 12px; color: var(--muted); word-break: break-all; }
-  .export-outbox-toast .export-toast-path code { font-size: 12px; background: #f0f4f8; padding: 2px 6px; border-radius: 4px; }
-  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
-  button, .btn { font-size: 13px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
-  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .export-drop { display: inline-block; position: relative; }
-  .export-drop-summary { list-style: none; cursor: pointer; }
-  .export-drop-summary::-webkit-details-marker { display: none; }
-  .export-drop-menu {
-    position: absolute; left: 0; top: calc(100% + 4px); z-index: 30;
-    min-width: 168px; max-height: 240px; overflow-y: auto;
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: 8px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.12);
-  }
-  .export-drop-item {
-    display: block; width: 100%; text-align: left; padding: 6px 10px;
-    border: none; background: transparent; font: inherit; font-size: 13px;
-    cursor: pointer; border-radius: 6px;
-  }
-  .export-drop-item:hover { background: #f0f4f8; }
-  .advanced-only { display: none; }
-  body.show-advanced .advanced-only { display: block; }
-  label.adv { font-size: 13px; color: var(--muted); }
-  pre.adv { font-size: 11px; overflow: auto; background: #111; color: #eee; padding: 10px; border-radius: 8px; }
-  .dry-run-json { margin-top: 10px; max-height: 280px; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"PingFang SC",sans-serif; background:var(--bg); color:var(--text); }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 24px; background:var(--surface); border-bottom:1px solid var(--line); }
+  .top a { color:var(--accent); text-decoration:none; font-size:14px; }
+  .wrap { max-width:920px; margin:0 auto; padding:22px 24px 48px; }
+  h1 { margin:0 0 6px; font-size:24px; }
+  .meta { color:var(--muted); font-size:13px; margin-bottom:16px; }
+  .pill { display:inline-flex; font-size:12px; padding:4px 10px; border-radius:999px; background:var(--accent-soft); color:#0a7a3e; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:14px; }
+  .card h2 { margin:0 0 10px; font-size:15px; }
+  .next { background:var(--accent-soft); border-color:#c8ead4; }
+  .next.preflight-blocked { background:#fff5f5; border-color:#f5c2c2; }
+  .next ul { margin:8px 0 0; padding-left:18px; color:var(--muted); font-size:13px; }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+  button,.btn { font-size:13px; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; text-decoration:none; color:var(--text); }
+  .btn-primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .preflight-bar { padding:10px 12px; border-radius:10px; font-size:13px; margin:0 0 14px; }
+  .preflight-bar.ok { background:var(--accent-soft); color:#0a7a3e; border:1px solid #c8ead4; }
+  .preflight-bar.warn { background:var(--warn); color:#8a6d00; border:1px solid #e8d48a; }
+  .preflight-bar.err { background:var(--err); color:#b91c1c; border:1px solid #f5c2c2; }
+  .checks li { margin:4px 0; font-size:13px; }
+  .checks .bad { color:#b45309; }
+  .cover { max-width:320px; max-height:140px; border-radius:8px; object-fit:cover; margin-top:8px; }
+  .preview-body { font-size:16px; line-height:1.75; padding:12px; background:#fafafa; border-radius:8px; border:1px solid var(--line); }
+  .preview-body p { margin:0 0 1em; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chips span { font-size:12px; padding:2px 8px; border-radius:999px; background:#eef2f7; color:var(--muted); }
+  .warn { padding:8px 10px; border-radius:8px; background:var(--warn); color:#8a6d00; font-size:13px; margin-top:8px; }
+  .advanced-only { display:none; }
+  body.show-advanced .advanced-only { display:block; }
+  label.adv { font-size:13px; color:var(--muted); }
+  pre.adv { font-size:11px; overflow:auto; background:#111; color:#eee; padding:10px; border-radius:8px; }
+  @media (max-width:600px) { .top,.wrap { padding-left:14px; padding-right:14px; } }
 </style>
 </head>
 <body>
@@ -77,7 +53,6 @@
 </header>
 <main class="wrap">
   <div id="loadErr" hidden class="warn"></div>
-  <div id="exportToast" hidden></div>
   <div id="mainPanel" hidden>
     <span class="pill" id="modePill"></span>
     <div id="preflightBar" class="preflight-bar ok" hidden></div>
@@ -90,22 +65,14 @@
       <div class="actions">
         <button type="button" class="btn-primary" id="btnPreview">刷新正文预览</button>
         <button type="button" class="btn" id="btnUpdateDraft" hidden>更新微信草稿</button>
-        <div id="exportOutboxSlot"></div>
+        <button type="button" class="btn" id="btnExportAgent" hidden>导出外部 Agent 只读核对包</button>
+        <button type="button" class="btn" id="btnStartPublishConfirmation" hidden>进入人工发布确认</button>
         <a class="btn" id="btnWorkbench" href="/#works">返回工作台</a>
       </div>
     </section>
     <section class="card">
-      <h2>发布状态</h2>
+      <h2>草稿状态</h2>
       <div id="statusBlock"></div>
-    </section>
-    <section class="card" id="browserAssistCard" hidden>
-      <h2>浏览器辅助（手动登录）</h2>
-      <p style="margin:0 0 10px;font-size:13px;color:var(--muted);" id="browserAssistHint">
-        需用户在场扫码登录；Agent 不得在未经确认时继续后台操作。
-      </p>
-      <div id="browserAssistStatus" style="font-size:13px;margin-bottom:10px;"></div>
-      <div id="browserAssistActions" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
-      <pre id="browserAssistDetail" class="adv" style="margin-top:10px;display:none;font-size:12px;background:#f0f4f8;color:#333;max-height:240px;overflow:auto;"></pre>
     </section>
     <section class="card" id="proof" hidden>
       <h2>发布证明（人工确认）</h2>
@@ -117,10 +84,10 @@
         <label style="font-size:13px;">备注 <input type="text" name="note" style="width:100%;padding:6px 8px;margin-top:4px;"/></label>
         <button type="submit" class="btn-primary" style="align-self:flex-start;">提交发布证明</button>
       </form>
-      <pre id="proofExisting" class="adv" style="margin-top:10px;display:none;font-size:12px;background:#f0f4f8;color:#333;"></pre>
+      <pre id="proofExisting" class="adv advanced-only"></pre>
     </section>
     <section class="card">
-      <h2>发布前检查</h2>
+      <h2>草稿创建前检查</h2>
       <ul class="checks" id="checksList"></ul>
     </section>
     <section class="card">
@@ -139,24 +106,19 @@
       <div class="preview-body" id="previewBody">加载预览中…</div>
       <pre class="adv advanced-only" id="previewRaw" hidden></pre>
     </section>
-    <section class="card advanced-only" id="dryRunCard">
-      <h2>发布 dry-run</h2>
-      <p style="margin:0 0 8px;font-size:12px;color:var(--muted);">只读摘要，复用 <code>/api/articles/{id}/publish-dry-run</code>（mock 安全）。</p>
-      <div id="dryRunSummary"></div>
-      <pre class="adv dry-run-json advanced-only" id="dryRunJson" hidden></pre>
-    </section>
     <section class="card advanced-only">
       <h2>高级信息</h2>
       <pre class="adv" id="detailRaw"></pre>
     </section>
   </div>
 </main>
-<script src="/assets/export-outbox-ui.js"></script>
 <script>
 const ARTICLE_ID = {{ARTICLE_ID}};
 const ADV_STORAGE_KEY = 'wechat_workbench_show_advanced';
 const HASH_SECTION_STORAGE_KEY = 'wechat_workbench_section_hash';
 const RETURN_HASH_SESSION_KEY = 'wechat_workbench_return_hash';
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 function workbenchReturnUrl(){
   try {
@@ -173,414 +135,185 @@ function workbenchReturnUrl(){
 
 function applyWorkbenchReturnLinks(){
   const url = workbenchReturnUrl();
-  const back = document.getElementById('backWorkbench');
-  if (back) back.setAttribute('href', url);
-  const wb = document.getElementById('btnWorkbench');
-  if (wb) wb.setAttribute('href', url);
+  document.getElementById('backWorkbench').setAttribute('href', url);
+  document.getElementById('btnWorkbench').setAttribute('href', url);
 }
 
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-let manualExportPlatforms = [{ id: 'generic', label: '通用', description: '' }];
-let manualExportOutboxDir = 'outbox';
-
-async function loadManualExportPlatforms(){
-  try {
-    const d = await (await fetch('/api/manual-export/platforms')).json();
-    const list = (d.platforms || []).map(p => ({
-      id: p.id,
-      label: p.label || p.id,
-      description: p.description || '',
-    }));
-    if (list.length) {
-      list.sort((a, b) => {
-        if (a.id === 'generic') return -1;
-        if (b.id === 'generic') return 1;
-        return String(a.label).localeCompare(String(b.label), 'zh');
-      });
-      manualExportPlatforms = list;
-    }
-    if (d.outbox_dir) manualExportOutboxDir = d.outbox_dir;
-  } catch (e) { /* 非阻塞 */ }
-}
-
-function ordinaryDetailExportPlatforms(){
-  const adv = document.documentElement.classList.contains('show-advanced');
-  const list = manualExportPlatforms.length
-    ? manualExportPlatforms
-    : [{ id: 'generic', label: '通用' }];
-  if (adv) return list;
-  return list.filter(p => p.id === 'generic');
-}
-
-function detailExportMenuHtml(){
-  const platforms = ordinaryDetailExportPlatforms();
-  const buttons = platforms.map(p => {
-    const pid = String(p.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const title = p.description ? ` title="${esc(p.description)}"` : '';
-    const lbl = esc(p.label || p.id).replace(/'/g, "\\'");
-    return `<button type="button" class="export-drop-item"${title} onclick="doExportOutbox('${pid}', '${lbl}')">${esc(p.label || p.id)}</button>`;
-  }).join('');
-  return `<details class="export-drop"><summary class="btn export-drop-summary">导出</summary><div class="export-drop-menu" role="menu">${buttons}</div></details>`;
-}
-
-async function doExportOutbox(platform, label){
-  const plat = platform || 'generic';
-  const platLabel = label || plat;
-  const dirHint = manualExportOutboxDir ? `\n\n导出目录：${manualExportOutboxDir}/（由 MANUAL_EXPORT_OUTBOX 配置）` : '';
-  if (!window.confirm(`将导出「${platLabel}」到本地 outbox，不会联网或自动发布。${dirHint}\n\n继续？`)) return;
-  document.querySelectorAll('.export-drop[open]').forEach(el => el.removeAttribute('open'));
-  try {
-    const url = `/api/articles/${ARTICLE_ID}/export-outbox?platform=${encodeURIComponent(plat)}`;
-    const r = await (await fetch(url, { method:'POST' })).json();
-    if (!r.ok) { alert(r.detail || r.error || '导出失败'); return; }
-    const toast = document.getElementById('exportToast');
-    if (window.ExportOutboxUi && toast) {
-      ExportOutboxUi.showInElement(toast, r, platLabel, esc);
-      toast.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
-      alert((r.human||['已导出']).join('\n') + (r.relative_path ? '\n\n路径：'+r.relative_path : ''));
-    }
-  } catch(e) { alert('导出失败：'+e); }
-}
-
-function renderDetailDryRun(dr){
-  const sum = document.getElementById('dryRunSummary');
-  const pre = document.getElementById('dryRunJson');
-  if (!sum) return;
-  if (!dr || !dr.ok) {
-    sum.innerHTML = '<p style="margin:0;font-size:13px;color:var(--muted);">请在上方勾选「显示高级信息」后加载 dry-run</p>';
-    if (pre) { pre.hidden = true; pre.textContent = ''; }
-    return;
-  }
-  let html = `<p style="margin:0 0 8px;font-size:14px;"><b>${esc(dr.gate_summary || dr.summary || '')}</b></p>`;
-  if (dr.mock_safe) {
-    html += '<p class="warn" style="margin:0 0 8px;"><b>mock 安全</b>：只读模拟，不联网、不写库。</p>';
-  }
-  const steps = (dr.report && dr.report.simulated_steps) || [];
-  if (steps.length) {
-    html += '<ul style="margin:0;padding-left:18px;font-size:12px;color:var(--muted);">' +
-      steps.map(s => `<li>${esc(s.label)} → ${esc(s.outcome)}</li>`).join('') + '</ul>';
-  }
-  const hum = dr.human || [];
-  if (hum.length > 1) {
-    html += '<p style="margin:8px 0 0;font-size:12px;color:var(--muted);">' +
-      hum.slice(1).map(h => esc(h)).join('<br/>') + '</p>';
-  }
-  sum.innerHTML = html;
-  if (pre) {
-    const slim = {
-      ok: dr.ok, article_id: dr.article_id, mode: dr.mode, mock_safe: dr.mock_safe,
-      network: dr.network, wechat_mode: dr.wechat_mode, gate_summary: dr.gate_summary,
-      preflight_ready: dr.preflight_ready, human: dr.human, report: dr.report,
-    };
-    pre.textContent = JSON.stringify(slim, null, 2);
-    pre.hidden = false;
-  }
-}
-
-async function loadPublishDryRun(){
-  if (!document.body.classList.contains('show-advanced')) {
-    renderDetailDryRun(null);
-    return null;
-  }
-  try {
-    const dr = await (await fetch(`/api/articles/${ARTICLE_ID}/publish-dry-run`)).json();
-    renderDetailDryRun(dr);
-    return dr;
-  } catch (e) {
-    renderDetailDryRun(null);
-    return null;
-  }
-}
-
-function initAdvancedToggle(onChange){
+function initAdvancedToggle(detail){
   let on = false;
   try { on = localStorage.getItem(ADV_STORAGE_KEY) === '1'; } catch (e) {}
   document.body.classList.toggle('show-advanced', on);
-  const t = document.getElementById('advToggle');
-  if (t) t.checked = on;
-  document.getElementById('advToggle').addEventListener('change', e => {
+  const toggle = document.getElementById('advToggle');
+  toggle.checked = on;
+  toggle.addEventListener('change', e => {
     const checked = !!e.target.checked;
     document.body.classList.toggle('show-advanced', checked);
     try { localStorage.setItem(ADV_STORAGE_KEY, checked ? '1' : '0'); } catch (err) {}
-    if (typeof onChange === 'function') onChange();
+    document.getElementById('detailRaw').textContent = checked ? JSON.stringify(detail, null, 2) : '';
+    loadPreview();
   });
 }
 
 async function loadPreview(){
-  const body = document.getElementById('previewBody');
+  const previewBody = document.getElementById('previewBody');
   try {
-    const d = await (await fetch(`/api/articles/${ARTICLE_ID}/render-preview`)).json();
-    document.getElementById('approxNote').textContent = d.approximation_note || '';
-    body.innerHTML = d.html_body || '（空）';
+    const response = await fetch(`/api/articles/${ARTICLE_ID}/render-preview`);
+    const data = await response.json();
+    document.getElementById('approxNote').textContent = data.approximation_note || '';
+    previewBody.innerHTML = data.html_body || '（空）';
     const chips = document.getElementById('hintChips');
-    if ((d.content_hints||[]).length) {
-      chips.innerHTML = d.content_hints.map(h=>`<span>${esc(h)}</span>`).join('');
-      chips.hidden = false;
-    }
-    const w = document.getElementById('previewWarn');
-    if (d.render_error) { w.textContent = '渲染异常：'+d.render_error; w.hidden = false; }
-    else if ((d.blocking_hints||[]).length) { w.textContent = '注意：'+d.blocking_hints.join('；'); w.hidden = false; }
-    if (document.body.classList.contains('show-advanced') && d.raw_body) {
-      const raw = document.getElementById('previewRaw');
-      raw.hidden = false; raw.textContent = d.raw_body;
-    }
-  } catch(e) { body.textContent = '预览加载失败：'+e; }
+    const hints = data.content_hints || [];
+    chips.innerHTML = hints.map(h => `<span>${esc(h)}</span>`).join('');
+    chips.hidden = hints.length === 0;
+    const warning = document.getElementById('previewWarn');
+    const warningText = data.render_error
+      ? '渲染异常：' + data.render_error
+      : ((data.blocking_hints || []).length ? '注意：' + data.blocking_hints.join('；') : '');
+    warning.textContent = warningText;
+    warning.hidden = !warningText;
+    const raw = document.getElementById('previewRaw');
+    raw.hidden = !document.body.classList.contains('show-advanced') || !data.raw_body;
+    raw.textContent = raw.hidden ? '' : data.raw_body;
+  } catch (e) {
+    previewBody.textContent = '预览加载失败：' + e;
+  }
 }
 
-async function postBrowserAssist(path, body){
-  const r = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body || {}),
-  });
-  return r.json();
-}
-
-function renderBrowserAssistSession(session, job){
-  const card = document.getElementById('browserAssistCard');
-  const statusEl = document.getElementById('browserAssistStatus');
-  const actionsEl = document.getElementById('browserAssistActions');
-  const detailEl = document.getElementById('browserAssistDetail');
-  if (!card || !job || !job.id) return;
+function renderProof(proof){
+  if (!proof || !proof.needs_proof) return;
+  const card = document.getElementById('proof');
   card.hidden = false;
-  const sid = session && session.session_id;
-  const st = session && session.status;
-  const connVerified = !!(session && session.connection_verified);
-  if (!sid) {
-    statusEl.innerHTML = '<span class="pill wait">未启动</span> 请先按 Chrome 会话手册连接已登录页面，再启动浏览器辅助。';
-    actionsEl.innerHTML = `<button type="button" class="btn-primary btn-sm" id="btnBaStart">开始浏览器辅助</button>`;
-    document.getElementById('btnBaStart').onclick = async () => {
-      if (!window.confirm('将启动浏览器辅助门控。请确认 Cursor 已通过 wechat-chrome-session 连接现有 Chrome。')) return;
-      try {
-        const r = await postBrowserAssist('/api/browser-assist/sessions/start', { job_id: job.id });
-        if (!r.ok) { alert(r.detail || r.error || '启动失败'); return; }
-        renderBrowserAssistSession(r, job);
-      } catch(e) { alert('启动失败：'+e); }
+  document.getElementById('proofHint').textContent = proof.hint || '';
+  if (proof.existing) {
+    document.getElementById('proofExisting').textContent = JSON.stringify(proof.existing, null, 2);
+  }
+  document.getElementById('proofForm').onsubmit = async event => {
+    event.preventDefault();
+    const fields = new FormData(event.target);
+    const body = {
+      public_url: fields.get('public_url') || null,
+      screenshot_path: fields.get('screenshot_path') || null,
+      confirmed_by: fields.get('confirmed_by') || null,
+      note: fields.get('note') || null,
     };
-    detailEl.style.display = 'none';
-    return;
-  }
-  const label = {
-    awaiting_browser_login: '等待接管已登录页',
-    browser_session_ready: '已登录，可继续',
-    assist_in_progress: '辅助进行中',
-    draft_review_in_progress: '草稿检查中',
-    awaiting_proof: '待回填 proof',
-    completed: '已完成',
-    cancelled: '已取消',
-  }[st] || st;
-  statusEl.innerHTML = `<span class="pill ${st==='awaiting_browser_login'?'wait':'ok'}">${esc(label)}</span> 会话 <code>${esc(sid)}</code>`;
-  if (st === 'awaiting_browser_login') {
-    statusEl.innerHTML += `<p style="margin:8px 0 0;font-size:12px;color:var(--muted);">连接验收：${connVerified ? 'PASS（已记录）' : '未记录，需先提交只读接管报告'}</p>`;
-  }
-  if ((session.human_steps||[]).length) {
-    statusEl.innerHTML += '<ul style="margin:8px 0 0 16px;font-size:12px;color:var(--muted);">' +
-      session.human_steps.map(h=>`<li>${esc(h)}</li>`).join('') + '</ul>';
-  }
-  let btns = '';
-  if (st === 'awaiting_browser_login') {
-    btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaRecord">记录接管报告</button>`;
-    btns += `<button type="button" class="btn-primary btn-sm" id="btnBaLogin"${connVerified ? '' : ' disabled title="先记录接管报告"'}>已登录，继续</button>`;
-  } else if (st === 'assist_in_progress' || st === 'browser_session_ready') {
-    btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaSched">草稿已定位并检查，记录 proof</button>`;
-  }
-  btns += `<button type="button" class="btn-ghost btn-sm" id="btnBaCancel">取消会话</button>`;
-  actionsEl.innerHTML = btns;
-  const bind = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
-  bind('btnBaRecord', async () => {
-    const tmpl = (((session||{}).login_gate||{}).connection_report_template) || {
-      mcp: 'wechat-chrome-session',
-      connection_mode: 'existing Chrome / autoConnect',
-      target_host: 'mp.weixin.qq.com',
-      target_url: 'https://mp.weixin.qq.com/cgi-bin/home',
-      page_title: '微信公众号后台（脱敏）',
-      backend_visible: true,
-      login_required: false,
-      dom_snapshot_available: true,
-      screenshot_available: true,
-      write_actions_performed: 0,
-      result: 'PASS',
-      block_reason: 'none'
-    };
-    const raw = window.prompt('请粘贴或确认连接验收报告 JSON（不要包含 token/query）：', JSON.stringify(tmpl, null, 2));
-    if (!raw) return;
-    let report = null;
     try {
-      report = JSON.parse(raw);
-    } catch (e) {
-      alert('JSON 解析失败，请检查格式');
-      return;
-    }
-    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/record-connection`, { report });
-    if (!r.ok) { alert(r.detail || r.error || '记录失败'); return; }
-    alert((r.human||['已记录']).join('\n'));
-    location.reload();
-  });
-  bind('btnBaLogin', async () => {
-    if (!connVerified && !window.confirm('尚未记录 PASS 连接报告，是否继续尝试？通常会失败。')) return;
-    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-login`, {});
-    if (!r.ok) { alert(r.detail || r.error || '确认失败'); return; }
-    alert((r.human||['已确认登录']).join('\n'));
-    location.reload();
-  });
-  bind('btnBaSched', async () => {
-    if (!window.confirm('确认只完成了草稿定位/检查，并未点击发布、群发或定时确认？')) return;
-    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/confirm-schedule-setup`, {
-      scheduled_at: (job && job.scheduled_at) || null,
-    });
-    if (!r.ok) { alert(r.detail || r.error || '确认失败'); return; }
-    alert((r.human||['已记录']).join('\n'));
-    location.reload();
-  });
-  bind('btnBaCancel', async () => {
-    if (!window.confirm('取消当前 browser_assist 会话？')) return;
-    const r = await postBrowserAssist(`/api/browser-assist/sessions/${sid}/cancel`, {});
-    if (!r.ok) { alert(r.detail || r.error || '取消失败'); return; }
-    location.reload();
-  });
-  if (document.body.classList.contains('show-advanced')) {
-    detailEl.style.display = 'block';
-    detailEl.textContent = JSON.stringify(session, null, 2);
-  } else {
-    detailEl.style.display = 'none';
-  }
-}
-
-async function loadBrowserAssistForJob(job){
-  if (!job || !job.id) return;
-  try {
-    const list = await (await fetch('/api/browser-assist/sessions?active_only=true')).json();
-    const match = (list.sessions||[]).find(s => Number(s.job_id) === Number(job.id));
-    renderBrowserAssistSession(match || null, job);
-  } catch(e) {
-    renderBrowserAssistSession(null, job);
-  }
+      const response = await fetch(`/api/publish-jobs/${proof.job_id}/proof`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        alert(result.detail || result.error || '提交失败');
+        return;
+      }
+      alert('已记录发布证明');
+      location.reload();
+    } catch (e) { alert('提交失败：' + e); }
+  };
+  if (location.hash === '#proof') card.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 async function boot(){
-  let detailCache = null;
   applyWorkbenchReturnLinks();
-  await loadManualExportPlatforms();
-  const exportSlot = document.getElementById('exportOutboxSlot');
-  if (exportSlot) exportSlot.innerHTML = detailExportMenuHtml();
-  initAdvancedToggle(async () => {
-    if (detailCache) {
-      if (document.body.classList.contains('show-advanced'))
-        document.getElementById('detailRaw').textContent = JSON.stringify(detailCache, null, 2);
-      else document.getElementById('detailRaw').textContent = '';
-    }
-    await loadPublishDryRun();
-    await loadPreview();
-  });
   document.getElementById('btnPreview').addEventListener('click', loadPreview);
-  const btnUpd = document.getElementById('btnUpdateDraft');
-  if (btnUpd) btnUpd.addEventListener('click', async () => {
-    if (!window.confirm('将当前作品内容同步到已有微信草稿？演练模式不会改动公众号后台。')) return;
-    try {
-      const r = await (await fetch(`/api/articles/${ARTICLE_ID}/update-draft`, { method:'POST' })).json();
-      alert((r.human||['已更新']).join('\n'));
-      location.reload();
-    } catch(e) { alert('更新失败：'+e); }
-  });
   try {
-    const d = await (await fetch(`/api/articles/${ARTICLE_ID}`)).json();
-    detailCache = d;
-    if (!d.id) throw new Error('作品不存在');
+    const response = await fetch(`/api/articles/${ARTICLE_ID}`);
+    const detail = await response.json();
+    if (!response.ok || !detail.id) throw new Error(detail.detail || '作品不存在');
     document.getElementById('mainPanel').hidden = false;
-    document.getElementById('modePill').textContent = d.mode_label || '';
-    const pfb = d.preflight_bar || {};
-    const barEl = document.getElementById('preflightBar');
-    if (pfb.bar_text) {
-      barEl.hidden = false;
-      barEl.className = 'preflight-bar ' + (pfb.bar_level || 'ok');
-      barEl.textContent = (pfb.blocking_count > 0 ? '阻塞：' : '') + pfb.bar_text;
-    }
-    const nextCard = document.getElementById('nextCard');
-    if (nextCard) nextCard.classList.toggle('preflight-blocked', (pfb.blocking_count||0) > 0);
-    document.getElementById('titleEl').textContent = d.title || '（无标题）';
+    document.getElementById('modePill').textContent = detail.mode_label || '';
+    document.getElementById('titleEl').textContent = detail.title || '（无标题）';
     document.getElementById('metaEl').textContent =
-      `${d.collection_name||''} · ${d.status_label||''} · ${d.workflow_hint||''}`;
-    const wb = d.workbench || {};
-    document.getElementById('nextHeadline').innerHTML = `<b>${esc(wb.headline||'')}</b>`;
-    document.getElementById('nextList').innerHTML = (wb.hints||[]).map(h=>`<li>${esc(h)}</li>`).join('') || '<li>预览正文后返回工作台继续</li>';
-    const wbBtn = document.getElementById('btnWorkbench');
-    if (wbBtn) {
-      const wbBtnLabels = {
-        schedule: '去工作台安排排期',
-        wait: '去工作台查看队列',
-        draft_done: '返回工作台',
-        retry: '去工作台处理失败任务',
-        proof: '返回工作台',
-        cover: '去工作台设置封面',
-      };
-      wbBtn.textContent = wbBtnLabels[wb.primary_action] || '返回工作台';
+      `${detail.collection_name||''} · ${detail.status_label||''} · ${detail.workflow_hint||''}`;
+
+    const preflight = detail.preflight_bar || {};
+    const bar = document.getElementById('preflightBar');
+    if (preflight.bar_text) {
+      bar.hidden = false;
+      bar.className = 'preflight-bar ' + (preflight.bar_level || 'ok');
+      bar.textContent = (preflight.blocking_count > 0 ? '阻塞：' : '') + preflight.bar_text;
     }
-    let st = `<p style="margin:0 0 6px;font-size:14px;"><b>${esc(d.workflow_hint)}</b></p>`;
-    const job = d.latest_job;
+    document.getElementById('nextCard').classList.toggle('preflight-blocked', (preflight.blocking_count || 0) > 0);
+    const workbench = detail.workbench || {};
+    document.getElementById('nextHeadline').innerHTML = `<b>${esc(workbench.headline||'')}</b>`;
+    document.getElementById('nextList').innerHTML =
+      (workbench.hints || []).map(h => `<li>${esc(h)}</li>`).join('') || '<li>预览正文后返回工作台继续</li>';
+
+    let statusHtml = `<p style="margin:0 0 6px;font-size:14px;"><b>${esc(detail.workflow_hint)}</b></p>`;
+    const job = detail.latest_job;
     if (job) {
-      st += `<p style="margin:0;font-size:13px;color:var(--muted);">计划时间：${esc(job.scheduled_at_label)} · ${esc(job.status_label)} · ${esc(job.publish_config_label||'')}</p>`;
-      if (job.publish_effective_badge) {
-        st += `<p style="margin:4px 0 0;font-size:12px;color:var(--muted);">有效行为：${esc(job.publish_effective_badge)} — ${esc(job.publish_effective_label||'')}</p>`;
-      }
+      statusHtml += `<p style="margin:0;font-size:13px;color:var(--muted);">草稿创建时间：${esc(job.scheduled_at_label)} · ${esc(job.status_label)} · ${esc(job.publish_config_label||'')}</p>`;
     } else {
-      st += `<p style="margin:0;font-size:13px;color:var(--muted);">尚未创建发布任务</p>`;
+      statusHtml += '<p style="margin:0;font-size:13px;color:var(--muted);">尚未创建草稿任务</p>';
     }
-    const draft = d.wechat_draft || {};
-    st += `<p style="margin:8px 0 0;font-size:13px;">${esc(draft.label||'')}</p>`;
-    if (draft.mock_note) st += `<p class="warn" style="margin-top:6px;">${esc(draft.mock_note)}</p>`;
-    if (draft.update_hint) st += `<p style="margin-top:6px;font-size:12px;color:var(--muted);">${esc(draft.update_hint)}</p>`;
-    document.getElementById('statusBlock').innerHTML = st;
-    await loadBrowserAssistForJob(job);
-    const proof = d.publish_proof;
-    const proofCard = document.getElementById('proof');
-    if (proof && proof.needs_proof) {
-      proofCard.hidden = false;
-      if (location.hash === '#proof') proofCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      document.getElementById('proofHint').textContent = proof.hint || '';
-      if (proof.existing) {
-        const pe = document.getElementById('proofExisting');
-        pe.style.display = 'block';
-        pe.textContent = JSON.stringify(proof.existing, null, 2);
-      }
-      document.getElementById('proofForm').onsubmit = async (ev) => {
-        ev.preventDefault();
-        const fd = new FormData(ev.target);
-        const body = {
-          public_url: fd.get('public_url') || null,
-          screenshot_path: fd.get('screenshot_path') || null,
-          confirmed_by: fd.get('confirmed_by') || null,
-          note: fd.get('note') || null,
-        };
-        try {
-          const r = await (await fetch(`/api/publish-jobs/${proof.job_id}/proof`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          })).json();
-          if (!r.ok) { alert(r.error || '提交失败'); return; }
-          alert('已记录发布证明');
-          location.reload();
-        } catch(e) { alert('提交失败：'+e); }
-      };
+    const draft = detail.wechat_draft || {};
+    statusHtml += `<p style="margin:8px 0 0;font-size:13px;">${esc(draft.label||'')}</p>`;
+    if (draft.mock_note) statusHtml += `<p class="warn">${esc(draft.mock_note)}</p>`;
+    if (draft.update_hint) statusHtml += `<p style="font-size:12px;color:var(--muted);">${esc(draft.update_hint)}</p>`;
+    document.getElementById('statusBlock').innerHTML = statusHtml;
+
+    const exportAgentButton = document.getElementById('btnExportAgent');
+    exportAgentButton.hidden = !job;
+    if (job) {
+      exportAgentButton.addEventListener('click', async () => {
+        if (!window.confirm('生成本地外部 Agent 只读核对包？该操作不会启动浏览器或修改后台内容。')) return;
+        const exportResponse = await fetch(`/api/publish-jobs/${job.id}/export-agent-task`, {method:'POST'});
+        const result = await exportResponse.json();
+        if (!exportResponse.ok || !result.ok) {
+          alert(result.detail || result.error || '任务包导出失败');
+          return;
+        }
+        alert((result.human || ['任务包已生成']).join('\n'));
+      });
     }
-    const btnUpdDraft = document.getElementById('btnUpdateDraft');
-    if (btnUpdDraft) btnUpdDraft.hidden = !draft.can_update;
-    document.getElementById('checksList').innerHTML = (d.preflight_checks||[]).map(c =>
-      `<li class="${c.ok?'':'bad'}">${esc(c.label)}：${esc(c.detail)}</li>`).join('');
-    document.getElementById('summaryEl').textContent = d.summary_preview || '（无摘要）';
-    const cov = document.getElementById('coverBlock');
-    if (d.cover_url) cov.innerHTML = `<img class="cover" src="${esc(d.cover_url)}" alt="封面"/>`;
-    else cov.innerHTML = '<span style="color:var(--muted);font-size:13px;">未设置封面</span>';
+
+    const updateButton = document.getElementById('btnUpdateDraft');
+    updateButton.hidden = !draft.can_update;
+    updateButton.addEventListener('click', async () => {
+      if (!window.confirm('将当前作品内容同步到已有微信草稿？演练模式不会改动公众号后台。')) return;
+      const updateResponse = await fetch(`/api/articles/${ARTICLE_ID}/update-draft`, {method:'POST'});
+      const result = await updateResponse.json();
+      if (!updateResponse.ok) { alert(result.detail || result.error || '更新失败'); return; }
+      alert((result.human || ['已更新']).join('\n'));
+      location.reload();
+    });
+
+    const confirmation = detail.publish_confirmation || {};
+    const confirmationButton = document.getElementById('btnStartPublishConfirmation');
+    confirmationButton.hidden = !confirmation.can_start;
+    if (confirmation.can_start) {
+      confirmationButton.addEventListener('click', async () => {
+        if (!window.confirm('仅把本地任务状态改为“待人工确认”；不会操作微信公众号后台。继续？')) return;
+        const response = await fetch(`/api/publish-jobs/${confirmation.job_id}/waiting-confirmation`, {method:'POST'});
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          alert(result.detail || result.error || '无法进入人工发布确认');
+          return;
+        }
+        location.hash = 'proof';
+        location.reload();
+      });
+    }
+
+    renderProof(detail.publish_proof);
+    document.getElementById('checksList').innerHTML = (detail.preflight_checks || []).map(check =>
+      `<li class="${check.ok?'':'bad'}">${esc(check.label)}：${esc(check.detail)}</li>`
+    ).join('');
+    document.getElementById('summaryEl').textContent = detail.summary_preview || '（无摘要）';
+    const cover = document.getElementById('coverBlock');
+    cover.innerHTML = detail.cover_url
+      ? `<img class="cover" src="${esc(detail.cover_url)}" alt="封面"/>`
+      : '<span style="color:var(--muted);font-size:13px;">未设置封面</span>';
+    initAdvancedToggle(detail);
     if (document.body.classList.contains('show-advanced')) {
-      document.getElementById('detailRaw').textContent = JSON.stringify(d, null, 2);
+      document.getElementById('detailRaw').textContent = JSON.stringify(detail, null, 2);
     }
-    await loadPublishDryRun();
     await loadPreview();
-  } catch(e) {
-    const err = document.getElementById('loadErr');
-    err.hidden = false;
-    err.textContent = '无法加载作品详情：' + e;
+  } catch (e) {
+    const error = document.getElementById('loadErr');
+    error.hidden = false;
+    error.textContent = '无法加载作品详情：' + e;
   }
 }
 boot();

@@ -1,4 +1,4 @@
-"""网页批量上传：把用户上传的作品文件与封面图落地并入库（Round 44）。
+"""网页批量上传：把用户上传的作品文件与封面图落地并入库。
 
 设计：保持 FastAPI 细节在 app.py，本模块只处理 (filename, bytes) 元组，便于单测。
 - 作品文件 → 写入收件箱（config.inbox_dir），随后复用 scan_inbox 解析入库。
@@ -12,10 +12,17 @@ from pathlib import Path
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.config import AppConfig
+from wechat_article_scheduler.cover_assets.index import (
+    InvalidCoverError,
+    SUPPORTED_COVER_EXTENSIONS,
+    managed_cover_bytes,
+    validate_image_bytes,
+)
 from wechat_article_scheduler.scanner import scan_inbox
+from wechat_article_scheduler.filesystem_safety import UnsafePathError, write_unique_file
 
 ARTICLE_EXTENSIONS = {".md", ".markdown", ".txt", ".html", ".htm"}
-COVER_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+COVER_EXTENSIONS = SUPPORTED_COVER_EXTENSIONS
 
 _UNSAFE = re.compile(r"[^\w.\-\u4e00-\u9fff]+")
 
@@ -38,26 +45,17 @@ def safe_filename(name: str) -> str:
     return cleaned
 
 
-def _unique_path(path: Path) -> Path:
-    """若目标已存在则追加序号，避免覆盖。"""
-    if not path.exists():
-        return path
-    stem, suffix, parent = path.stem, path.suffix, path.parent
-    i = 1
-    while True:
-        candidate = parent / f"{stem}_{i}{suffix}"
-        if not candidate.exists():
-            return candidate
-        i += 1
-
-
 def save_cover_file(config: AppConfig, filename: str, data: bytes) -> Path:
     """保存单个封面文件，返回落地路径。"""
+    safe_name = safe_filename(filename)
+    validate_image_bytes(data, Path(safe_name).suffix)
     target_dir = config.covers_dir
-    target_dir.mkdir(parents=True, exist_ok=True)
-    dest = _unique_path(target_dir / safe_filename(filename))
-    dest.write_bytes(data)
-    return dest
+    try:
+        dest = write_unique_file(target_dir, safe_name, data, allowed_roots=(config.root,))
+        managed_cover_bytes(config, dest)
+        return dest
+    except (OSError, UnsafePathError) as exc:
+        raise InvalidCoverError("封面上传目录无效") from exc
 
 
 def _match_covers(config: AppConfig, cover_by_stem: dict[str, str]) -> int:
@@ -91,8 +89,6 @@ def handle_upload(
 ) -> dict:
     """落地上传文件、扫描入库并配对封面，返回人话摘要。"""
     inbox = config.inbox_dir
-    inbox.mkdir(parents=True, exist_ok=True)
-
     saved_articles = 0
     skipped_articles: list[str] = []
     for name, data in articles:
@@ -100,8 +96,11 @@ def handle_upload(
         if suffix not in ARTICLE_EXTENSIONS:
             skipped_articles.append(safe_filename(name))
             continue
-        dest = _unique_path(inbox / safe_filename(name))
-        dest.write_bytes(data)
+        try:
+            write_unique_file(inbox, safe_filename(name), data, allowed_roots=(config.root,))
+        except (OSError, UnsafePathError):
+            skipped_articles.append(safe_filename(name))
+            continue
         saved_articles += 1
 
     cover_by_stem: dict[str, str] = {}
@@ -111,7 +110,11 @@ def handle_upload(
         if suffix not in COVER_EXTENSIONS:
             skipped_covers.append(safe_filename(name))
             continue
-        dest = save_cover_file(config, name, data)
+        try:
+            dest = save_cover_file(config, name, data)
+        except InvalidCoverError:
+            skipped_covers.append(safe_filename(name))
+            continue
         cover_by_stem[Path(safe_filename(name)).stem] = str(dest)
 
     scan_stats = scan_inbox(config) if saved_articles else {
@@ -143,7 +146,7 @@ def handle_upload(
     if skipped_articles:
         human.append(f"有 {len(skipped_articles)} 个文件格式不支持，未处理（支持 md/txt/html）")
     if skipped_covers:
-        human.append(f"有 {len(skipped_covers)} 张图片格式不支持，未处理（支持 jpg/png/gif/webp）")
+        human.append(f"有 {len(skipped_covers)} 张图片格式不支持，未处理（仅支持 jpg/jpeg/png）")
     if not human:
         human.append("没有可处理的文件，请选择 md/txt/html 作品或 jpg/png 封面")
 

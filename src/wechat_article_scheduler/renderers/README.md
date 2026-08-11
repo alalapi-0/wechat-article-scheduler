@@ -1,5 +1,4 @@
 # renderers
 
-渲染器层负责将 Markdown 或其他输入格式转换为微信草稿可接受的 HTML。
-
-当前仅提供最小 Markdown 段落渲染骨架：段落映射为带 margin 的 `<p>` 标签。
+负责将 Markdown 与内嵌 HTML 规范化为公众号草稿正文 HTML，包括标题、列表、引用、
+代码块、链接、图片和安全降级处理。

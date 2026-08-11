@@ -1,4 +1,4 @@
-"""调度器 dry-run 与重试上限测试（Round 7）。"""
+"""调度器 dry-run 与重试上限测试。"""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from wechat_article_scheduler.adapters.base import DraftResult
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.scheduler import run_due_jobs
 from tests.conftest import make_test_config
+from tests.test_web_upload import PNG
 
 
 @pytest.fixture
@@ -70,16 +71,19 @@ def test_real_draft_only_keeps_article_unpublished(tmp_path: Path, monkeypatch: 
     src = tmp_path / "articles" / "imported" / "real.md"
     src.parent.mkdir(parents=True)
     src.write_text("# T\n\nbody", encoding="utf-8")
+    cover = tmp_path / "articles" / "covers" / "real.png"
+    cover.parent.mkdir(parents=True)
+    cover.write_bytes(PNG)
     db_path = tmp_path / "draft.sqlite3"
     db.init_db(db_path)
     past = (datetime.now() - timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
     with db.connect(db_path) as conn:
         conn.execute(
             """
-            INSERT INTO articles (source_path, title, summary, body, content_hash, status)
-            VALUES (?, 'T', 'S', '# T\n\nbody', 'hash-draft', 'imported')
+            INSERT INTO articles (source_path, title, summary, body, content_hash, status, cover_path)
+            VALUES (?, 'T', 'S', '# T\n\nbody', 'hash-draft', 'imported', ?)
             """,
-            (str(src),),
+            (str(src), str(cover)),
         )
         aid = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
         conn.execute(
@@ -95,9 +99,6 @@ def test_real_draft_only_keeps_article_unpublished(tmp_path: Path, monkeypatch: 
         def create_draft(self, **kwargs):  # noqa: ANN001, ANN201
             return DraftResult(media_id="draft-real-1", raw_response={"media_id": "draft-real-1"})
 
-        def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-            return {"errcode": 0, "skipped": True, "media_id": media_id}
-
     monkeypatch.setattr(
         "wechat_article_scheduler.scheduler.domain.get_adapter",
         lambda config: FakeAdapter(),  # noqa: ARG005
@@ -106,7 +107,8 @@ def test_real_draft_only_keeps_article_unpublished(tmp_path: Path, monkeypatch: 
         tmp_path,
         db_path,
         wechat_mode="real",
-        wechat_enable_publish=False,
+        wechat_app_id="test-app",
+        wechat_app_secret="test-secret",
         dry_run=False,
     )
     stats = run_due_jobs(cfg)
@@ -115,11 +117,20 @@ def test_real_draft_only_keeps_article_unpublished(tmp_path: Path, monkeypatch: 
     assert src.exists()
     with db.connect(db_path) as conn:
         article = conn.execute("SELECT status, source_path FROM articles WHERE id = ?", (aid,)).fetchone()
-        job = conn.execute("SELECT status FROM publish_jobs WHERE article_id = ?", (aid,)).fetchone()
-        drafts = conn.execute("SELECT COUNT(*) AS cnt FROM wechat_drafts WHERE article_id = ?", (aid,)).fetchone()
+        job = conn.execute(
+            "SELECT id, status FROM publish_jobs WHERE article_id = ?", (aid,)
+        ).fetchone()
+        draft = conn.execute(
+            """
+            SELECT adapter_mode, publish_job_id
+            FROM wechat_drafts WHERE article_id = ?
+            """,
+            (aid,),
+        ).fetchone()
         event = conn.execute("SELECT event_type FROM events ORDER BY id DESC LIMIT 1").fetchone()
     assert article["status"] == "imported"
     assert article["source_path"] == str(src)
     assert job["status"] == "done"
-    assert drafts["cnt"] == 1
+    assert draft["adapter_mode"] == "real"
+    assert draft["publish_job_id"] == job["id"]
     assert event["event_type"] == "draft_created"

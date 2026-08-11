@@ -1,4 +1,4 @@
-"""收敛路线图 Round 2：scan -> plan -> run-once 主链路 mock 回归。"""
+"""scan -> plan -> run-once 主链路 mock 回归。"""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ import pytest
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters.base import DraftResult
 from wechat_article_scheduler.plan import build_plan
-from wechat_article_scheduler.publish_config import PublishConfig, should_submit_publish
 from wechat_article_scheduler.scanner import scan_inbox
 from wechat_article_scheduler.scheduler import run_due_jobs
 
 from tests.conftest import make_test_config
+from tests.test_web_upload import PNG
 
 
 def test_scan_plan_run_once_mock_chain(tmp_path: Path) -> None:
@@ -72,32 +72,6 @@ def test_scan_plan_run_once_mock_chain(tmp_path: Path) -> None:
         assert draft_count >= 1
 
 
-def test_should_submit_publish_draft_only_matrix(tmp_path: Path) -> None:
-    """历史 publish 配置也不再触发自动发布。"""
-    mock_cfg = make_test_config(tmp_path, tmp_path / "m.sqlite3", wechat_mode="mock")
-    real_draft = make_test_config(
-        tmp_path,
-        tmp_path / "r.sqlite3",
-        wechat_mode="real",
-        wechat_enable_publish=False,
-    )
-    real_pub = make_test_config(
-        tmp_path,
-        tmp_path / "p.sqlite3",
-        wechat_mode="real",
-        wechat_enable_publish=True,
-    )
-    publish_job = PublishConfig(publish_action="publish")
-    draft_job = PublishConfig(publish_action="draft")
-
-    assert should_submit_publish(app_config=mock_cfg, job_config=publish_job) is False
-    assert should_submit_publish(app_config=mock_cfg, job_config=draft_job) is False
-    assert should_submit_publish(app_config=real_draft, job_config=publish_job) is False
-    assert should_submit_publish(app_config=real_draft, job_config=draft_job) is False
-    assert should_submit_publish(app_config=real_pub, job_config=draft_job) is False
-    assert should_submit_publish(app_config=real_pub, job_config=publish_job) is False
-
-
 def test_real_draft_only_run_once_skips_submit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -123,22 +97,16 @@ def test_real_draft_only_run_once_skips_submit(
             (
                 aid,
                 past,
-                '{"publish_action":"draft","auto_execute":false,'
+                '{"auto_execute":false,'
                 '"need_open_comment":false,"only_fans_can_comment":false,'
                 '"author":"","content_source_url":""}',
             ),
         )
         conn.commit()
 
-    submit_calls: list[bool] = []
-
     class FakeAdapter:
         def create_draft(self, **kwargs):  # noqa: ANN001, ANN201
             return DraftResult(media_id="draft-r57", raw_response={"media_id": "draft-r57"})
-
-        def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-            submit_calls.append(force)
-            return {"errcode": 0, "skipped": True, "media_id": media_id}
 
     monkeypatch.setattr(
         "wechat_article_scheduler.scheduler.domain.get_adapter",
@@ -148,13 +116,15 @@ def test_real_draft_only_run_once_skips_submit(
         tmp_path,
         db_path,
         wechat_mode="real",
-        wechat_enable_publish=False,
+        wechat_app_id="test-app",
+        wechat_app_secret="test-secret",
+        wechat_default_thumb_path=str(tmp_path / "default.png"),
         dry_run=False,
     )
+    (tmp_path / "default.png").write_bytes(PNG)
     stats = run_due_jobs(cfg)
     assert stats["processed"] == 1
     assert stats["drafted"] == 1
-    assert submit_calls == [False]
     with db.connect(db_path) as conn:
         article = conn.execute("SELECT status FROM articles WHERE id = ?", (aid,)).fetchone()
         event = conn.execute(

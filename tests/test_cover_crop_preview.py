@@ -1,4 +1,4 @@
-"""Round 62：封面裁剪与双比例预览。"""
+"""封面裁剪与双比例预览。"""
 
 from __future__ import annotations
 
@@ -28,7 +28,12 @@ from tests.conftest import make_test_config
 def _write_png(path: Path, w: int, h: int) -> None:
     def chunk(tag: bytes, data: bytes) -> bytes:
         n = len(data)
-        return struct.pack(">I", n) + tag + data + struct.pack(">I", 0)
+        return (
+            struct.pack(">I", n)
+            + tag
+            + data
+            + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        )
 
     ihdr = struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)
     row = b"\x00" + b"".join(b"\x00\xff\x00" for _ in range(w))
@@ -73,7 +78,7 @@ def test_probe_image_size_without_pillow(tmp_path: Path, monkeypatch: pytest.Mon
     )
     png = tmp_path / "t.png"
     _write_png(png, 120, 80)
-    assert probe_image_size(png) == (120, 80)
+    assert probe_image_size(png, allowed_roots=(tmp_path,)) == (120, 80)
 
 
 def test_build_dual_previews_css_mode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,7 +89,7 @@ def test_build_dual_previews_css_mode(tmp_path: Path, monkeypatch: pytest.Monkey
     png = tmp_path / "cover.png"
     _write_png(png, 400, 300)
     cfg = normalize_cover_config({"crop": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.5}})
-    out = build_dual_cover_previews(png, cfg)
+    out = build_dual_cover_previews(png, cfg, allowed_roots=(tmp_path,))
     assert out["ok"] is True
     assert out["horizontal"]["render_mode"] == "css"
     assert out["square"]["render_mode"] == "css"
@@ -99,7 +104,7 @@ def test_build_dual_previews_with_pillow_when_available(tmp_path: Path) -> None:
     png = tmp_path / "cover.jpg"
     Image.new("RGB", (320, 200), color=(40, 120, 200)).save(png, format="JPEG")
     cfg = normalize_cover_config({"crop": {"x": 0, "y": 0, "width": 1, "height": 0.5}})
-    out = build_dual_cover_previews(png, cfg)
+    out = build_dual_cover_previews(png, cfg, allowed_roots=(tmp_path,))
     assert out["ok"] is True
     assert out["horizontal"]["render_mode"] == "jpeg"
     assert out["horizontal"]["image_base64"]
@@ -122,7 +127,7 @@ def test_article_cover_previews_api(app_config, tmp_path: Path) -> None:
     from wechat_article_scheduler.web import create_app
 
     app_config.covers_dir.mkdir(parents=True, exist_ok=True)
-    cover = app_config.covers_dir / "art.jpg"
+    cover = app_config.covers_dir / "art.png"
     _write_png(cover, 200, 100)
     cfg = normalize_cover_config({"crop": {"x": 0, "y": 0.1, "width": 1, "height": 0.6}})
     with db.connect(app_config.database_path) as conn:

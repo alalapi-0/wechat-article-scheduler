@@ -1,4 +1,4 @@
-"""Playwright E2E 可用性基线（Round 35）。"""
+"""Playwright E2E 可用性基线。"""
 
 from __future__ import annotations
 
@@ -18,7 +18,6 @@ ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN_IN_ORDINARY = (
     "publish_jobs",
     "payload_json",
-    "wechat_enable_publish",
     "mode: mock",
     "imported",
     "pending",
@@ -63,6 +62,10 @@ def _start_server() -> tuple[subprocess.Popen, str, Path]:
             "WECHAT_MODE": "mock",
             "DATABASE_PATH": str(db),
             "ARTICLES_INBOX": str(inbox),
+            "RULES_PATH": str(tmp / "missing-rules.yaml"),
+            "LOG_FILE": "none",
+            "WEB_AUTO_RUN_DUE": "false",
+            "EXTERNAL_AGENT_TASK_OUTBOX": str(tmp / "outbox"),
             "PYTHONPATH": str(ROOT / "src"),
         }
     )
@@ -115,7 +118,11 @@ def test_ordinary_view_e2e_baseline():
             browser.close()
     finally:
         proc.terminate()
-        proc.wait(timeout=10)
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=10)
         import shutil
 
         shutil.rmtree(tmp, ignore_errors=True)
@@ -123,43 +130,3 @@ def test_ordinary_view_e2e_baseline():
 
 def test_e2e_module_documents_forbidden_list():
     assert "publish_jobs" in FORBIDDEN_IN_ORDINARY
-
-
-@pytest.mark.skipif(not _playwright_ready(), reason="playwright chromium not available")
-def test_ordinary_view_export_toast_manual_notice_e2e():
-    """Round 128：普通视图（不开高级）作品卡导出后 alert 含「未自动发布」。"""
-    from playwright.sync_api import sync_playwright
-
-    proc, url, tmp = _start_server()
-    try:
-        assert _wait_for_server(url), "临时 web 服务未就绪"
-        inbox = tmp / "inbox"
-        (inbox / "e2e_export.md").write_text("# E2E\n\nbody\n", encoding="utf-8")
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page(viewport={"width": 1280, "height": 900})
-            page.add_init_script(
-                "try{localStorage.removeItem('wechat_workbench_show_advanced');"
-                "document.documentElement.classList.remove('show-advanced');}catch(e){}"
-            )
-            page.goto(url + "#works", wait_until="networkidle")
-            page.wait_for_timeout(1200)
-            page.get_by_role("button", name="扫描本地收件箱").click()
-            page.wait_for_timeout(2000)
-            drop = page.locator(".export-drop").first
-            drop.click()
-            item = page.locator(".export-drop-item").filter(has_text="通用").first
-            page.once("dialog", lambda d: d.accept())
-            item.click()
-            page.wait_for_selector("#alertBox .export-toast-warn", timeout=15000)
-            alert_text = page.inner_text("#alertBox")
-            assert "未自动发布" in alert_text
-            assert "路径：" in alert_text or "outbox/" in alert_text
-            assert not page.locator("#advanced").is_visible()
-            browser.close()
-    finally:
-        proc.terminate()
-        proc.wait(timeout=10)
-        import shutil
-
-        shutil.rmtree(tmp, ignore_errors=True)

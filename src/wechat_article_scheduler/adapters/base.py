@@ -25,7 +25,7 @@ class DraftOptions:
 
 
 class WechatAdapter(ABC):
-    """公众号草稿/发布适配器接口。"""
+    """公众号草稿适配器接口。"""
 
     @abstractmethod
     def create_draft(
@@ -53,10 +53,6 @@ class WechatAdapter(ABC):
     ) -> DraftResult:
         """更新已有草稿（微信 draft/update；mock 仅更新本地记录语义）。"""
 
-    @abstractmethod
-    def submit_publish(self, media_id: str, *, force: bool = False) -> dict:
-        """历史提交发布接口；当前调度策略只创建草稿，不应传入 force=True。"""
-
     def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
         """draft/batchget 分页列表（子类可覆盖）。"""
         raise NotImplementedError("list_drafts_batchget not implemented")
@@ -64,7 +60,3 @@ class WechatAdapter(ABC):
     def list_published_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
         """freepublish/batchget 分页列表（子类可覆盖）。"""
         raise NotImplementedError("list_published_batchget not implemented")
-
-    def delete_draft(self, media_id: str) -> dict:
-        """draft/delete 删除单篇草稿（子类可覆盖）。"""
-        raise NotImplementedError("delete_draft not implemented")

@@ -3,49 +3,48 @@
 !.env.example
 .venv/
 venv/
-node_modules/
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
-data/app.sqlite3
-data/*.sqlite3
-data/logs/
-data/reports/
-# 本地 real_api_check 每次运行产物（仓库内 20260531 示例报告除外）
-reports/real_api_runs/run_*.json
-reports/real_api_runs/run_*.md
-reports/auto_approve_pipeline/round_*.json
-reports/auto_approve_pipeline/round_*.md
-config/rules.yaml
 .DS_Store
 .idea/
+node_modules/
 .cursor/*
 !.cursor/mcp.json
-!.cursor/rules/
-!.cursor/rules/**
-!.cursor/skills/
-!.cursor/skills/**
-# Playwright 诊断脚本的临时数据库/inbox（自动清理，仅以防万一）
-.ui_review_tmp/
-storage/preview_snapshots/article_*.json
-storage/preview_snapshots/article_*.html
-storage/browser_assist_sessions/*.json
-# 本地 outbox 导出包（目录占位保留；勿提交测试/业务导出物）
+
+# 本地配置、数据库和日志
+config/rules.yaml
+data/*
+!data/.gitkeep
+storage/*
+!storage/README.md
+!storage/logs/
+storage/logs/*
+!storage/logs/.gitkeep
+!storage/preview_snapshots/
+storage/preview_snapshots/*
+!storage/preview_snapshots/README.md
+
+# 可再生运行产物
+artifacts/
+reports/*
+!reports/.gitkeep
+docs/reports/
 outbox/*
 !outbox/.gitkeep
-# Playwright MCP 页面快照与 console 日志
 .playwright-mcp/
-# 浏览器 profile / session / cookie（不得入库）
-storage/browser_profiles/
-storage/chrome_user_data/
-*.cookies.json
-*.session.json
+
+# 浏览器认证与会话
 browser_profile/
 chrome_user_data/
-# Round 114 浏览器/API 测试稿（保留本地，不入库）
-articles/imported/r114_*
-# 用户视角功能测试隔离数据（不入库）
-data/user_view_test/
+*.cookies.json
+*.session.json
+
+# 本地导入的编号文章和浏览器验证稿；不匹配已跟踪的历史示例
+articles/imported/[0-9][0-9][0-9]_*.md
+articles/imported/r114_browser*.md
+
+# 用户视角测试隔离目录
 articles/user_view_test/

@@ -1,55 +1,13 @@
 # 文档索引
 
-- [当前状态审计](current_state_audit.md)
-- [微信主链路稳定性](wechat_chain_stability.md)
-- [摘要/错误码/幂等](wechat_digest_errors_idempotency.md)
-- [微信公众号 HTML 渲染器](wechat_html_renderer.md)
-- [路线收敛审计](route_convergence_audit.md)
-- [产品愿景](product_vision.md)
-- [微信公众号优先架构](architecture.md)
-- [收敛路线图](roadmap_converged.md)
-- [平台优先级](platform_priority.md)
-- [微信公众号 browser_assist 策略](wechat_browser_assist_strategy.md)
-- [外部 Browser Agent 策略](external_browser_agent_strategy.md)
-- [外部 Agent 任务包设计](external_agent_task_package_design.md)
-- [外部 Agent 集成指南](external_agent_integration_guide.md)
-- [外部 Agent 安全策略](external_agent_safety_policy.md)
-- [微信草稿流程](wechat_draft_workflow.md)
-- [发布状态机](state_machine.md)
-- [开发轮次](rounds.md)
-- [Web 控制台设计](web_console_design.md)
-- [Web 工作台可用性诊断（桌面浏览器优先）](web_console_usability_review.md)
-- [设计输入总则](design/DESIGN.md)
-- [Stitch 设计工作区](design/stitch/README.md)
-- [Workspace MCP](mcp/README.md)
-- [浏览器测试](testing/BROWSER_TESTING.md)
-- [真实 API 测试](testing/REAL_API_TESTING.md)
-- [用户视角测试](testing/USER_PERSPECTIVE_TESTING.md)
-- [Agent 工作流](agent_workflow/README.md)
-- [调度设计](scheduler_design.md)
-- [Scheduler 稳定化](scheduler_stability.md)
-- [Scheduler 常驻运行手册](scheduler_runbook.md)
-- [微信草稿更新](draft_update.md)
-- [数据库设计](database_design.md)
-- [内容库设计](content_library_design.md)
-- [渲染器设计](renderer_design.md)
-- [封面资产设计](cover_assets_design.md)
-- [微信能力矩阵](wechat_capability_matrix.md)
-- [迁移计划](migration_plan.md)
-- [用户手册](user_manual.md)
-- [微信 API 调研](api_research.md)
-- [仓库协议（副本）](repo_protocol_standard.yaml)
-- [报告](reports/)
-- [长期 backlog](backlog/)
+当前文档只保留产品使用、架构、运维和验证所需内容：
 
-## 长期 Backlog
+- [用户手册](user_manual.md)：导入、排期、草稿、封面和 proof。
+- [架构](architecture.md)：运行主线、组件边界和本地数据。
+- [微信能力矩阵](wechat_capability_matrix.md)：API、浏览器和人工边界。
+- [Scheduler 手册](scheduler_runbook.md)：常驻运行与故障处理。
+- [已登录 Chrome 只读连接](wechat_chrome_session_runbook.md)：可选外部浏览器协作。
+- [测试](testing/README.md)：本地、E2E 和真实 API 检查。
+- [Backlog](backlog.md)：未进入当前产品的未来方向。
 
-以下内容只作为后期备选，不是当前开发主线：
-
-- [Backlog 说明](backlog/README.md)
-- [旧 40 轮长期路线图](backlog/roadmap_40_rounds.md)
-- [长期数据模型设计](backlog/data_model_design.md)
-- [长期适配器设计](backlog/adapter_design.md)
-- [长期平台能力矩阵](backlog/platform_capability_matrix.md)
-- [多项目 Manifest 设计](backlog/multi_project_manifest_design.md)
-- [参考架构吸收记录](backlog/reference_absorption/05_auto_publish_synthesis.md)
+快速开始见项目根目录 [README](../README.md)，Agent 权限与安全规则见 [AGENTS](../AGENTS.md)。历史 round、生成报告、旧工具说明和多平台预研已从当前源真相移除，可通过 Git 历史查阅。

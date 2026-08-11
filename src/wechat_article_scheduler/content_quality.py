@@ -1,4 +1,4 @@
-"""发布前内容质量检查（Round 53，供调度器与 Web 预检共用）。"""
+"""草稿创建前内容质量检查，供调度器与 Web 预检共用。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from wechat_article_scheduler.publish_preview import _maybe_unescape_html
 
 
 def content_block_reason(title: str, body: str) -> str | None:
-    """真实正式发布路径上的严重内容问题（mock/仅草稿不阻断）。"""
+    """真实草稿创建路径上的严重内容问题（mock 演练不阻断）。"""
     raw = body or ""
     if not raw.strip():
         return "正文为空"

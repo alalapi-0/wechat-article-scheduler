@@ -3,19 +3,16 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from wechat_article_scheduler.config import AppConfig
 
-VALID_PUBLISH_ACTIONS = frozenset({"draft", "publish", "inherit"})
-
 
 @dataclass
 class PublishConfig:
-    """单篇发布任务的微信参数与执行策略。"""
+    """单篇草稿任务的微信参数与执行策略。"""
 
-    publish_action: str = "draft"
     auto_execute: bool = False
     need_open_comment: bool = False
     only_fans_can_comment: bool = False
@@ -24,11 +21,7 @@ class PublishConfig:
     fixed_collection: str = ""
 
     def normalized(self) -> PublishConfig:
-        action = (self.publish_action or "draft").strip().lower()
-        if action not in VALID_PUBLISH_ACTIONS:
-            action = "draft"
         return PublishConfig(
-            publish_action=action,
             auto_execute=bool(self.auto_execute),
             need_open_comment=bool(self.need_open_comment),
             only_fans_can_comment=bool(self.only_fans_can_comment),
@@ -41,11 +34,7 @@ class PublishConfig:
 def defaults_from_rules(config: AppConfig) -> PublishConfig:
     """从 rules.yaml 的 publish 段读取默认配置。"""
     pub = config.rules.get("publish") if isinstance(config.rules.get("publish"), dict) else {}
-    action = str(pub.get("default_action", "draft")).strip().lower()
-    if action not in VALID_PUBLISH_ACTIONS:
-        action = "draft"
     return PublishConfig(
-        publish_action=action,
         auto_execute=bool(pub.get("auto_execute", False)),
         need_open_comment=bool(pub.get("need_open_comment", False)),
         only_fans_can_comment=bool(pub.get("only_fans_can_comment", False)),
@@ -73,7 +62,6 @@ def parse_publish_config(
         data = raw
 
     merged = PublishConfig(
-        publish_action=str(data.get("publish_action", base.publish_action)),
         auto_execute=bool(data.get("auto_execute", base.auto_execute)),
         need_open_comment=bool(data.get("need_open_comment", base.need_open_comment)),
         only_fans_can_comment=bool(
@@ -91,9 +79,8 @@ def publish_config_to_json(config: PublishConfig) -> str:
 
 
 def publish_config_from_payload(payload: dict[str, Any]) -> PublishConfig:
-    """从 API 请求提取发布配置字段。"""
+    """从 API 请求提取草稿配置字段。"""
     keys = (
-        "publish_action",
         "auto_execute",
         "need_open_comment",
         "only_fans_can_comment",
@@ -105,22 +92,8 @@ def publish_config_from_payload(payload: dict[str, Any]) -> PublishConfig:
     return parse_publish_config(subset)
 
 
-def should_submit_publish(*, app_config: AppConfig, job_config: PublishConfig) -> bool:
-    """当前产品目标只按时创建草稿，永不自动调用 freepublish/submit。"""
-    return False
-
-
-def human_publish_action_label(config: PublishConfig) -> str:
-    action = config.publish_action
-    if action == "publish":
-        return "草稿后人工后台发布"
-    if action == "draft":
-        return "仅创建草稿"
-    return "跟随全局"
-
-
 def human_publish_config_summary(config: PublishConfig) -> list[str]:
-    lines = [human_publish_action_label(config)]
+    lines = ["仅创建草稿"]
     if config.auto_execute:
         lines.append("到点自动执行")
     if config.need_open_comment:

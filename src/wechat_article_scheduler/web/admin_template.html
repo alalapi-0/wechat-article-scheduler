@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>微信公众号文章发布工作台</title>
+<title>微信公众号草稿工作台</title>
 <link rel="icon" href="/favicon.ico" type="image/png" />
 <script>
 try {
@@ -183,14 +183,6 @@ try {
   .alert { padding: 10px 12px; border-radius: 9px; font-size: 13px; border: 1px solid var(--line); margin-bottom: 14px; }
   .alert.info { background: var(--surface-soft); color: var(--text); }
   .alert.ok { background: var(--ok-soft); border-color: #cfe8d6; color: var(--ok); }
-  .export-outbox-toast { text-align: left; line-height: 1.5; }
-  .export-outbox-toast .export-toast-title { font-size: 14px; margin-bottom: 6px; color: var(--text); }
-  .export-outbox-toast .export-toast-warn {
-    margin: 8px 0; padding: 8px 10px; border-radius: 8px;
-    background: var(--warn-soft); border: 1px solid #e8d48a; color: var(--warn); font-size: 13px;
-  }
-  .export-outbox-toast .export-toast-path { font-size: 12px; color: var(--muted); word-break: break-all; }
-  .export-outbox-toast .export-toast-path code { font-size: 12px; background: var(--surface-soft); padding: 2px 6px; border-radius: 4px; }
   .alert.warn { background: var(--warn-soft); border-color: #ead8a6; color: var(--warn); }
   .alert.err { background: var(--err-soft); border-color: #edc9c4; color: var(--err); }
 
@@ -266,22 +258,6 @@ try {
   .work .acts { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
   .work .acts .btn-ghost { border-color: var(--line); color: var(--muted); }
   .work .acts .btn-ghost:hover { color: var(--text); }
-  .export-drop { display: inline-block; position: relative; }
-  .export-drop-summary { list-style: none; cursor: pointer; }
-  .export-drop-summary::-webkit-details-marker { display: none; }
-  .export-drop-menu {
-    position: absolute; right: 0; top: calc(100% + 4px); z-index: 30;
-    min-width: 168px; max-height: 240px; overflow-y: auto;
-    background: var(--surface); border: 1px solid var(--line-strong);
-    border-radius: 8px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.12);
-  }
-  .export-drop-item {
-    display: block; width: 100%; text-align: left; padding: 6px 10px;
-    border: none; background: transparent; font: inherit; font-size: 13px;
-    color: var(--text); border-radius: 6px; cursor: pointer;
-  }
-  .export-drop-item:hover { background: var(--surface-soft); }
-
   .steps { display: flex; flex-direction: column; gap: 8px; }
   .step {
     display: grid; grid-template-columns: 24px 1fr; gap: 9px; align-items: start;
@@ -540,8 +516,8 @@ try {
     <div class="brand">
       <div class="logo" aria-hidden="true"></div>
       <div>
-        <div class="name">发布工作台</div>
-        <div class="sub">本地 · 安全发布</div>
+        <div class="name">草稿工作台</div>
+        <div class="sub">本地 · 安全草稿</div>
       </div>
     </div>
     <nav class="nav">
@@ -553,7 +529,6 @@ try {
       <a href="#trash"><span class="ico">⌫</span> 回收站</a>
       <a href="#events"><span class="ico">≣</span> 操作记录</a>
       <a href="#help"><span class="ico">?</span> 帮助</a>
-      <a href="/debug" class="advanced-only"><span class="ico">⚙</span> 高级排错</a>
     </nav>
   </header>
 
@@ -628,7 +603,7 @@ try {
             <div class="card pad">
               <div class="dropzone" id="dropzone">
                 <div class="big">拖拽作品和封面到这里</div>
-                <div class="small">支持 md / txt / html 与 jpg / png / gif / webp；同名封面会自动绑定</div>
+                <div class="small">支持 md / txt / html 与 jpg / jpeg / png；同名封面会自动绑定</div>
                 <div class="upload-actions">
                   <button class="btn-ghost" id="pickArticles">选择作品</button>
                   <button class="btn-ghost" id="pickCovers">选择封面</button>
@@ -713,6 +688,7 @@ try {
             <div class="card queue-box pad">
               <div class="queue-actions">
                 <button type="button" class="btn-primary btn-sm" id="btnRetryAllFailed" hidden>重试全部失败</button>
+                <button type="button" class="btn-ghost btn-sm" id="btnClearFailed" hidden>清除失败记录</button>
                 <button type="button" class="btn-ghost btn-sm" id="btnRefreshQueue">刷新队列</button>
               </div>
               <div class="queue-filters" id="queueFilters" role="tablist" aria-label="队列筛选">
@@ -745,16 +721,8 @@ try {
               <p class="preview-hint" id="publishedCapabilityNote" hidden></p>
               <div class="upload-actions">
                 <button class="btn-ghost btn-sm" id="btnSyncRemote" type="button">同步远端草稿</button>
-                <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:0;">
-                  <input type="checkbox" id="chkSelectAllRemote" /> 全选远端草稿
-                </label>
-                <button class="btn-ghost btn-sm" id="btnRemoteDeletePreview" type="button" disabled>删除影响预览</button>
-                <button class="btn-ghost btn-sm" id="btnRemoteDeleteExecute" type="button" disabled>删除选中远端草稿</button>
-                <button class="btn-ghost btn-sm" id="btnRemoteDeselectAll" type="button">取消选择</button>
-                <button class="btn-ghost btn-sm" id="btnPublishedDelete" type="button" disabled>删除已发布</button>
               </div>
-              <p class="preview-hint" id="remoteDeletePolicy" style="margin-top:6px;">仅按稳定 media_id 删除，禁止按标题匹配；逐条执行（并发 1）。</p>
-              <div id="remoteDeletePreviewBox" class="preview-hint" hidden></div>
+              <p class="preview-hint" style="margin-top:6px;">远端镜像仅供核对；工作台不会修改或删除公众号后台内容。</p>
               <div id="remoteDraftsBox"></div>
             </div>
           </section>
@@ -773,7 +741,6 @@ try {
               <div class="advanced-only">
                 <p><b>真实 API（高级）</b> 在 <code>.env</code> 设 <code>WECHAT_MODE=real</code> 与公众号凭证；当前只验证草稿创建。命令行验证：<code>python3 scripts/real_api_check.py --samples 3</code>（报告在 <code>reports/real_api_runs/</code>）。</p>
                 <p><b>草稿-only 测试清理</b> 真实草稿会留在公众号后台；测试后请登录后台手动删除测试草稿，并对照「微信草稿」区的 <code>media_id</code> 核对，避免残留占用草稿箱配额。</p>
-                <p style="margin-bottom:0;">更多见 <a href="/debug">高级排错</a>（开发者/排错用）。</p>
               </div>
             </div>
           </section>
@@ -784,9 +751,6 @@ try {
       <section class="panel advanced-only section" id="advanced" style="margin-top:18px;">
         <div class="section-head"><h2>高级信息</h2><span class="hint">仅排错用，普通用户可忽略</span></div>
         <div class="card pad">
-          <div id="advRoadmap" class="adv-roadmap-block" style="margin-bottom:12px;font-size:13px;"></div>
-          <div id="advAgentGate" class="adv-agent-gate-block" style="margin-bottom:12px;font-size:13px;"></div>
-          <div id="advDryRun" class="adv-dry-run-block advanced-only" style="margin-bottom:12px;font-size:13px;"></div>
           <div id="advMeta" style="font-size:13px;color:var(--muted);"></div>
           <pre id="advRaw">…</pre>
         </div>
@@ -919,16 +883,12 @@ try {
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr" onerror="window.__flatpickrCdnFailed=true"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh.js" onerror="window.__flatpickrCdnFailed=true"></script>
-<script src="/assets/export-outbox-ui.js"></script>
 <script>
 let COPY = {};
 const pending = { articles: [], covers: [] };
 const selectedWorkIds = new Set();
 let selectedCollectionSlug = '';
 const selectedTrashIds = new Set();
-const selectedRemoteDraftIds = new Set();
-let remoteDraftsList = [];
-let lastRemoteSyncSummary = null;
 let workArticlesList = [];
 let lastClickedWorkId = null;
 let marqueeState = null;
@@ -937,8 +897,6 @@ let scheduleMode = 'batch'; // 'single' | 'batch'
 let scheduleSingleArticleId = null;
 let fpSingle = null;
 let fpBatch = null;
-let manualExportPlatforms = [{ id: 'generic', label: '通用 outbox', description: '' }];
-let manualExportOutboxDir = 'outbox';
 
 function defaultScheduleMoment(){
   const d = new Date();
@@ -961,13 +919,6 @@ function flatpickrDefaults(){
 function publishConfigHtml(prefix) {
   return `
     <p class="block-title">草稿配置（批量统一应用）</p>
-    <label>
-      <span>后续处理</span>
-      <select id="${prefix}PublishAction">
-        <option value="draft">只按时创建草稿</option>
-        <option value="publish">创建草稿后人工后台发布</option>
-      </select>
-    </label>
     <label class="row-check">
       <input type="checkbox" id="${prefix}AutoExecute" checked />
       <span>到点自动创建草稿（无需手动点「执行到点草稿创建」）</span>
@@ -991,13 +942,12 @@ function publishConfigHtml(prefix) {
     <label>
       <span>固定合集（可选）</span>
       <input type="text" id="${prefix}FixedCollection" placeholder="写入任务目标；后台设置需人工或外部 Agent" />
-      <span class="muted" style="font-size:12px;">能力：browser_required（API 不直接写入合集）</span>
+      <span class="muted" style="font-size:12px;">合集需由外部 Agent 或用户在公众号后台设置</span>
     </label>`;
 }
 
 function readPublishConfig(prefix) {
   return {
-    publish_action: el(prefix + 'PublishAction').value,
     auto_execute: el(prefix + 'AutoExecute').checked,
     need_open_comment: el(prefix + 'OpenComment').checked,
     only_fans_can_comment: el(prefix + 'FansOnlyComment').checked,
@@ -1231,15 +1181,6 @@ async function refreshWorkbenchFast(){
   finally { setWorkbenchLoading(false); }
 }
 
-function ordinaryExportPlatforms(){
-  const adv = document.documentElement.classList.contains('show-advanced');
-  const list = manualExportPlatforms.length
-    ? manualExportPlatforms
-    : [{ id: 'generic', label: '通用 outbox' }];
-  if (adv) return list;
-  return list.filter(p => p.id === 'generic');
-}
-
 async function boot(){
   try { COPY = await (await fetch('/api/user-labels')).json(); } catch(e){ COPY = {}; }
   initAdvancedToggle();
@@ -1248,7 +1189,6 @@ async function boot(){
   setupWorkbenchReturnCapture();
   setupUpload();
   setupWorksSelection();
-  setupRemoteDraftSelection();
   setupCoverBatchModal();
   setupScheduleModal();
   el('btnScan').addEventListener('click', onScan);
@@ -1284,11 +1224,12 @@ async function boot(){
   setupDraftFilters();
   const btnRetryAll = el('btnRetryAllFailed');
   if (btnRetryAll) btnRetryAll.addEventListener('click', () => bulkRetryFailed());
+  const btnClearFailed = el('btnClearFailed');
+  if (btnClearFailed) btnClearFailed.addEventListener('click', () => clearFailedJobs());
   const btnRefreshQ = el('btnRefreshQueue');
   if (btnRefreshQ) btnRefreshQ.addEventListener('click', refreshAll);
   renderSteps();
   await refreshWorkbenchFast();
-  await loadManualExportPlatforms();
   if (!window.flatpickr || window.__flatpickrCdnFailed) {
     window.__schedulePickerFallback = true;
   }
@@ -1500,7 +1441,7 @@ function setupUpload(){
   ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
   ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
   dz.addEventListener('drop', e => {
-    const imgRe = /\.(jpg|jpeg|png|gif|webp)$/i;
+    const imgRe = /\.(jpg|jpeg|png)$/i;
     [...e.dataTransfer.files].forEach(f => addFiles(imgRe.test(f.name)?'covers':'articles', [f]));
   });
 }
@@ -1538,62 +1479,6 @@ function showUploadOutcome(data){
   const boxKind = kind === 'info' ? 'ok' : kind;
   showResult(lines, boxKind);
   flashEventsPanel();
-}
-
-async function loadManualExportPlatforms(){
-  try {
-    const d = await (await fetch('/api/manual-export/platforms')).json();
-    const list = (d.platforms || []).map(p => ({
-      id: p.id,
-      label: p.label || p.id,
-      description: p.description || '',
-    }));
-    if (list.length) {
-      list.sort((a, b) => {
-        if (a.id === 'generic') return -1;
-        if (b.id === 'generic') return 1;
-        return String(a.label).localeCompare(String(b.label), 'zh');
-      });
-      manualExportPlatforms = list;
-    }
-    if (d.outbox_dir) manualExportOutboxDir = d.outbox_dir;
-  } catch (e) { /* 非阻塞，回退 generic */ }
-}
-
-function manualExportPlatformLabel(platformId){
-  const p = manualExportPlatforms.find(x => x.id === platformId);
-  return (p && p.label) ? p.label : platformId;
-}
-
-function workExportMenuHtml(articleId){
-  const platforms = ordinaryExportPlatforms();
-  const buttons = platforms.map(p => {
-    const pid = String(p.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const title = p.description ? ` title="${esc(p.description)}"` : '';
-    return `<button type="button" class="export-drop-item"${title} onclick="event.stopPropagation(); exportOutboxArticle(${articleId},'${pid}')">${esc(p.label || p.id)}</button>`;
-  }).join('');
-  return `<details class="export-drop" onclick="event.stopPropagation()"><summary class="btn-ghost btn-sm export-drop-summary">导出</summary><div class="export-drop-menu" role="menu">${buttons}</div></details>`;
-}
-
-async function exportOutboxArticle(articleId, platform){
-  const plat = platform || 'generic';
-  const label = manualExportPlatformLabel(plat);
-  const dirHint = manualExportOutboxDir ? `\n\n导出目录：${manualExportOutboxDir}/（由 MANUAL_EXPORT_OUTBOX 配置）` : '';
-  if (!window.confirm(`导出「${label}」outbox 包到本地目录？不会联网或自动发布。${dirHint}`)) return;
-  document.querySelectorAll('.export-drop[open]').forEach(el => el.removeAttribute('open'));
-  try {
-    const d = await (await fetch(
-      `/api/articles/${articleId}/export-outbox?platform=${encodeURIComponent(plat)}`,
-      { method: 'POST' },
-    )).json();
-    if (!d.ok) { setAlert('err', d.error || d.detail || '导出失败'); return; }
-    if (window.ExportOutboxUi) {
-      el('alertBox').innerHTML = ExportOutboxUi.buildSuccessHtml(d, label, esc);
-    } else {
-      setAlert('ok', (d.human || ['已导出']).join('；') + (d.relative_path ? ' · ' + d.relative_path : ''));
-    }
-    flashEventsPanel();
-  } catch(e) { setAlert('err', '导出失败：' + e); }
 }
 
 async function submitUpload(){
@@ -1898,11 +1783,7 @@ async function refreshAll(){
     const wcPromise = queueFilterKey === 'confirm'
       ? fetch('/api/waiting-confirmation').then(r => r.json())
       : Promise.resolve(null);
-    const agPromise = fetch('/api/agent-gate-status').then(r => r.json()).catch(() => null);
-    const drPromise = document.documentElement.classList.contains('show-advanced')
-      ? fetchPublishDryRunForWorkbench()
-      : Promise.resolve(null);
-    const [ov, arts, trash, jobs, qsum, drafts, dsum, remoteDrafts, rsum, wc, agStatus, dryRun] = await Promise.all([
+    const [ov, arts, trash, jobs, qsum, drafts, dsum, remoteDrafts, rsum, wc] = await Promise.all([
       (await fetch('/api/overview')).json(),
       (await fetch(artUrl)).json(),
       (await fetch('/api/trash')).json(),
@@ -1913,8 +1794,6 @@ async function refreshAll(){
       (await fetch('/api/remote-drafts?limit=30')).json(),
       (await fetch('/api/remote-sync-summary')).json(),
       wcPromise,
-      agPromise,
-      drPromise,
     ]);
     lastWaitingConfirmMeta = wc;
     queueJobsList = (queueFilterKey === 'confirm' && wc)
@@ -1940,65 +1819,35 @@ async function refreshAll(){
     renderEvents(ov.recent_events);
     renderWorks(arts);
     renderTrash(trash);
-    renderAdvanced(ov, agStatus, dryRun);
+    renderAdvanced(ov);
   } catch(e){
     setAlert('err', '读取数据失败：' + e);
   }
-}
-
-function generationPolicyBadge(status){
-  const gp = status && status.generation_policy;
-  if (!gp || !gp.auto_approve_generations) return '';
-  return ' · <span class="pill-tag" title="' + esc(gp.detail || '') + '">AUTO_APPROVE</span>';
 }
 
 function renderSafety(status, preflight){
   const pill = el('safetyTop');
   const mode = status ? status.wechat_mode : 'mock';
   const auto = status && status.web_auto_runner_active ? ' · 自动到点执行' : '';
-  const genBadge = generationPolicyBadge(status);
-  const pol = status && status.publish_policy ? status.publish_policy : null;
-  if (pol && pol.headline) {
-    if (pol.badge === 'real_publish_enabled') {
-      const blocked = preflight && preflight.ready === false;
-      pill.className = blocked ? 'pill err' : 'pill err';
-      const hint = blocked ? ' · 内容质量未通过' : '';
-      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + hint + auto + genBadge;
-    } else if (pol.badge === 'real_draft_only') {
-      pill.className = 'pill warn';
-      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + auto + genBadge;
-    } else {
-      pill.className = 'pill ok';
-      pill.innerHTML = '<span class="dot"></span> ' + esc(pol.headline) + auto + genBadge;
-    }
-    return;
-  }
-  if (mode === 'real' && status.wechat_enable_publish) {
+  if (mode === 'real') {
     const blocked = preflight && preflight.ready === false;
-    pill.className = blocked ? 'pill err' : 'pill err';
-    const hint = blocked ? ' · 内容质量未通过' : '';
-    pill.innerHTML = '<span class="dot"></span> 真实 API · 按时创建草稿，不自动发布' + hint + genBadge;
-  } else if (mode === 'real') {
-    pill.className = 'pill warn'; pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿，不会发布' + auto + genBadge;
+    pill.className = blocked ? 'pill err' : 'pill warn';
+    const hint = blocked ? ' · 草稿内容检查未通过' : '';
+    pill.innerHTML = '<span class="dot"></span> 真实连接 · 仅创建草稿' + hint + auto;
   } else {
-    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 只模拟创建草稿' + auto + genBadge;
+    pill.className = 'pill ok'; pill.innerHTML = '<span class="dot"></span> 演练模式 · 只模拟创建草稿' + auto;
   }
 }
 
 function dashboardMode(status, preflight){
   const mode = status ? status.wechat_mode : 'mock';
-  const pol = status && status.publish_policy ? status.publish_policy : null;
   const blocked = preflight && preflight.ready === false;
-  if (pol && pol.headline) {
+  if (mode === 'real') {
     return {
-      label: pol.headline + (blocked ? ' · 内容质量未通过' : ''),
-      cls: pol.badge === 'real_publish_enabled' ? 'err' : (pol.badge === 'real_draft_only' ? 'warn' : 'ok'),
+      label: '真实连接 · 仅创建草稿' + (blocked ? ' · 草稿内容检查未通过' : ''),
+      cls: blocked ? 'err' : 'warn',
     };
   }
-  if (mode === 'real' && status && status.wechat_enable_publish) {
-    return { label: '真实 API · 按时创建草稿，不自动发布' + (blocked ? ' · 内容质量未通过' : ''), cls: 'warn' };
-  }
-  if (mode === 'real') return { label: '真实连接 · 仅创建草稿，不会发布', cls: 'warn' };
   return { label: '演练模式 · 只模拟创建草稿', cls: 'ok' };
 }
 
@@ -2034,7 +1883,7 @@ function renderDashboard(ov, draftsSummary){
     autoPill.title = status.web_auto_runner_reason || '';
   }
   dashboardPrimaryAction = wb.primary_action || 'idle';
-  const headline = wb.headline || '欢迎使用本地发布工作台';
+  const headline = wb.headline || '欢迎使用本地草稿工作台';
   const hints = wb.hints || [];
   el('dashboardHeadline').textContent = headline;
   el('dashboardHint').textContent = hints[0] || '先看当前模式，再按三步完成上传、排期和到点执行。';
@@ -2085,24 +1934,17 @@ function renderWaitingConfirmationEntry(wc){
   const count = (wc && wc.count) || 0;
   if (!count) { box.hidden = true; box.innerHTML = ''; return; }
   const preview = (wc && (wc.preview || wc.items)) || [];
-  const gp = (wc && wc.generation_policy) || {};
-  const autoBadge = gp.badge === 'AUTO_APPROVE'
-    ? ' <span class="pill-tag">AUTO_APPROVE</span>' : '';
   const rows = preview.slice(0, 5).map(it => {
     const proof = it.has_proof ? ' · 已有证明' : ' · 待提交证明';
     const url = esc(it.proof_form_url || '/articles/'+it.article_id+'#proof');
     return `<li><a class="wb-detail-link" href="${url}" onclick="captureWorkbenchReturnContext()">${esc(it.article_title||'（无标题）')}</a>${esc(proof)}</li>`;
   }).join('');
-  const quickBtn = wc.quick_proof_allowed
-    ? '<button type="button" class="btn-ghost btn-sm" onclick="bulkQuickProofWaiting()">全部快速确认</button>'
-    : '';
   box.hidden = false;
   box.innerHTML = `<div class="waiting-confirm-entry">
-    <div><b>待人工确认 ${count} 条</b>${autoBadge}${wc.summary_label ? ' · '+esc(wc.summary_label) : ''}</div>
+    <div><b>待人工确认 ${count} 条</b>${wc.summary_label ? ' · '+esc(wc.summary_label) : ''}</div>
     ${rows ? `<ul>${rows}</ul>` : ''}
     <div class="actions">
       <button type="button" class="btn-primary btn-sm" onclick="goWaitingConfirmQueue()">查看待确认队列</button>
-      ${quickBtn}
     </div>
   </div>`;
   refreshWorkbenchDetailLinkBindings(box);
@@ -2136,8 +1978,8 @@ function renderStats(ov){
 function renderSchedule(s, ov){
   const sched = el('scheduleBanner');
   if (!sched) return;
-  if (!s) { sched.textContent = '暂无发布计划'; return; }
-  let text = s.next_summary || '暂无发布计划';
+  if (!s) { sched.textContent = '暂无草稿创建计划'; return; }
+  let text = s.next_summary || '暂无草稿创建计划';
   const chain = (ov && ov.wechat_chain_summary) || {};
   const action = chain.recommended_next_action;
   if (action && action !== 'idle') {
@@ -2180,182 +2022,30 @@ function renderDraftsSummary(dsum){
   }
 }
 
-function syncRemoteDeleteSelectionUI(){
-  const n = selectedRemoteDraftIds.size;
-  const btnPreview = el('btnRemoteDeletePreview');
-  const btnExec = el('btnRemoteDeleteExecute');
-  const chkAll = el('chkSelectAllRemote');
-  if (btnPreview) btnPreview.disabled = n === 0;
-  if (btnExec) btnExec.disabled = n === 0;
-  if (chkAll && remoteDraftsList.length) {
-    chkAll.checked = n > 0 && n === remoteDraftsList.length;
-    chkAll.indeterminate = n > 0 && n < remoteDraftsList.length;
-  } else if (chkAll) {
-    chkAll.checked = false;
-    chkAll.indeterminate = false;
-  }
-}
-
-function updatePublishedDeleteButton(rsum){
-  const btn = el('btnPublishedDelete');
-  if (!btn) return;
-  const enabled = !!(rsum && rsum.published_delete_enabled);
-  btn.disabled = !enabled;
-  if (enabled) {
-    btn.title = '已发布删除需单独权限；当前账号已授权列表读取';
-  } else {
-    const reason = (rsum && rsum.published_delete_reason) || '账号无已发布列表权限，删除已禁用';
-    btn.title = reason;
-  }
-}
-
 function renderRemoteDrafts(rows, rsum){
   const box = el('remoteDraftsBox');
   const hint = el('remoteDraftsHint');
   const pubNote = el('publishedCapabilityNote');
-  remoteDraftsList = rows || [];
-  lastRemoteSyncSummary = rsum || null;
   if (hint && rsum) hint.textContent = rsum.remote_draft_label || '远端镜像';
   if (pubNote && rsum) {
     pubNote.textContent = '已发布列表：' + (rsum.published_list_label || '未探测');
     pubNote.hidden = false;
-    if (!rsum.published_delete_enabled) {
-      pubNote.textContent += ' · ' + (rsum.published_delete_reason || '删除已禁用');
-    }
   }
-  updatePublishedDeleteButton(rsum);
   if (!box) return;
   if (!rows || !rows.length) {
-    selectedRemoteDraftIds.clear();
-    syncRemoteDeleteSelectionUI();
     box.innerHTML = '<div class="empty" style="padding:10px;">暂无远端镜像。点「同步远端草稿」拉取公众号草稿箱（只读）。</div>';
     return;
   }
-  const knownIds = new Set(rows.map(d => d.media_id).filter(Boolean));
-  for (const mid of [...selectedRemoteDraftIds]) {
-    if (!knownIds.has(mid)) selectedRemoteDraftIds.delete(mid);
-  }
   const body = rows.map(d => {
     const mid = d.media_id || '';
-    const checked = selectedRemoteDraftIds.has(mid) ? 'checked' : '';
     return `<tr>
-    <td><label><input type="checkbox" data-sel-remote="${esc(mid)}" ${checked}/></label></td>
     <td>${esc(d.title||'（无标题）')}</td>
     <td>${esc(d.update_time_label)}</td>
     <td title="${esc(mid)}">${esc(d.media_id_label)}</td>
     <td>${esc(d.last_seen_label)}</td>
   </tr>`;
   }).join('');
-  box.innerHTML = `<table class="queue-table"><thead><tr><th></th><th>标题</th><th>远端更新</th><th>media_id</th><th>最近同步</th></tr></thead><tbody>${body}</tbody></table>`;
-  syncRemoteDeleteSelectionUI();
-}
-
-function setupRemoteDraftSelection(){
-  const box = el('remoteDraftsBox');
-  if (box) {
-    box.addEventListener('change', e => {
-      const inp = e.target;
-      if (!inp || !inp.matches || !inp.matches('input[data-sel-remote]')) return;
-      const mid = inp.getAttribute('data-sel-remote') || '';
-      if (!mid) return;
-      if (inp.checked) selectedRemoteDraftIds.add(mid);
-      else selectedRemoteDraftIds.delete(mid);
-      syncRemoteDeleteSelectionUI();
-    });
-  }
-  const chkAll = el('chkSelectAllRemote');
-  if (chkAll) {
-    chkAll.addEventListener('change', e => {
-      if (e.target.checked) remoteDraftsList.forEach(d => { if (d.media_id) selectedRemoteDraftIds.add(d.media_id); });
-      else selectedRemoteDraftIds.clear();
-      renderRemoteDrafts(remoteDraftsList, lastRemoteSyncSummary);
-    });
-  }
-  const btnDeselect = el('btnRemoteDeselectAll');
-  if (btnDeselect) {
-    btnDeselect.addEventListener('click', () => {
-      selectedRemoteDraftIds.clear();
-      el('remoteDeletePreviewBox').hidden = true;
-      el('remoteDeletePreviewBox').innerHTML = '';
-      renderRemoteDrafts(remoteDraftsList, lastRemoteSyncSummary);
-    });
-  }
-  const btnPreview = el('btnRemoteDeletePreview');
-  if (btnPreview) btnPreview.addEventListener('click', onRemoteDeletePreview);
-  const btnExec = el('btnRemoteDeleteExecute');
-  if (btnExec) btnExec.addEventListener('click', onRemoteDeleteExecute);
-  const btnPub = el('btnPublishedDelete');
-  if (btnPub) {
-    btnPub.addEventListener('click', () => {
-      const reason = (lastRemoteSyncSummary && lastRemoteSyncSummary.published_delete_reason)
-        || '账号无已发布列表权限';
-      setAlert('warn', '已发布删除未启用：' + reason);
-    });
-  }
-}
-
-async function onRemoteDeletePreview(){
-  const ids = [...selectedRemoteDraftIds];
-  if (!ids.length) { setAlert('warn', '请先勾选要删除的远端草稿'); return; }
-  setAlert('info', '正在生成删除影响预览…');
-  try {
-    const r = await (await fetch('/api/remote-delete/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ media_ids: ids }),
-    })).json();
-    if (!r.ok) { setAlert('err', '预览失败'); return; }
-    const m = r.manifest || {};
-    const items = m.items || [];
-    const lines = items.map(it => {
-      const title = it.found ? (it.title || '（无标题）') : '镜像未找到';
-      const warn = it.warning ? ` · ${it.warning}` : '';
-      return `<li><code>${esc(it.media_id)}</code> — ${esc(title)}${esc(warn)}</li>`;
-    }).join('');
-    const box = el('remoteDeletePreviewBox');
-    box.innerHTML = `<b>删除影响预览（${items.length} 项）</b><ul style="margin:6px 0 0;padding-left:18px;">${lines}</ul><div class="muted" style="margin-top:6px;">${esc(m.policy || '')} · 并发 ${m.concurrency || 1}</div>`;
-    box.hidden = false;
-    setAlert('ok', `已生成 ${items.length} 项删除预览，确认后再执行`);
-  } catch (e) { setAlert('err', '预览失败：' + e.message); }
-}
-
-async function onRemoteDeleteExecute(){
-  const ids = [...selectedRemoteDraftIds];
-  if (!ids.length) { setAlert('warn', '请先勾选要删除的远端草稿'); return; }
-  let manifest = null;
-  try {
-    const prev = await (await fetch('/api/remote-delete/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ media_ids: ids }),
-    })).json();
-    manifest = prev.manifest;
-  } catch (e) { /* 降级 */ }
-  const titles = (manifest && manifest.items ? manifest.items : [])
-    .map(it => `${it.media_id}: ${it.title || '（无标题）'}`).join('\n');
-  const msg = titles
-    ? `将按 media_id 逐条删除以下 ${ids.length} 篇远端草稿（不可撤销）：\n\n${titles}\n\n确定执行？`
-    : `将按 media_id 逐条删除 ${ids.length} 篇远端草稿（不可撤销）。确定执行？`;
-  if (!window.confirm(msg)) return;
-  setAlert('info', '正在删除远端草稿…');
-  try {
-    const r = await (await fetch('/api/remote-delete/execute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ media_ids: ids, confirmed: true }),
-    })).json();
-    selectedRemoteDraftIds.clear();
-    el('remoteDeletePreviewBox').hidden = true;
-    el('remoteDeletePreviewBox').innerHTML = '';
-    const ok = r.success_count || 0;
-    const fail = r.failure_count || 0;
-    const skipped = r.skipped_prior || 0;
-    let detail = `成功 ${ok}，失败 ${fail}`;
-    if (skipped) detail += `，跳过 ${skipped}`;
-    if (r.run_id) detail += ` · run_id=${r.run_id}`;
-    setAlert(fail ? 'warn' : 'ok', '远端草稿删除完成：' + detail);
-    await refreshAll();
-  } catch (e) { setAlert('err', '删除失败：' + e.message); }
+  box.innerHTML = `<table class="queue-table"><thead><tr><th>标题</th><th>远端更新</th><th>media_id</th><th>最近同步</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
 async function onSyncRemote(){
@@ -2408,38 +2098,15 @@ function waitingItemsToQueueRows(wc){
     detail_url: it.proof_form_url || ('/articles/' + it.article_id + '#proof'),
     proof_form_url: it.proof_form_url,
     has_proof: !!it.has_proof,
-    quick_proof_available: !!it.quick_proof_available,
-    next_hint: it.has_proof ? '已有证明，任务可标记完成' : '可快速占位确认或去详情填写',
+    next_hint: it.has_proof ? '已有证明，任务可标记完成' : '请在详情页填写真实发布证明',
   }));
-}
-
-async function quickProofJob(jobId){
-  if (!window.confirm('提交演练占位证明（AUTO_APPROVE dry-run）？不会联网验证公众号后台。')) return;
-  try {
-    const r = await (await fetch(`/api/publish-jobs/${jobId}/proof`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quick_dry_run: true }),
-    })).json();
-    if (!r.ok) { setAlert('err', r.detail || r.error || '提交失败'); return; }
-    setAlert('ok', (r.human || ['已确认']).join('；'));
-    await refreshAll();
-  } catch(e) { setAlert('err', '快速确认失败：' + e); }
-}
-
-async function bulkQuickProofWaiting(){
-  if (!window.confirm('为全部待人工确认任务提交演练占位证明？')) return;
-  try {
-    const r = await (await fetch('/api/waiting-confirmation/quick-proof-all', { method: 'POST' })).json();
-    setAlert(r.completed > 0 ? 'ok' : 'info', (r.human || ['完成']).join('；'));
-    await refreshAll();
-  } catch(e) { setAlert('err', '批量确认失败：' + e); }
 }
 
 function renderQueueSummary(qsum){
   lastQueueSummary = qsum || null;
   const hint = el('queueHint');
   const btnAll = el('btnRetryAllFailed');
+  const btnClear = el('btnClearFailed');
   if (!hint) return;
   if (qsum && qsum.summary_label) hint.textContent = qsum.summary_label;
   const failedCnt = (qsum && (qsum.failed_count ?? (qsum.counts && qsum.counts.failed))) || 0;
@@ -2448,6 +2115,7 @@ function renderQueueSummary(qsum){
     btnAll.className = (queueFilterKey === 'err' && failedCnt > 0)
       ? 'btn-primary btn-sm' : 'btn-ghost btn-sm';
   }
+  if (btnClear) btnClear.hidden = !(failedCnt > 0);
 }
 
 function renderQueue(jobs){
@@ -2456,15 +2124,8 @@ function renderQueue(jobs){
   let failBanner = '';
   if (queueFilterKey === 'confirm' && lastWaitingConfirmMeta && (lastWaitingConfirmMeta.count || 0) > 0) {
     const wc = lastWaitingConfirmMeta;
-    const gp = wc.generation_policy || {};
-    const badge = gp.badge === 'AUTO_APPROVE'
-      ? '<span class="pill-tag">AUTO_APPROVE</span> ' : '';
-    const bulkBtn = wc.quick_proof_allowed
-      ? '<button type="button" class="btn-primary btn-sm" onclick="bulkQuickProofWaiting()">全部快速确认</button>'
-      : '';
     failBanner = `<div class="queue-confirm-banner">
-      <div>${badge}<b>待人工确认 ${wc.count} 条</b> · 演练可提交 dry-run 占位证明</div>
-      <div class="actions">${bulkBtn}</div>
+      <div><b>待人工确认 ${wc.count} 条</b> · 请核对公众号后台并提交真实证明</div>
     </div>`;
   }
   if (queueFilterKey === 'err' && failedCnt > 0) {
@@ -2476,6 +2137,7 @@ function renderQueue(jobs){
       ${preview ? `<ul style="margin:8px 0 0;padding-left:18px;font-size:12px;">${preview}</ul>` : ''}
       <div class="actions">
         <button type="button" class="btn-primary btn-sm" onclick="bulkRetryFailed()">重试全部失败</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="clearFailedJobs()">清除失败记录</button>
       </div>
     </div>`;
   }
@@ -2502,10 +2164,9 @@ function renderQueue(jobs){
       ? `<td class="fail-reason">${esc(j.failure_reason_short || j.failure_reason || '—')}</td>`
       : '';
     const detailHref = esc(j.proof_form_url || j.detail_url || '/articles/'+j.article_id+'#proof');
-    let acts = `<a class="btn-ghost btn-sm wb-detail-link" href="${detailHref}" onclick="captureWorkbenchReturnContext()">填写证明</a> `;
-    if (j.status === 'waiting_confirmation' && j.quick_proof_available) {
-      acts += `<button class="btn-primary btn-sm" type="button" onclick="quickProofJob(${j.id})">快速确认</button> `;
-    }
+    let acts = j.status === 'waiting_confirmation'
+      ? `<a class="btn-ghost btn-sm wb-detail-link" href="${detailHref}" onclick="captureWorkbenchReturnContext()">填写证明</a> `
+      : '';
     if (j.status === 'pending') {
       acts += `<button class="btn-ghost btn-sm" type="button" onclick="cancelJob(${j.id})">取消</button>`;
     }
@@ -2518,7 +2179,7 @@ function renderQueue(jobs){
     <tr>
       <td><a class="wb-detail-link" href="${titleHref}" onclick="captureWorkbenchReturnContext()">${esc(j.title||'（无标题）')}</a><div class="hint-cell">${esc(j.collection_name||'')}</div>${hintRow}</td>
       <td>${esc(j.scheduled_at_label||'未安排')}</td>
-      <td>${esc(j.publish_config_label||'—')}<div class="hint-cell">${esc(j.publish_effective_badge||'')}</div></td>
+      <td>${esc(j.publish_config_label||'—')}</td>
       <td>${statusCell}</td>
       ${failCol}
       <td class="acts">${acts}</td>
@@ -2549,6 +2210,22 @@ async function bulkRetryFailed(){
     setAlert('ok', (d.human||['已完成']).join('；'));
     await refreshAll();
   } catch(e){ setAlert('err', '批量重试失败：'+e); }
+}
+
+async function clearFailedJobs(){
+  const warning = '此操作不可逆，只会清除本地失败队列记录；不会删除文章、微信草稿或远端内容。确认继续？';
+  if (!window.confirm(warning)) return;
+  try {
+    const response = await fetch('/api/jobs/clear-failed', {
+      method:'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmed: true }),
+    });
+    const d = await response.json();
+    if (!response.ok) throw new Error(d.detail || '清除失败');
+    setAlert('ok', (d.human||['已清除本地失败队列']).join('；'));
+    await refreshAll();
+  } catch(e){ setAlert('err', '清除失败记录失败：'+e); }
 }
 function pillForJob(s){ return s==='done'?'ok':(s==='failed'?'err':(s==='running'?'warn':'')); }
 
@@ -2595,7 +2272,6 @@ function renderWorks(arts){
             <button class="btn-ghost btn-sm" onclick="preview(${a.id})">预览</button>
             <button class="btn-ghost btn-sm" onclick="scheduleArticle(${a.id})">安排时间</button>
             <button class="btn-ghost btn-sm" onclick="changeCover(${a.id})">换封面</button>
-            ${workExportMenuHtml(a.id)}
             <button class="btn-ghost btn-sm" onclick="trashArticle(${a.id})">删除</button>
           </div>
         </div>
@@ -3313,7 +2989,7 @@ async function purgeTrashBin(){
   }
   const msg =
     `确定彻底清空回收站中的 ${trash.length} 篇作品？\n\n` +
-    '将删除项目内的文章/封面文件、发布任务与草稿记录，且不可恢复。\n' +
+    '将删除项目内的文章/封面文件、草稿任务与草稿记录，且不可恢复。\n' +
     '不会撤回已发到公众号的内容。';
   if (!window.confirm(msg)) return;
   try {
@@ -3340,7 +3016,7 @@ async function preview(id){
     el('modalTitle').textContent = d.title || '预览';
     const digest = d.digest_preview || '';
     el('modalSummary').textContent = (d.summary || digest)
-      ? ((d.summary || digest) + (d.digest_truncated ? '（发布时将截断至 120 字）' : ''))
+      ? ((d.summary || digest) + (d.digest_truncated ? '（创建草稿时将截断至 120 字）' : ''))
       : '';
     if (d.approximation_note) el('modalApprox').textContent = d.approximation_note;
     if (d.cover_url) {
@@ -3357,7 +3033,7 @@ async function preview(id){
       el('modalWarn').textContent = '渲染异常：' + d.render_error;
       el('modalWarn').hidden = false;
     } else if ((d.blocking_hints || []).length) {
-      el('modalWarn').textContent = '发布前注意：' + d.blocking_hints.join('；');
+      el('modalWarn').textContent = '草稿创建前注意：' + d.blocking_hints.join('；');
       el('modalWarn').hidden = false;
     }
     el('modalBody').innerHTML = d.html_body || '（空）';
@@ -3377,102 +3053,9 @@ function changeCover(id){
   openCoverBatchModal();
 }
 
-function renderAgentGatePanel(ag){
-  const box = el('advAgentGate');
-  if (!box) return;
-  if (!ag || !ag.current_round) {
-    box.innerHTML = '<span class="hint">Agent gate 状态未加载</span>';
-    return;
-  }
-  const cur = ag.current_round;
-  let html = `<p style="margin:0 0 8px;"><b>Agent gate</b>：${esc(ag.gate_summary || (cur.id + ' · ' + cur.status))}</p>`;
-  if (ag.last_completed_round && ag.last_completed_round.id) {
-    const l = ag.last_completed_round;
-    html += `<p style="margin:0 0 8px;color:var(--muted);font-size:12px;">最近完成：${esc(l.id)} · ${esc(l.completed_at || '—')}</p>`;
-  }
-  const acc = ag.acceptance_criteria || [];
-  if (acc.length) {
-    html += '<p style="margin:0 0 4px;font-size:12px;">验收标准：</p><ul style="margin:0 0 8px;padding-left:18px;font-size:12px;color:var(--muted);">' +
-      acc.map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
-  }
-  const na = ag.next_actions || [];
-  if (na.length) {
-    html += '<p style="margin:0 0 4px;font-size:12px;">next_actions：</p><ul style="margin:0 0 8px;padding-left:18px;font-size:12px;">' +
-      na.map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
-  }
-  if (ag.suggested_command) {
-    html += `<p style="margin:0;font-size:11px;color:var(--muted);"><code>${esc(ag.suggested_command)}</code></p>`;
-  }
-  box.innerHTML = html;
-}
-
-function resolveDryRunArticleId(){
-  const ids = [...selectedWorkIds];
-  if (ids.length === 1) return ids[0];
-  if (ids.length > 1) return ids[ids.length - 1];
-  if (workArticlesList.length) return workArticlesList[0].id;
-  return null;
-}
-
-async function fetchPublishDryRunForWorkbench(){
-  if (!document.documentElement.classList.contains('show-advanced')) return null;
-  const aid = resolveDryRunArticleId();
-  if (!aid) return null;
-  try {
-    return await (await fetch(`/api/articles/${aid}/publish-dry-run`)).json();
-  } catch (e) { return null; }
-}
-
-function renderPublishDryRunPanel(dr){
-  const box = el('advDryRun');
-  if (!box) return;
-  if (!dr || !dr.ok) {
-    box.innerHTML = '<span class="hint">发布 dry-run：请在作品库选择或加载作品</span>';
-    return;
-  }
-  let html = `<p style="margin:0 0 8px;"><b>发布 dry-run</b>（作品 #${esc(dr.article_id)}）</p>`;
-  html += `<p style="margin:0 0 8px;">${esc(dr.gate_summary || dr.summary || '')}</p>`;
-  if (dr.mock_safe) {
-    html += '<p style="margin:0 0 8px;padding:8px 10px;border-radius:8px;background:var(--warn-soft);color:var(--warn);font-size:12px;"><b>mock 安全</b>：只读模拟，不联网、不写库。</p>';
-  }
-  const steps = (dr.report && dr.report.simulated_steps) || [];
-  if (steps.length) {
-    html += '<ul style="margin:0 0 8px;padding-left:18px;font-size:12px;color:var(--muted);">' +
-      steps.map(s => `<li>${esc(s.label)} → ${esc(s.outcome)}</li>`).join('') + '</ul>';
-  }
-  const hum = dr.human || [];
-  if (hum.length > 1) {
-    html += '<p style="margin:0;font-size:11px;color:var(--muted);">' + hum.slice(1).map(h => esc(h)).join('<br/>') + '</p>';
-  }
-  box.innerHTML = html;
-}
-
-function renderAdvanced(ov, agStatus, dryRun){
+function renderAdvanced(ov){
   const st = ov.status || {};
-  const hint = st.roadmap_hint || {};
-  const lcr = st.last_completed_round;
-  let road = '';
-  if (hint.position_label) {
-    road += `<p style="margin:0 0 8px;"><b>当前路线图位置</b>：${esc(hint.position_label)}</p>`;
-  }
-  if (lcr && lcr.id) {
-    road += `<p style="margin:0 0 8px;color:var(--muted);font-size:12px;">最近完成轮次：${esc(lcr.id)} · ${esc(lcr.completed_at || '—')}</p>`;
-  }
-  const links = hint.doc_links || [];
-  if (links.length) {
-    road += '<p style="margin:0 0 6px;">下一步查阅：' +
-      links.map(l => `<a href="${esc(l.path)}" title="仓库内 ${esc(l.path)}">${esc(l.label)}</a>`).join(' · ') +
-      '</p>';
-  }
-  const actions = hint.next_actions || [];
-  if (actions.length) {
-    road += '<ul style="margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:12px;">' +
-      actions.map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
-  }
-  el('advRoadmap').innerHTML = road || '<span class="hint">路线图状态未加载</span>';
-  renderAgentGatePanel(agStatus);
-  renderPublishDryRunPanel(dryRun);
-  el('advMeta').innerHTML = `运行模式 mode=${esc(st.wechat_mode)} · DRY_RUN=${esc(st.dry_run)} · 发布开关 wechat_enable_publish=${esc(st.wechat_enable_publish)}<br/>数据库 ${esc(st.database)}`;
+  el('advMeta').innerHTML = `运行模式 mode=${esc(st.wechat_mode)} · DRY_RUN=${esc(st.dry_run)} · 仅创建草稿<br/>数据库 ${esc(st.database)}`;
   el('advRaw').textContent = JSON.stringify(ov, null, 2);
 }
 

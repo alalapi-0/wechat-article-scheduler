@@ -1,11 +1,9 @@
-"""RotatingFileHandler 日志初始化（Round 7 加固）。"""
+"""RotatingFileHandler 日志初始化。"""
 
 from __future__ import annotations
 
 import logging
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
-
 from wechat_article_scheduler.config import AppConfig
 
 
@@ -13,7 +11,7 @@ def setup_logging(config: AppConfig) -> None:
     """
     配置根日志：控制台 INFO + 可选文件轮转。
 
-    日志中不打印 access_token（由业务层 _safe_payload 与 redact_url 配合）。
+    access_token 由各 HTTP 与事件序列化边界统一脱敏，日志层不提供可关闭的秘密输出开关。
     """
     root = logging.getLogger()
     if getattr(root, "_wechat_scheduler_configured", False):

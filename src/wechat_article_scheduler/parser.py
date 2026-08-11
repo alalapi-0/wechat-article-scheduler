@@ -6,6 +6,9 @@ import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
+
+from wechat_article_scheduler.filesystem_safety import FileSnapshot, read_regular_file
 
 
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
@@ -23,6 +26,7 @@ class ParsedArticle:
     summary: str
     body: str
     content_hash: str
+    source_snapshot: FileSnapshot | None = None
 
 
 def _normalize_title(title: str) -> str:
@@ -85,9 +89,25 @@ def make_summary(body: str, max_chars: int = DIGEST_MAX_CHARS) -> str:
     return clamp_summary(plain, max_chars)
 
 
-def parse_file(path: Path, *, summary_max_chars: int = DIGEST_MAX_CHARS) -> ParsedArticle:
+def parse_file(
+    path: Path,
+    *,
+    summary_max_chars: int = DIGEST_MAX_CHARS,
+    allowed_roots: Iterable[Path],
+) -> ParsedArticle:
     """读取并解析单个文件。"""
-    raw = path.read_text(encoding="utf-8", errors="replace")
+    snapshot = read_regular_file(path, allowed_roots=allowed_roots)
+    return parse_file_snapshot(path, snapshot, summary_max_chars=summary_max_chars)
+
+
+def parse_file_snapshot(
+    path: Path,
+    snapshot: FileSnapshot,
+    *,
+    summary_max_chars: int = DIGEST_MAX_CHARS,
+) -> ParsedArticle:
+    """Parse bytes already captured from an authoritative directory handle."""
+    raw = snapshot.data.decode("utf-8", errors="replace")
     suffix = path.suffix.lower()
 
     if suffix in {".md", ".txt"}:
@@ -113,4 +133,5 @@ def parse_file(path: Path, *, summary_max_chars: int = DIGEST_MAX_CHARS) -> Pars
         summary=summary,
         body=body,
         content_hash=ch,
+        source_snapshot=snapshot,
     )

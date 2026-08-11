@@ -1,4 +1,4 @@
-"""远端镜像内容展示（Round 132 只读）。"""
+"""远端草稿镜像与已发布列表能力的只读展示。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from typing import Any
 from wechat_article_scheduler.capability_probe import (
     CAPABILITY_DRAFT_LIST,
     CAPABILITY_PUBLISHED_LIST,
-    human_capability_summary,
 )
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.remote_sync import list_remote_mirrors
@@ -51,7 +50,6 @@ def remote_sync_summary(conn: Any, config: AppConfig) -> dict[str, Any]:
 
     mode = (config.wechat_mode or "mock").strip().lower()
     cached = get_cached_capabilities(conn)
-    human = human_capability_summary(cached)
     draft_cap = cached.get(CAPABILITY_DRAFT_LIST, {})
     pub_cap = cached.get(CAPABILITY_PUBLISHED_LIST, {})
     total = conn.execute(
@@ -78,8 +76,6 @@ def remote_sync_summary(conn: Any, config: AppConfig) -> dict[str, Any]:
         "draft_list_capability": draft_cap,
         "published_list_capability": pub_cap,
         "published_list_label": published_label,
-        "published_delete_enabled": published_state == "authorized",
-        "published_delete_reason": human.get("published_delete"),
         "can_sync": draft_cap.get("state") in ("authorized", "empty", None, "unknown")
         or mode == "mock",
     }

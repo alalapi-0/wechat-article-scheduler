@@ -17,7 +17,6 @@ from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.external_agent.redaction import redact_sensitive_values
 
 REMOTE_TYPE_DRAFT = "draft"
-REMOTE_TYPE_PUBLISHED = "published"
 PAGE_SIZE = 20
 
 
@@ -143,7 +142,6 @@ def sync_remote_drafts(
     *,
     max_pages: int = 50,
     dry_run: bool = False,
-    run_id: str | None = None,
 ) -> dict[str, Any]:
     """
     分页同步 draft/batchget 到本地镜像表（幂等，不泄露 token）。
@@ -159,11 +157,11 @@ def sync_remote_drafts(
         "stale": 0,
         "pages": 0,
         "dry_run": dry_run,
-        "run_id": run_id,
         "seen_media_ids": [],
     }
     seen: set[str] = set()
     offset = 0
+    complete_scan = False
 
     with db.connect(config.database_path) as conn:
         caps = probe_all_capabilities(adapter)
@@ -188,6 +186,7 @@ def sync_remote_drafts(
             stats["pages"] += 1
             items = _extract_draft_items(page)
             if not items:
+                complete_scan = True
                 break
             for item in items:
                 mid = item["media_id"]
@@ -206,20 +205,37 @@ def sync_remote_drafts(
                 )
                 stats["synced"] += 1
                 stats[action] = int(stats.get(action, 0)) + 1
-            if len(items) < PAGE_SIZE:
+            total_count = page.get("total_count")
+            reached_reported_total = False
+            try:
+                reached_reported_total = int(total_count) <= offset + len(items)
+            except (TypeError, ValueError):
+                pass
+            if len(items) < PAGE_SIZE or reached_reported_total:
+                complete_scan = True
                 break
             offset += PAGE_SIZE
 
-        if not dry_run and seen:
-            placeholders = ",".join("?" for _ in seen)
-            stale_rows = conn.execute(
-                f"""
-                SELECT media_id FROM remote_content_mirror
-                WHERE remote_type = ? AND sync_status = 'active'
-                  AND media_id NOT IN ({placeholders})
-                """,
-                (REMOTE_TYPE_DRAFT, *seen),
-            ).fetchall()
+        stats["complete_scan"] = complete_scan
+        if not dry_run and complete_scan:
+            if seen:
+                placeholders = ",".join("?" for _ in seen)
+                stale_rows = conn.execute(
+                    f"""
+                    SELECT media_id FROM remote_content_mirror
+                    WHERE remote_type = ? AND sync_status = 'active'
+                      AND media_id NOT IN ({placeholders})
+                    """,
+                    (REMOTE_TYPE_DRAFT, *seen),
+                ).fetchall()
+            else:
+                stale_rows = conn.execute(
+                    """
+                    SELECT media_id FROM remote_content_mirror
+                    WHERE remote_type = ? AND sync_status = 'active'
+                    """,
+                    (REMOTE_TYPE_DRAFT,),
+                ).fetchall()
             for row in stale_rows:
                 conn.execute(
                     """
@@ -230,6 +246,8 @@ def sync_remote_drafts(
                     (REMOTE_TYPE_DRAFT, row["media_id"]),
                 )
                 stats["stale"] += 1
+        elif not dry_run:
+            stats["stale_skipped_incomplete_scan"] = True
 
         if not dry_run:
             db.log_event(
@@ -244,7 +262,6 @@ def sync_remote_drafts(
                         "updated": stats.get("updated", 0),
                         "stale": stats["stale"],
                         "dry_run": False,
-                        "run_id": run_id,
                     },
                     ensure_ascii=False,
                 ),

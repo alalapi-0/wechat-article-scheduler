@@ -1,4 +1,4 @@
-"""Round 70 / 收敛 Round 15：scheduler 常驻运行文档与示例。"""
+"""scheduler 常驻运行文档与示例。"""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def test_scheduler_runbook_artifacts_exist(path: Path) -> None:
 
 def test_runbook_covers_deployment_modes() -> None:
     text = RUNBOOK.read_text(encoding="utf-8")
-    for keyword in ("launchd", "systemd", "cron", "tmux", "WECHAT_MODE", "scheduler-health"):
+    for keyword in ("launchd", "systemd", "cron", "WECHAT_MODE", "scheduler-health"):
         assert keyword in text, keyword
 
 

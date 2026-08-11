@@ -1,4 +1,4 @@
-"""调度 claim、单实例锁与卡住任务恢复（Round 14 / round_069）。"""
+"""调度 claim、单实例锁与卡住任务恢复。"""
 
 from __future__ import annotations
 
@@ -88,21 +88,48 @@ def release_run_lock(conn: sqlite3.Connection, config: AppConfig) -> None:
     )
 
 
-def recover_stale_running_jobs(conn: sqlite3.Connection, config: AppConfig) -> int:
+def recover_stale_running_jobs(
+    conn: sqlite3.Connection,
+    config: AppConfig,
+    *,
+    eligible_job_ids: set[int] | None = None,
+) -> int:
     """将超时仍停留在 running 的任务恢复为 pending，避免卡死。"""
     timeout = max(60, int(getattr(config, "scheduler_claim_timeout_seconds", 900)))
     rows = conn.execute(
         """
-        SELECT id, article_id, retry_count
-        FROM publish_jobs
-        WHERE status = 'running'
-          AND datetime(updated_at) <= datetime('now', ?)
+        SELECT j.id, j.article_id, j.retry_count, j.adapter_mode,
+               j.scheduled_at, j.next_retry_at
+        FROM publish_jobs AS j
+        JOIN articles AS a ON a.id = j.article_id
+        WHERE j.status = 'running'
+          AND (a.deleted_at IS NULL OR a.deleted_at = '')
+          AND datetime(j.updated_at) <= datetime('now', ?)
         """,
         (f"-{timeout} seconds",),
     ).fetchall()
     count = 0
     for row in rows:
         jid = int(row["id"])
+        if eligible_job_ids is not None and jid not in eligible_job_ids:
+            continue
+        if eligible_job_ids is None:
+            if str(row["adapter_mode"] or "").strip().lower() != str(
+                config.wechat_mode or ""
+            ).strip().lower():
+                continue
+            try:
+                scheduled = datetime.fromisoformat(str(row["scheduled_at"]).replace("Z", "+00:00"))
+                retry_at = (
+                    datetime.fromisoformat(str(row["next_retry_at"]).replace("Z", "+00:00"))
+                    if row["next_retry_at"]
+                    else None
+                )
+                current = datetime.now(tz=scheduled.tzinfo) if scheduled.tzinfo else datetime.now()
+            except (TypeError, ValueError):
+                continue
+            if scheduled > current or (retry_at is not None and retry_at > current):
+                continue
         conn.execute(
             """
             UPDATE publish_jobs
@@ -128,7 +155,7 @@ def recover_stale_running_jobs(conn: sqlite3.Connection, config: AppConfig) -> i
                 ensure_ascii=False,
             ),
         )
-        logger.warning("任务 %s 执行超时，已恢复为待发布", jid)
+        logger.warning("任务 %s 执行超时，已恢复为待创建草稿", jid)
         count += 1
     return count
 

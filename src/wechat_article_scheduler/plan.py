@@ -1,4 +1,4 @@
-"""为已导入文章生成发布计划（publish_jobs），支持合集级排期规则。"""
+"""为已导入文章生成草稿创建计划（publish_jobs），支持合集级排期规则。"""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from wechat_article_scheduler.content_library.collection_config import (
     discover_collection_configs,
 )
 from wechat_article_scheduler.content_library.collection_schedule import (
-    CollectionScheduleRules,
     collection_plan_window_days,
     day_count_key,
     global_schedule_rules,
@@ -34,7 +33,7 @@ def _next_slot(
     preferred_hours: list[int] | tuple[int, ...],
     last_scheduled: datetime | None,
 ) -> datetime:
-    """在窗口内找下一个可用发布时间（不早于 floor）。"""
+    """在窗口内找下一个可用草稿创建时间（不早于 floor）。"""
     not_before = (floor or start).replace(microsecond=0)
     current = start.replace(minute=0, second=0, microsecond=0)
     if current < not_before:
@@ -119,7 +118,7 @@ def _fetch_plan_groups(conn: Any) -> list[dict[str, Any]]:
     return [groups[s] for s in order]
 
 
-def build_plan(config: AppConfig) -> dict[str, Any]:
+def build_plan(config: AppConfig, *, now: datetime | None = None) -> dict[str, Any]:
     """
     为 status=imported 且尚无 pending 任务的文章创建 publish_jobs（按合集规则错峰）。
 
@@ -127,7 +126,7 @@ def build_plan(config: AppConfig) -> dict[str, Any]:
     """
     global_rules = global_schedule_rules(config)
     coll_map = _collection_config_map(config)
-    now = datetime.now()
+    current_time = (now or datetime.now()).replace(microsecond=0)
 
     stats: dict[str, Any] = {
         "planned": 0,
@@ -152,12 +151,20 @@ def build_plan(config: AppConfig) -> dict[str, Any]:
             else:
                 rules = schedule_rules_for_collection(config, coll_cfg)
             window_days = collection_plan_window_days(config, rules)
-            end = now + timedelta(days=window_days)
+            # `window_days` means calendar days, including today.  A rolling
+            # N×24-hour boundary can span N+1 dates and exceed max_per_day × N
+            # when planning late in the evening.
+            end = (current_time + timedelta(days=max(1, window_days))).replace(
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
 
             if last_scheduled and rules.stagger_hours:
                 slot_start = last_scheduled + timedelta(hours=rules.stagger_hours)
             else:
-                slot_start = now
+                slot_start = current_time
 
             coll_stats = {"planned": 0, "skipped_window": 0, "rules_label": rules.label()}
             article_ids: list[int] = group["article_ids"]
@@ -174,7 +181,7 @@ def build_plan(config: AppConfig) -> dict[str, Any]:
                 effective_min_gap = max(global_rules.min_hours_between, rules.min_hours_between)
                 slot = _next_slot(
                     slot_start,
-                    floor=now,
+                    floor=current_time,
                     day_counts=day_counts,
                     collection_slug=slug,
                     max_per_day=rules.max_per_day,
@@ -182,7 +189,7 @@ def build_plan(config: AppConfig) -> dict[str, Any]:
                     preferred_hours=rules.preferred_hours,
                     last_scheduled=last_scheduled,
                 )
-                if slot > end:
+                if slot >= end:
                     coll_stats["skipped_window"] += 1
                     stats["hints"].append(
                         f"合集「{name}」部分作品超出 {window_days} 天排期窗口，请手动安排或调大 window_days"

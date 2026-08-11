@@ -1,4 +1,4 @@
-"""统一发布预览与草稿正文 HTML 构建（Web 预览与 real draft 同源）。"""
+"""统一草稿预览与正文 HTML 构建（Web 预览与 real draft 同源）。"""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def _maybe_unescape_html(body: str) -> str:
 
 
 def normalized_body_for_publish(title: str, body: str) -> str:
-    """发布前正文：实体归一化 + 去掉与 title 重复的首标题。"""
+    """草稿正文：实体归一化 + 去掉与 title 重复的首标题。"""
     return publish_body_for(title, _maybe_unescape_html(body))
 
 

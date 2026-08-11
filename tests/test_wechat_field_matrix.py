@@ -1,4 +1,4 @@
-"""Round 72 / 收敛 Round 17：微信字段能力矩阵。"""
+"""微信字段能力矩阵。"""
 
 from __future__ import annotations
 
@@ -56,11 +56,10 @@ def test_gaps_include_unsupported_schedule() -> None:
     assert by_id["wechat_backend_schedule"]["api_support"] == "unsupported"
 
 
-def test_matrix_doc_lists_field_ids() -> None:
+def test_matrix_doc_points_to_runtime_cli_and_api() -> None:
     text = DOC.read_text(encoding="utf-8")
-    assert "## 字段级能力矩阵" in text
-    for row in WECHAT_FIELD_MATRIX:
-        assert row["field_id"] in text
+    assert "field-matrix" in text
+    assert "/api/wechat-field-matrix" in text
 
 
 def test_api_field_matrix_endpoint(tmp_path) -> None:
