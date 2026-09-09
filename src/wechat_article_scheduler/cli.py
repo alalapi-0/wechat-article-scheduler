@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 
 from wechat_article_scheduler import db
-from wechat_article_scheduler.config import load_config, require_loopback_web_host
+from wechat_article_scheduler.config import AppConfig, load_config, require_loopback_web_host
 from wechat_article_scheduler.logging_setup import setup_logging
 from wechat_article_scheduler.plan import build_plan as build_publish_plan
 from wechat_article_scheduler.scanner import scan_inbox
@@ -94,9 +94,9 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, config: AppConfig | None = None) -> int:
     args = _build_parser().parse_args(argv)
-    config = load_config()
+    config = config if config is not None else load_config()
     setup_logging(config)
 
     if args.command == "init-db":

@@ -17,34 +17,35 @@
 
 多平台发布、内置浏览器 Agent、自动审核、视频/音频内容包和通用 outbox 不属于当前产品。未来方向只记录在 [docs/backlog.md](docs/backlog.md)。
 
-## 安装
+## 当前存储与运行状态
 
-    python3 -m venv .venv
-    .venv/bin/python -m pip install -e ".[dev]"
-    cp .env.example .env
-    cp config/rules.example.yaml config/rules.yaml
-    .venv/bin/python -m wechat_article_scheduler.cli init-db
+唯一项目状态入口是 [project.yaml](project.yaml)。当前使用外盘隔离 mock profile，不读取旧 `.env`、用户文章或旧数据库。运行时、输入、数据库、日志与输出均落在经过身份守卫验证的 `AI_WORK_SSD`；不回退到内盘。
+
+    python3 -B scripts/storage_runtime.py check
+    python3 -B scripts/storage_runtime.py cli init-db
+
+无需重新安装；当前环境由已有本机包离线建立。恢复环境、保留范围和未验证项见 [存储维护](docs/storage_runtime.md)。旧数据与真实微信模式须另行选择，不能把新空库当成旧数据迁移结果。
 
 .env、config/rules.yaml、data/、storage/、outbox/、reports/ 和 artifacts/ 是本地状态，不应提交。不要把 AppSecret、token、cookie 或浏览器会话写进仓库。
 
 ## 启动 Web 工作台
 
-    .venv/bin/python -m wechat_article_scheduler.cli serve
+    python3 -B scripts/storage_runtime.py cli serve
 
 默认地址是 http://127.0.0.1:8080/。管理页没有登录保护，只能绑定本机地址，不能暴露到公网。
 
 ## CLI 日常使用
 
-把文章放进 articles/inbox/，或直接在 Web 工作台上传，然后执行：
+把新演练文章放进外盘 profile 的 articles/inbox/，或直接在 Web 工作台上传，然后执行：
 
-    .venv/bin/python -m wechat_article_scheduler.cli scan
-    .venv/bin/python -m wechat_article_scheduler.cli plan
-    .venv/bin/python -m wechat_article_scheduler.cli run-once
+    python3 -B scripts/storage_runtime.py cli scan
+    python3 -B scripts/storage_runtime.py cli plan
+    python3 -B scripts/storage_runtime.py cli run-once
 
 常驻调度：
 
-    .venv/bin/python -m wechat_article_scheduler.cli scheduler-health
-    .venv/bin/python -m wechat_article_scheduler.cli scheduler-daemon
+    python3 -B scripts/storage_runtime.py cli scheduler-health
+    python3 -B scripts/storage_runtime.py cli scheduler-daemon
 
 Web 默认会处理勾选了 auto_execute 的到期任务。Web 自动执行、scheduler-daemon 和 cron 只能选择一种；若使用 daemon 或 cron，请设置 WEB_AUTO_RUN_DUE=false，或不要同时运行 Web。
 
@@ -70,9 +71,11 @@ Web 默认会处理勾选了 auto_execute 的到期任务。Web 自动执行、s
 
 完整命令和参数以运行时帮助为准：
 
-    .venv/bin/python -m wechat_article_scheduler.cli --help
+    python3 -B scripts/storage_runtime.py cli --help
 
 ## 真实草稿模式
+
+以下是保留的旧数据维护说明，不属于当前外盘 mock 入口；本轮没有加载或验证此模式，也没有安装缺失的 dotenv/浏览器组件。
 
 在本地 .env 中设置：
 
@@ -108,10 +111,10 @@ real 模式需要可读取且非空的封面文件。可以给文章绑定独立
 
 ## 测试
 
-    .venv/bin/python -m pytest -q
-    .venv/bin/python scripts/check_repo_contract.py
+    python3 -B scripts/storage_runtime.py test
+    python3 -B scripts/storage_runtime.py contract
 
-Web E2E：
+旧全量测试与 Web E2E 需要另行隔离配置；当前基础测试不读取旧库：
 
     .venv/bin/python -m pytest tests/test_ui_e2e.py -q
 

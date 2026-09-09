@@ -1,3 +1,3 @@
 # Storage
 
-Future local JSONL audit mirrors and runtime logs. Do not commit secrets or platform cookies here.
+Local preview snapshots and runtime state. This directory is not source truth and must never contain platform cookies, passwords, tokens, or other secrets.

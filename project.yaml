@@ -8,10 +8,13 @@ project:
 runtime:
   language: python
   minimum_python: "3.10"
-  cli: ".venv/bin/python -m wechat_article_scheduler.cli"
+  cli: "python3 -B scripts/storage_runtime.py cli"
   web_url: "http://127.0.0.1:8080/"
-  database: "data/app.sqlite3"
+  database: "/Volumes/AI_WORK_SSD/ProjectData/wechat-article-scheduler/mock/data/app.sqlite3"
   default_mode: mock
+  storage_profile: external_mock_no_legacy_state_load
+  python: /Volumes/AI_WORK_SSD/Runtimes/wechat-article-scheduler/.venv/bin/python
+  maintenance: docs/storage_runtime.md
 
 scope:
   includes:
@@ -32,6 +35,9 @@ authority:
   agent_rules: AGENTS.md
   user_entry: README.md
   docs_index: docs/index.md
+  current_state: project.yaml
+  current_state_readers: [owner, development_agent, personal_control_hub]
+  current_state_update_trigger: accepted_runtime_or_product_status_change
 
 safety:
   final_publish_api_present: false

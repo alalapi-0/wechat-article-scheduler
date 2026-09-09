@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from dotenv import load_dotenv
 
 # 项目根目录：src/wechat_article_scheduler -> 上两级
 ROOT = Path(__file__).resolve().parents[2]
@@ -105,6 +104,8 @@ def load_config(env_file: Path | None = None) -> AppConfig:
     if env_file is None:
         env_file = ROOT / ".env"
     if env_file.exists():
+        from dotenv import load_dotenv
+
         load_dotenv(env_file)
 
     rules_path = Path(os.getenv("RULES_PATH", "config/rules.yaml"))
