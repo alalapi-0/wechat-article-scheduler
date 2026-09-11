@@ -28,6 +28,7 @@ storage/preview_snapshots/*
 !storage/preview_snapshots/README.md
 
 # 可再生运行产物
+.hub/status.json
 artifacts/
 reports/*
 !reports/.gitkeep

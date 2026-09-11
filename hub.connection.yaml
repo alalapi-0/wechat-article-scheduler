@@ -1,0 +1,45 @@
+schema_version: '2.0'
+project_id: wechat-article-scheduler
+source_refs:
+- id: state
+  path: project.yaml
+  format: yaml
+  role: current_state
+metric_export:
+  entry: scripts/export_hub_metric_snapshot.py
+  snapshot: .hub/status.json
+mapping:
+  current_work.status:
+    source_ref: state
+    selector:
+      path:
+      - project
+      - status
+    value_map: null
+unknown_fields:
+  current_work.objective: The declared purpose is a stable product identity, not a current objective.
+  current_work.phase: The project state declares scope and runtime, not one typed phase.
+  current_work.round: The project state does not publish a current round.
+  current_work.status: Applies only when the declared project status field is missing or not a supported lifecycle value.
+  current_work.completed: Included scope items are capabilities, not whole-project completion.
+  current_work.accepted: Runtime and safety declarations are not an acceptance boolean.
+  current_work.next_action: The project state does not publish one canonical next action.
+  current_work.owner_role: Declared readers are not one current owner-role field.
+  progress.completed: Articles, jobs, drafts, and proofs are not a homogeneous numerator.
+  progress.total: The workbench has no stable homogeneous completion denominator.
+  progress.counting_basis: Counting bases remain attached to each metric row.
+  progress.milestones: Scope includes and excludes are not typed current milestones.
+  blockers: Excluded scope is a product boundary, not a typed blocker record.
+  verification.status: The project state does not publish one current verification status.
+  verification.evidence_refs: Evidence stays in the runtime store and scoped metrics.
+  verification.accepted_basis: No current whole-project accepted basis is published.
+  delivery.status: Draft creation and final publication are deliberately separate facts.
+  delivery.remote: Real accounts and credentials are protected and never published here.
+  delivery.branch: The project state does not publish one current delivery branch.
+  delivery.commit: The project state does not identify one current delivery commit.
+  delivery.receipt_ref: Human-supplied publish proof is per article, not one receipt.
+validation_entry:
+- python3 -B scripts/storage_runtime.py check
+- python3 -B scripts/storage_runtime.py contract
+- python3 -B scripts/storage_runtime.py test
+max_read_age_seconds: 604800
