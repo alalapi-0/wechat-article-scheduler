@@ -19,33 +19,33 @@
 
 ## 当前存储与运行状态
 
-唯一项目状态入口是 [project.yaml](project.yaml)。当前使用外盘隔离 mock profile，不读取旧 `.env`、用户文章或旧数据库。运行时、输入、数据库、日志与输出均落在经过身份守卫验证的 `AI_WORK_SSD`；不回退到内盘。
+唯一项目状态入口是 [project.yaml](project.yaml)。当前 Linux 入口使用新的隔离 mock profile，不读取旧 `.env`、用户文章或旧数据库。固定解释器与存储根由本机 ext4 身份守卫验证；环境或路径漂移时停止。数据根为 `/home/alalapi/ProjectData/wechat-article-scheduler/linux-local-profile/mock`。
 
-    python3 -B scripts/storage_runtime.py check
-    python3 -B scripts/storage_runtime.py cli init-db
+    python3 -I -B scripts/storage_runtime.py check
+    python3 -I -B scripts/storage_runtime.py cli init-db
 
-无需重新安装；当前环境由已有本机包离线建立。恢复环境、保留范围和未验证项见 [存储维护](docs/storage_runtime.md)。旧数据与真实微信模式须另行选择，不能把新空库当成旧数据迁移结果。
+当前 Linux 环境使用专属 Python 3.12 和经过哈希登记的兼容 wheel；已有环境不会被重建覆盖。恢复环境、保留范围和未验证项见 [存储维护](docs/storage_runtime.md)。旧数据与真实微信模式须另行选择，不能把新空库当成旧数据迁移结果。
 
 .env、config/rules.yaml、data/、storage/、outbox/、reports/ 和 artifacts/ 是本地状态，不应提交。不要把 AppSecret、token、cookie 或浏览器会话写进仓库。
 
 ## 启动 Web 工作台
 
-    python3 -B scripts/storage_runtime.py cli serve
+    python3 -I -B scripts/storage_runtime.py cli serve
 
 默认地址是 http://127.0.0.1:8080/。管理页没有登录保护，只能绑定本机地址，不能暴露到公网。
 
 ## CLI 日常使用
 
-把新演练文章放进外盘 profile 的 articles/inbox/，或直接在 Web 工作台上传，然后执行：
+把新演练文章放进 Linux 本地 profile 的 articles/inbox/，或直接在 Web 工作台上传，然后执行：
 
-    python3 -B scripts/storage_runtime.py cli scan
-    python3 -B scripts/storage_runtime.py cli plan
-    python3 -B scripts/storage_runtime.py cli run-once
+    python3 -I -B scripts/storage_runtime.py cli scan
+    python3 -I -B scripts/storage_runtime.py cli plan
+    python3 -I -B scripts/storage_runtime.py cli run-once
 
 常驻调度：
 
-    python3 -B scripts/storage_runtime.py cli scheduler-health
-    python3 -B scripts/storage_runtime.py cli scheduler-daemon
+    python3 -I -B scripts/storage_runtime.py cli scheduler-health
+    python3 -I -B scripts/storage_runtime.py cli scheduler-daemon
 
 Web 默认会处理勾选了 auto_execute 的到期任务。Web 自动执行、scheduler-daemon 和 cron 只能选择一种；若使用 daemon 或 cron，请设置 WEB_AUTO_RUN_DUE=false，或不要同时运行 Web。
 
@@ -71,11 +71,11 @@ Web 默认会处理勾选了 auto_execute 的到期任务。Web 自动执行、s
 
 完整命令和参数以运行时帮助为准：
 
-    python3 -B scripts/storage_runtime.py cli --help
+    python3 -I -B scripts/storage_runtime.py cli --help
 
 ## 真实草稿模式
 
-以下是保留的旧数据维护说明，不属于当前外盘 mock 入口；本轮没有加载或验证此模式，也没有安装缺失的 dotenv/浏览器组件。
+以下是保留的旧数据维护说明，不属于当前 Linux mock 入口；本轮没有加载或验证此模式。Linux 专属环境已安装 python-dotenv，浏览器运行组件尚未验收；下方仓库内 `.venv` 命令属于历史说明，不能作为当前 Linux 入口使用。
 
 在本地 .env 中设置：
 
@@ -111,12 +111,12 @@ real 模式需要可读取且非空的封面文件。可以给文章绑定独立
 
 ## 测试
 
-    python3 -B scripts/storage_runtime.py test
-    python3 -B scripts/storage_runtime.py contract
+    python3 -I -B scripts/storage_runtime.py test
+    python3 -I -B scripts/storage_runtime.py contract
 
-旧全量测试与 Web E2E 需要另行隔离配置；当前基础测试不读取旧库：
+完整测试使用受控源码与合成 fixtures 的私有临时副本，保持测试断言，不复制旧配置、数据库或用户文章：
 
-    .venv/bin/python -m pytest tests/test_ui_e2e.py -q
+    python3 -I -B scripts/test_linux_profile.py current
 
 浏览器不可用时，E2E 会按测试条件跳过。测试产物必须留在临时目录，不能污染仓库 outbox 或 tracked 报告。
 

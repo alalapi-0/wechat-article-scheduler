@@ -8,12 +8,12 @@ project:
 runtime:
   language: python
   minimum_python: "3.10"
-  cli: "python3 -B scripts/storage_runtime.py cli"
+  cli: "python3 -I -B scripts/storage_runtime.py cli"
   web_url: "http://127.0.0.1:8080/"
-  database: "/Volumes/AI_WORK_SSD/ProjectData/wechat-article-scheduler/mock/data/app.sqlite3"
+  database: "/home/alalapi/ProjectData/wechat-article-scheduler/linux-local-profile/mock/data/app.sqlite3"
   default_mode: mock
-  storage_profile: external_mock_no_legacy_state_load
-  python: /Volumes/AI_WORK_SSD/Runtimes/wechat-article-scheduler/.venv/bin/python
+  storage_profile: linux_mock_no_legacy_state_load
+  python: /home/alalapi/Runtimes/wechat-article-scheduler/.venv/bin/python
   maintenance: docs/storage_runtime.md
 
 scope:

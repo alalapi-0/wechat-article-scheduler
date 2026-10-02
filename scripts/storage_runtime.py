@@ -1,23 +1,22 @@
-"""Guarded external mock profile; never load the legacy .env or database."""
+"""Guarded Linux fixed-root mock profile; never load the legacy .env or database."""
 from __future__ import annotations
 
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
 
 sys.dont_write_bytecode = True
-REPO = Path(__file__).resolve().parents[1]
-VOLUME = Path('/Volumes/AI_WORK_SSD')
-GUARD = Path('/Users/alalapi/.config/storage-governance/guard.sh')
+REPO = Path('/home/alalapi/Projects/wechat-article-scheduler')
+sys.path.insert(0, str(REPO / 'scripts'))
+from linux_runtime_guard import verify, BASE as BASE_PYTHON
+VOLUME = Path('/home/alalapi')
 RUNTIME = VOLUME / 'Runtimes/wechat-article-scheduler'
-DATA = VOLUME / 'ProjectData/wechat-article-scheduler'
+DATA = VOLUME / 'ProjectData/wechat-article-scheduler/linux-local-profile'
 CACHE = VOLUME / 'Caches/wechat-article-scheduler'
 TEMP = VOLUME / 'Temp/wechat-article-scheduler'
-BASE_PYTHON = VOLUME / 'Runtimes/uv-managed/data/python/cpython-3.11.15-macos-aarch64-none/bin/python3'
 PYTHON = RUNTIME / '.venv/bin/python'
 SAFE_TESTS = [
     'tests/test_storage_runtime.py', 'tests/test_mock_adapter.py',
@@ -40,38 +39,26 @@ def physical(path: Path) -> Path:
             raise RuntimeError('external path is a symlink')
         if current.exists() and current.stat().st_dev != device:
             raise RuntimeError('external path changed device')
+        if current.is_file() and current.stat().st_nlink != 1:
+            raise RuntimeError('external file is a hardlink')
     return path
 
 
 def check(require_python: bool = True) -> None:
-    env = {'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'LANG': 'C', 'LC_ALL': 'C'}
-    # The common guard itself rejects unsupported fixture injection.
     for key in ('STORAGE_GOVERNANCE_BOOTSTRAP_FILE', 'STORAGE_GOVERNANCE_TEST_FIXTURE_DIR'):
         if key in os.environ:
-            env[key] = os.environ[key]
-    result = subprocess.run(['/bin/zsh', '-f', str(GUARD), '--check'], env=env,
-                            capture_output=True, text=True)
-    if result.returncode:
-        raise RuntimeError('external disk identity guard refused access')
-    for root in (RUNTIME, DATA, CACHE, TEMP):
-        physical(root)
-        if not root.is_dir():
-            raise RuntimeError('registered external root missing')
-    if require_python:
-        physical(RUNTIME / '.venv')
-        physical(RUNTIME / '.venv/lib/python3.11/site-packages')
-        if not PYTHON.is_file() or PYTHON.resolve() != BASE_PYTHON.resolve():
-            raise RuntimeError('external interpreter missing or changed')
+            raise RuntimeError('Linux identity guard refused access: legacy fixture injection')
+    verify(require_python=require_python)
 
 
 def environment() -> dict[str, str]:
     return {
         'PATH': f'{PYTHON.parent}:/usr/bin:/bin:/usr/sbin:/sbin',
-        'LANG': 'en_US.UTF-8', 'LC_ALL': 'en_US.UTF-8',
+        'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8',
         'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONNOUSERSITE': '1',
         'PYTHONPATH': str(REPO / 'src'), 'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1',
         'TMPDIR': str(TEMP), 'XDG_CACHE_HOME': str(CACHE),
-        'PIP_CACHE_DIR': str(CACHE / 'pip'), 'UV_CACHE_DIR': str(VOLUME / 'Caches/uv'),
+        'PIP_CACHE_DIR': str(CACHE / 'pip'), 'UV_CACHE_DIR': str(CACHE / 'uv'),
         'UV_OFFLINE': 'true', 'UV_PYTHON_DOWNLOADS': 'never',
         'WECHAT_MODE': 'mock', 'WEB_AUTO_RUN_DUE': 'false',
     }
@@ -102,55 +89,60 @@ def external_config():
 
 
 def rebuild() -> int:
-    """Reconstruct an absent environment from the recorded local wheel payloads."""
-    if (RUNTIME / '.venv').exists():
+    """Reconstruct only an absent environment from registered compatible wheels."""
+    if os.path.lexists(RUNTIME / '.venv'):
         raise RuntimeError('environment exists; refusing to overwrite it')
-    manifest = json.loads((RUNTIME / 'offline_components.json').read_text())
-    if manifest['python'] != str(BASE_PYTHON):
-        raise RuntimeError('unexpected interpreter descriptor')
-    sources = []
-    for component in manifest['components']:
-        source = physical(Path(component['source']))
-        source.relative_to(VOLUME / 'Caches/uv/archive-v0')
-        if not source.is_dir():
-            raise RuntimeError('offline wheel payload missing; no download fallback')
-        sources.append(source)
-    subprocess.run([str(BASE_PYTHON), '-I', '-B', '-m', 'venv', '--without-pip',
+    import hashlib
+    manifest = verify(require_python=False)
+    wheels = []
+    for name, digest in manifest['wheels'].items():
+        if not name.endswith('.whl') or Path(name).name != name or '/' in name or '\\' in name:
+            raise RuntimeError('invalid registered wheel name')
+        source = physical(CACHE / 'wheels' / name)
+        if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
+            raise RuntimeError('registered compatible wheel changed or missing')
+        wheels.append(str(source))
+    subprocess.run([str(BASE_PYTHON), '-I', '-B', '-m', 'venv',
                     str(RUNTIME / '.venv')], env=environment(), check=True)
-    destination = RUNTIME / '.venv/lib/python3.11/site-packages'
-    for source in sources:
-        for child in source.iterdir():
-            target = destination / child.name
-            if target.exists():
-                raise RuntimeError('overlapping offline package')
-            if child.is_dir():
-                shutil.copytree(child, target)
-            else:
-                shutil.copy2(child, target)
+    subprocess.run([str(PYTHON), '-I', '-B', '-m', 'pip', '--isolated', 'install',
+                    '--no-index', '--no-cache-dir', *wheels], env=environment(), check=True)
+    subprocess.run([str(PYTHON), '-I', '-B', '-m', 'pip', '--isolated', 'check'], env=environment(), check=True)
+    # Re-registration after an explicit rebuild is local to this fixed manifest.
+    from linux_runtime_guard import MANIFEST, chain
+    manifest['venv_chain'] = chain(RUNTIME / '.venv')
+    manifest['pyvenv_sha256'] = hashlib.sha256((RUNTIME / '.venv/pyvenv.cfg').read_bytes()).hexdigest()
+    MANIFEST.write_text(json.dumps(manifest, indent=2) + '\n')
+    verify()
     return 0
 
 
 def main(args: list[str] | None = None) -> int:
+    os.umask(0o077)
     args = list(sys.argv[1:] if args is None else args)
     action = args[0] if args else 'check'
     try:
+        if os.environ.get('WECHAT_MODE', 'mock').strip().lower() != 'mock':
+            raise RuntimeError('Linux profile permits mock mode only')
         check(require_python=action != 'rebuild')
+        clean = environment()
+        os.environ.clear()
+        os.environ.update(clean)
         if action == 'check':
-            print(json.dumps({'status': 'PASS', 'profile': 'external_mock',
+            print(json.dumps({'status': 'PASS', 'profile': 'linux_mock_no_legacy_state_load',
                               'runtime': str(PYTHON), 'legacy_state': 'untouched'}))
             return 0
         if action == 'rebuild':
             return rebuild()
         if action not in ('cli', 'test', 'contract'):
             raise RuntimeError('use check, cli, test, contract, or rebuild')
-        if sys.prefix != str(RUNTIME / '.venv') or os.environ.get('PYTHONPATH') != str(REPO / 'src'):
-            os.execve(str(PYTHON), [str(PYTHON), '-B', str(Path(__file__).resolve()), *args], environment())
+        if sys.prefix != str(RUNTIME / '.venv') or not sys.flags.isolated:
+            os.execve(str(PYTHON), [str(PYTHON), '-I', '-B', str(REPO / 'scripts/storage_runtime.py'), *args], environment())
         sys.path.insert(0, str(REPO / 'src'))
         if action == 'cli':
             from wechat_article_scheduler.cli import main as cli_main
             return cli_main(args[1:], config=external_config())
         if action == 'contract':
-            return subprocess.call([str(PYTHON), '-B', str(REPO / 'scripts/check_repo_contract.py')],
+            return subprocess.call([str(PYTHON), '-I', '-B', str(REPO / 'scripts/check_repo_contract.py')],
                                    cwd=REPO, env=environment())
         if len(args) != 1:
             raise RuntimeError('test runs the isolated storage/core selection only')

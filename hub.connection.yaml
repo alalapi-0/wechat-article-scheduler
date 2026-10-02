@@ -39,7 +39,7 @@ unknown_fields:
   delivery.commit: The project state does not identify one current delivery commit.
   delivery.receipt_ref: Human-supplied publish proof is per article, not one receipt.
 validation_entry:
-- python3 -B scripts/storage_runtime.py check
-- python3 -B scripts/storage_runtime.py contract
-- python3 -B scripts/storage_runtime.py test
+- python3 -I -B scripts/storage_runtime.py check
+- python3 -I -B scripts/storage_runtime.py contract
+- python3 -I -B scripts/storage_runtime.py test
 max_read_age_seconds: 604800

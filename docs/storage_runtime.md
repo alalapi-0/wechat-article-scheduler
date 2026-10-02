@@ -1,22 +1,25 @@
-# 外盘存储与运行
+# Linux 存储与运行
 
-当前维护入口是 `python3 -B scripts/storage_runtime.py`。项目状态与此入口登记在 `project.yaml`；Hub 仅引用该状态，治理执行进度仍以 StorageGovernance/STATE.yaml 为准。
+当前入口为 `python3 -I -B scripts/storage_runtime.py`，状态声明在 `project.yaml`。本机 CPython 3.12 与专属 `.venv` 位于 `/home/alalapi/Runtimes/wechat-article-scheduler`；缓存和临时根分别为 `/home/alalapi/Caches/wechat-article-scheduler` 与 `/home/alalapi/Temp/wechat-article-scheduler`。新增数据 profile 为 `/home/alalapi/ProjectData/wechat-article-scheduler/linux-local-profile/mock`。旧 ProjectData、仓库 `.env`、rules、文章、数据库和账号状态不加载。
 
-统一身份守卫通过后才使用 `/Volumes/AI_WORK_SSD` 下本项目的 Runtimes、ProjectData、Caches、Temp 根。运行解释器固定为外盘 CPython 3.11 虚拟环境；错盘、缺盘、目录别名、运行时缺失均退出 78，不创建内盘替代环境。
+`configs/linux-runtime.json` 登记固定 ext4 UUID `9d258b70-f313-4a5d-9cf6-c715c5edca3d`、`/dev/nvme0n1p3`、挂载点 `/`、目录逐级设备/inode/UID/GID/权限、系统 Python 哈希、虚拟环境身份与依赖版本。守卫以 no-follow 目录描述符核对，不接受路径别名、其他挂载、缺根或工具链漂移；失败先于 profile 遍历、环境执行和应用导入。此清单是本机登记，不可迁到另一主机直接使用旧 inode。
 
 ```sh
-python3 -B scripts/storage_runtime.py check
-python3 -B scripts/storage_runtime.py cli init-db
-python3 -B scripts/storage_runtime.py cli serve --port 8080
-python3 -B scripts/storage_runtime.py cli --help
-python3 -B scripts/storage_runtime.py test
-python3 -B scripts/storage_runtime.py contract
+python3 -I -B scripts/storage_runtime.py check
+python3 -I -B scripts/storage_runtime.py cli init-db
+python3 -I -B scripts/storage_runtime.py cli serve --port 8080
+python3 -I -B scripts/storage_runtime.py cli --help
+python3 -I -B scripts/storage_runtime.py test
+python3 -I -B scripts/storage_runtime.py contract
+python3 -I -B scripts/test_linux_profile.py current
 ```
 
-新默认 profile 为 `ProjectData/wechat-article-scheduler/mock/`。数据库、文章输入、日志、快照和输出都在此根，mock、dry-run、自动执行关闭、任务包导出关闭。它不加载仓库 `.env`、rules、文章、旧数据库或会话；这不是把历史数据自动导入新库。原库与用户的 `storage/README.md` 改动原样保留内盘。真实微信模式与旧数据恢复不在此次存储验证范围内，必须另行明确选择，不能把 mock 验证当成真实草稿验收。
+运行入口擦除调用者环境，以固定 `-I -B` 解释器执行；不继承凭据、用户 site packages 或外部 PYTHONPATH。权限掩码为 0077。配置固定 mock、dry-run、自动到点执行关闭、任务包导出关闭、空凭据，Web 只允许 loopback。请求 `WECHAT_MODE=real` 在这个入口退出 78；原产品 real adapter 与发布权限边界仍保留，需另行授权和选择配置。此运行 profile 没有导入旧数据，也不代表真实微信、实际发布 proof 或常驻调度已验收。
 
-离线环境由本机现有的 24 个兼容 wheel 展开包重建，清单在 `Runtimes/wechat-article-scheduler/offline_components.json`。虚拟环境不存在时可运行 `rebuild`；已有环境不会被覆盖，缺包不会联网下载。完整声明中的 python-dotenv 与浏览器工具尚未安装；仅旧 `.env` 分支才需要 dotenv，现行外盘注入配置不需要它。
+环境确实缺失时，`rebuild` 校验专属缓存中登记的兼容 wheel 哈希，再以系统 Python 创建 `.venv`、离线安装并执行 `pip check`，更新本机虚拟环境身份登记。已有 `.venv`（含链接）拒绝覆盖；缺 wheel 或校验失败时停止，不下载替代品，不使用历史 Mac 包或其他环境。
 
-`test` 只运行已确认不读取旧配置/数据的存储、mock、migration 和基础 Web 测试。旧全量测试中仍有直接加载仓库配置的入口，本轮没有运行；UI 未改变，未声称浏览器 E2E 或真实微信 API 验收。基本服务验证使用真实 loopback HTTP 与外盘隔离数据库的重启持久性。
+`test` 覆盖原存储测试、mock adapter、迁移和基础 Web；包含实际 loopback HTTP 与 SQLite 重启持久性。完整测试入口只复制明确允许的源码、测试、文档、部署样例和合成 fixtures，逐文件校验相同字节；不复制原 `.env`、rules、数据库、articles 或 storage。所有普通 Python 子进程使用这个空配置副本，测试临时目录为私有权限。测试用 Python loopback 连接守卫记录外网尝试，它不是内核沙箱或恶意测试隔离；应用使用固定 mock 配置。测试断言、失败和浏览器条件跳过保留，不能将跳过声称为浏览器验收。
 
-本轮删除的是旧 untracked reports、已废弃平台/测试/外部任务 outbox 包、Python bytecode、pytest/Finder cache，合计约 9.78 MB；按所有者 release-first 授权不保留副本。Git 历史、源代码、文章、旧数据库与登录状态均未清理。之后不要用旧的内盘 `.venv` 安装步骤；历史 CLI 配置入口仅供单独批准的旧数据维护。
+测试报告固定写入专属 Temp 的 `current-pytest.xml`、`current-pytest.txt` 和 `current-source-view.json`，临时源码副本与 pytest fixtures 自动回收；不写 tracked 运行产物。工作站迁移的实际验收、原始分母与远端交付由 Hub inventory 本项目条目记录，业务事实继续由 `project.yaml` 负责。
+
+历史 Mac 存储调查与原数据保留在迁移归档；此前约 9.78 MB 的清理记录不构成本次删除授权。现有 Linux 副本不执行旧 Mac 运行时、不访问 APFS、不清理旧数据或账号状态。

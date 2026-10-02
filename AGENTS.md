@@ -46,30 +46,28 @@
 
 ## 常用命令
 
-优先使用虚拟环境中的解释器：
+Linux 默认入口使用固定存储守卫和专属解释器；不读取旧配置或用户数据：
 
-    python3 -m venv .venv
-    .venv/bin/python -m pip install -e ".[dev]"
-    .venv/bin/python -m wechat_article_scheduler.cli init-db
-    .venv/bin/python -m wechat_article_scheduler.cli serve
+    python3 -I -B scripts/storage_runtime.py check
+    python3 -I -B scripts/storage_runtime.py cli init-db
+    python3 -I -B scripts/storage_runtime.py cli serve
 
 核心 CLI：
 
-    .venv/bin/python -m wechat_article_scheduler.cli scan
-    .venv/bin/python -m wechat_article_scheduler.cli plan
-    .venv/bin/python -m wechat_article_scheduler.cli run-once
-    .venv/bin/python -m wechat_article_scheduler.cli scheduler-daemon
-    .venv/bin/python -m wechat_article_scheduler.cli scheduler-health
+    python3 -I -B scripts/storage_runtime.py cli scan
+    python3 -I -B scripts/storage_runtime.py cli plan
+    python3 -I -B scripts/storage_runtime.py cli run-once
+    python3 -I -B scripts/storage_runtime.py cli scheduler-health
 
 实际命令清单以此为准：
 
-    .venv/bin/python -m wechat_article_scheduler.cli --help
+    python3 -I -B scripts/storage_runtime.py cli --help
 
 ## 验证
 
 - 所有改动：检查 git status --short、git diff、git diff --check。
-- Python 代码：先跑受影响测试，再跑 .venv/bin/python -m pytest -q。
-- 文档/结构：运行 .venv/bin/python scripts/check_repo_contract.py，并检查所有本地链接和命令。
+- Python 代码：先跑 `python3 -I -B scripts/storage_runtime.py test`，再用 `python3 -I -B scripts/test_linux_profile.py current` 跑完整测试。后者复制受控源码、测试与合成 fixtures 到私有临时目录，测试和普通 Python 子进程的默认加载器只见空临时配置；原 `.env`、rules、数据库、articles 和 storage 不进入副本。失败/跳过保留，不可据此声称真实微信验收。
+- 文档/结构：运行 `python3 -I -B scripts/storage_runtime.py contract`，并检查所有本地链接和命令。
 - Web/UI：跑相关 API 测试和 tests/test_ui_e2e.py；若浏览器可用，再检查真实 localhost 页面、console、network 和核心路径。浏览器不可用时必须明确说明，不能把静态阅读当作浏览器验收。
 - 默认或自动验收不得触发真实草稿写入。只有用户对独立 real 检查给出当次明确授权时才可创建测试草稿；任何验收都不得删除远端内容或触发最终发布。
 

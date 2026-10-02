@@ -1,0 +1,324 @@
+{
+  "version": 1,
+  "repo": "/home/alalapi/Projects/wechat-article-scheduler",
+  "roots": {
+    "Runtimes": "/home/alalapi/Runtimes/wechat-article-scheduler",
+    "Caches": "/home/alalapi/Caches/wechat-article-scheduler",
+    "Temp": "/home/alalapi/Temp/wechat-article-scheduler",
+    "ProjectData": "/home/alalapi/ProjectData/wechat-article-scheduler/linux-local-profile"
+  },
+  "filesystem": {
+    "target": "/",
+    "source": "/dev/nvme0n1p3",
+    "fstype": "ext4",
+    "uuid": "9d258b70-f313-4a5d-9cf6-c715c5edca3d"
+  },
+  "chains": {
+    "repo": [
+      [
+        66307,
+        2,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058625,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058626,
+        1000,
+        1000,
+        488
+      ],
+      [
+        66307,
+        12062169,
+        1000,
+        1000,
+        493
+      ],
+      [
+        66307,
+        12461822,
+        1000,
+        1000,
+        493
+      ]
+    ],
+    "Runtimes": [
+      [
+        66307,
+        2,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058625,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058626,
+        1000,
+        1000,
+        488
+      ],
+      [
+        66307,
+        12211195,
+        1000,
+        1000,
+        509
+      ],
+      [
+        66307,
+        26769825,
+        1000,
+        1000,
+        448
+      ]
+    ],
+    "Caches": [
+      [
+        66307,
+        2,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058625,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058626,
+        1000,
+        1000,
+        488
+      ],
+      [
+        66307,
+        26217924,
+        1000,
+        1000,
+        448
+      ],
+      [
+        66307,
+        26769826,
+        1000,
+        1000,
+        448
+      ]
+    ],
+    "Temp": [
+      [
+        66307,
+        2,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058625,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058626,
+        1000,
+        1000,
+        488
+      ],
+      [
+        66307,
+        12345375,
+        1000,
+        1000,
+        509
+      ],
+      [
+        66307,
+        26769827,
+        1000,
+        1000,
+        448
+      ]
+    ],
+    "ProjectData": [
+      [
+        66307,
+        2,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058625,
+        0,
+        0,
+        493
+      ],
+      [
+        66307,
+        12058626,
+        1000,
+        1000,
+        488
+      ],
+      [
+        66307,
+        12205554,
+        1000,
+        1000,
+        493
+      ],
+      [
+        66307,
+        12465927,
+        1000,
+        1000,
+        493
+      ],
+      [
+        66307,
+        26769828,
+        1000,
+        1000,
+        448
+      ]
+    ]
+  },
+  "base_python_sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+  "venv_chain": [
+    [
+      66307,
+      2,
+      0,
+      0,
+      493
+    ],
+    [
+      66307,
+      12058625,
+      0,
+      0,
+      493
+    ],
+    [
+      66307,
+      12058626,
+      1000,
+      1000,
+      488
+    ],
+    [
+      66307,
+      12211195,
+      1000,
+      1000,
+      509
+    ],
+    [
+      66307,
+      26769825,
+      1000,
+      1000,
+      448
+    ],
+    [
+      66307,
+      26769829,
+      1000,
+      1000,
+      448
+    ]
+  ],
+  "pyvenv_sha256": "c1578f4b1751324d6c48f2d6ace19751660796f79005a325b24c21fc15d614fa",
+  "python_links": {
+    "python": "python3.12",
+    "python3": "python3.12",
+    "python3.12": "/usr/bin/python3.12"
+  },
+  "packages": {
+    "playwright": "1.63.0",
+    "opentelemetry-api": "1.45.0",
+    "anyio": "4.15.1",
+    "pyee": "13.0.1",
+    "uvicorn": "0.54.0",
+    "pydantic": "2.13.5",
+    "typing-extensions": "4.16.0",
+    "pyyaml": "6.0.3",
+    "idna": "3.20",
+    "python-dotenv": "1.2.4",
+    "python-multipart": "0.0.32",
+    "pygments": "2.21.0",
+    "starlette": "1.7.0",
+    "pluggy": "1.6.0",
+    "h11": "0.16.0",
+    "iniconfig": "2.3.0",
+    "pip": "24.0",
+    "greenlet": "3.5.6",
+    "packaging": "26.3",
+    "pytest": "9.1.1",
+    "annotated-types": "0.8.0",
+    "click": "8.5.0",
+    "pillow": "12.3.0",
+    "pydantic-core": "2.46.5",
+    "httpx": "0.28.1",
+    "typing-inspection": "0.4.4",
+    "certifi": "2026.7.22",
+    "fastapi": "0.142.2",
+    "httpcore": "1.0.9",
+    "annotated-doc": "0.0.5"
+  },
+  "wheels": {
+    "annotated_doc-0.0.5-py3-none-any.whl": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
+    "annotated_types-0.8.0-py3-none-any.whl": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+    "anyio-4.15.1-py3-none-any.whl": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+    "certifi-2026.7.22-py3-none-any.whl": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+    "click-8.5.0-py3-none-any.whl": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+    "fastapi-0.142.2-py3-none-any.whl": "bd5f4d81f1e93a88bcd77caf4dfe3c2dbffc3805407a0007e9a114c18b3a670b",
+    "greenlet-3.5.6-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl": "975736b002ed080d124cf81a79cb7e05cb26d6b3f5c7a7b651c0fcce70353aa1",
+    "h11-0.16.0-py3-none-any.whl": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+    "httpcore-1.0.9-py3-none-any.whl": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+    "httpx-0.28.1-py3-none-any.whl": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+    "idna-3.20-py3-none-any.whl": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+    "iniconfig-2.3.0-py3-none-any.whl": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+    "opentelemetry_api-1.45.0-py3-none-any.whl": "80e068aba7cd56c8b58512d6a36f8d25cb1dfaa0c0a4cc1c938ccf9f362d9cb3",
+    "packaging-26.3-py3-none-any.whl": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+    "pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91",
+    "playwright-1.63.0-py3-none-manylinux1_x86_64.whl": "ad21bc07516b187965a7521c5cf0df0bd657b17482eaad74335272d35a2b07de",
+    "pluggy-1.6.0-py3-none-any.whl": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
+    "pydantic-2.13.5-py3-none-any.whl": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+    "pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "0fc5be0abd4a407e200d844b404e33639a554e7bd0d448e7b9ae181be4789ac2",
+    "pyee-13.0.1-py3-none-any.whl": "af2f8fede4171ef667dfded53f96e2ed0d6e6bd7ee3bb46437f77e3b57689228",
+    "pygments-2.21.0-py3-none-any.whl": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+    "pytest-9.1.1-py3-none-any.whl": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+    "python_dotenv-1.2.4-py3-none-any.whl": "42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc",
+    "python_multipart-0.0.32-py3-none-any.whl": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+    "pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
+    "starlette-1.7.0-py3-none-any.whl": "67f8e99895493dd2911a03f11314af6ceebeae4e704bb9f43dfc6a9db151c93e",
+    "typing_extensions-4.16.0-py3-none-any.whl": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+    "typing_inspection-0.4.4-py3-none-any.whl": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+    "uvicorn-0.54.0-py3-none-any.whl": "505bdb0f318731d45f1f712071fc781a8981f6847a31c902c9f5e652d4f67faf"
+  }
+}

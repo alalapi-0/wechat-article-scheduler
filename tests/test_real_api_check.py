@@ -27,9 +27,8 @@ def load_mod():
 def rac(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     mod = load_mod()
     monkeypatch.setattr(mod, "_load_dotenv", lambda: None)
-    import wechat_article_scheduler.config as config_mod
-
-    monkeypatch.setattr(config_mod, "load_dotenv", lambda *args, **kwargs: False)
+    import dotenv
+    monkeypatch.setattr(dotenv, "load_dotenv", lambda *args, **kwargs: False)
     monkeypatch.setenv("RULES_PATH", str(tmp_path / "missing-rules.yaml"))
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "real-api.sqlite3"))
     monkeypatch.setenv("ARTICLES_INBOX", str(tmp_path / "articles" / "inbox"))

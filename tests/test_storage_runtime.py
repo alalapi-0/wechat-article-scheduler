@@ -68,6 +68,53 @@ def test_physical_rejects_symlink_and_escape(tmp_path, monkeypatch):
         module.physical(tmp_path.parent / 'outside')
 
 
+def test_linux_guard_rejects_real_alias_and_hardlink(tmp_path):
+    module = runtime()
+    import linux_runtime_guard as guard
+    import pytest
+    guard.verify()
+    target = tmp_path / 'directory'
+    target.mkdir()
+    link = tmp_path / 'alias'
+    link.symlink_to(target, target_is_directory=True)
+    with pytest.raises(OSError):
+        guard.chain(link)
+    source = tmp_path / 'single'
+    source.write_bytes(b'synthetic')
+    import os
+    os.link(source, tmp_path / 'second-name')
+    with pytest.raises(RuntimeError, match='aliased'):
+        guard.regular_bytes(source)
+
+
+def test_linux_guard_checks_actual_mount_and_rejects_wrong_identity(monkeypatch):
+    runtime()
+    import linux_runtime_guard as guard
+    import pytest
+    import json
+    original = guard.subprocess.check_output
+    guard.verify()
+    def wrong_mount(args, **kwargs):
+        if args[0] == '/usr/bin/findmnt':
+            return json.dumps({'filesystems': [{**guard.FILESYSTEM, 'target': '/foreign'}]})
+        return original(args, **kwargs)
+    monkeypatch.setattr(guard.subprocess, 'check_output', wrong_mount)
+    with pytest.raises(RuntimeError, match='unexpected mount'):
+        guard.verify()
+
+
+def test_linux_entry_refuses_existing_rebuild_and_real_mode():
+    module = runtime()
+    script = module.REPO / 'scripts/storage_runtime.py'
+    env = {'PATH': '/usr/bin:/bin', 'PYTHONPATH': '/nonexistent', 'WECHAT_MODE': 'mock'}
+    result = subprocess.run([sys.executable, '-I', '-B', str(script), 'rebuild'],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode == 78 and 'refusing to overwrite' in result.stderr
+    result = subprocess.run([sys.executable, '-I', '-B', str(script), 'cli', '--help'],
+                            env={**env, 'WECHAT_MODE': 'real'}, capture_output=True, text=True)
+    assert result.returncode == 78 and 'mock mode only' in result.stderr
+
+
 def test_real_http_restart_external_fixture(tmp_path, monkeypatch):
     """Actual loopback server twice; persistent fixture DB, no browser or network API."""
     import json
