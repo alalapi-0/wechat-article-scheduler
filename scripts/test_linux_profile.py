@@ -15,7 +15,8 @@ CACHE = Path('/home/alalapi/Caches/wechat-article-scheduler')
 PYTHON = Path('/home/alalapi/Runtimes/wechat-article-scheduler/.venv/bin/python')
 CODE_DIRS = {'src', 'tests', 'scripts', 'docs', 'fixtures', 'migrations', 'deploy'}
 FILES = {'AGENTS.md', 'README.md', 'project.yaml', 'hub.connection.yaml',
-         'pyproject.toml', '.gitignore', '.env.example', 'config/rules.example.yaml'}
+         'pyproject.toml', '.gitignore', '.env.example', 'config/rules.example.yaml',
+         'configs/linux-runtime.json'}
 GATE = '''import socket, ipaddress, os
 def local(address):
     host = address[0] if isinstance(address, tuple) else None
