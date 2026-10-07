@@ -11,6 +11,7 @@ runtime:
   cli: "python3 -I -B scripts/storage_runtime.py cli"
   web_url: "http://127.0.0.1:8080/"
   database: "/home/alalapi/ProjectData/wechat-article-scheduler/linux-local-profile/mock/data/app.sqlite3"
+  task_outbox: /data/ProjectOutputs/wechat-article-scheduler/task-packages
   default_mode: mock
   storage_profile: linux_mock_no_legacy_state_load
   python: /home/alalapi/Runtimes/wechat-article-scheduler/.venv/bin/python

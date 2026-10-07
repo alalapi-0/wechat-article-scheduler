@@ -2,6 +2,8 @@
 
 当前入口为 `python3 -I -B scripts/storage_runtime.py`，状态声明在 `project.yaml`。本机 CPython 3.12 与专属 `.venv` 位于 `/home/alalapi/Runtimes/wechat-article-scheduler`；缓存和临时根分别为 `/home/alalapi/Caches/wechat-article-scheduler` 与 `/home/alalapi/Temp/wechat-article-scheduler`。新增数据 profile 为 `/home/alalapi/ProjectData/wechat-article-scheduler/linux-local-profile/mock`。旧 ProjectData、仓库 `.env`、rules、文章、数据库和账号状态不加载。
 
+Linux profile 的外部任务包输出目录为 `/data/ProjectOutputs/wechat-article-scheduler/task-packages`，包括任务文件和其中生成的封面副本。入口核对 DATA 的 ext4 UUID `98a6a740-bf5c-41b5-90fe-fd8e78fa5f55`、可写状态、40 GiB 余量与无重定向路径，错盘或离线时拒绝使用输出目录。旧任务包目录没有已有媒体，仅保留原空占位；没有迁移用户文章、原封面、数据库或账号。任务包导出仍关闭，目录配置不启用导出、草稿运行或发布。
+
 `configs/linux-runtime.json` 登记固定 ext4 UUID `9d258b70-f313-4a5d-9cf6-c715c5edca3d`、`/dev/nvme0n1p3`、挂载点 `/`、目录逐级设备/inode/UID/GID/权限、系统 Python 哈希、虚拟环境身份与依赖版本。守卫以 no-follow 目录描述符核对，不接受路径别名、其他挂载、缺根或工具链漂移；失败先于 profile 遍历、环境执行和应用导入。此清单是本机登记，不可迁到另一主机直接使用旧 inode。
 
 ```sh

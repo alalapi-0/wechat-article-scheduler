@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
+import subprocess
 from html import escape
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -33,6 +36,49 @@ from wechat_article_scheduler.filesystem_safety import (
 )
 
 TASK_PACKAGE_VERSION = 2
+
+DATA_TASK_OUTPUT = Path('/data/ProjectOutputs/wechat-article-scheduler/task-packages')
+DATA_OUTPUT_UUID = '98a6a740-bf5c-41b5-90fe-fd8e78fa5f55'
+
+
+def data_task_outbox_root() -> Path:
+    """Admit only the DATA task-package folder; no internal-disk fallback."""
+    mount = Path('/data')
+    DATA_TASK_OUTPUT.relative_to(mount)
+    rows = json.loads(subprocess.check_output(
+        ['/usr/bin/findmnt', '-J', '-T', str(mount), '-o', 'TARGET,FSTYPE,UUID,OPTIONS'],
+        text=True, env={'PATH': '/usr/bin:/bin', 'LC_ALL': 'C'}, timeout=10,
+    ))['filesystems']
+    if len(rows) != 1 or rows[0].get('children'):
+        raise RuntimeError('DATA output volume identity is ambiguous')
+    row = rows[0]
+    options = str(row.get('options', '')).split(',')
+    if (row.get('target') != str(mount) or row.get('fstype') != 'ext4'
+            or row.get('uuid') != DATA_OUTPUT_UUID or 'rw' not in options or 'ro' in options):
+        raise RuntimeError('DATA output volume unavailable; no fallback')
+    usage = os.statvfs(mount)
+    if usage.f_flag & os.ST_RDONLY or usage.f_bavail * usage.f_frsize < 40 * 1024**3:
+        raise RuntimeError('DATA output volume read-only or insufficient free space')
+    current = Path('/')
+    missing = []
+    for part in DATA_TASK_OUTPUT.parts[1:]:
+        current /= part
+        if current.is_symlink():
+            raise RuntimeError('DATA output path redirects through a symlink')
+        if current.exists():
+            info = current.stat()
+            if not stat.S_ISDIR(info.st_mode):
+                raise RuntimeError('DATA output parent is not a directory')
+            if current == mount or current.is_relative_to(mount):
+                if info.st_dev != mount.stat().st_dev:
+                    raise RuntimeError('DATA output path changed device')
+        else:
+            missing.append(current)
+    for path in missing:
+        path.mkdir(mode=0o700)
+    if DATA_TASK_OUTPUT.resolve(strict=True) != DATA_TASK_OUTPUT or DATA_TASK_OUTPUT.stat().st_dev != mount.stat().st_dev:
+        raise RuntimeError('DATA output folder identity changed')
+    return DATA_TASK_OUTPUT
 
 REQUIRED_ACTIONS = [
     "wait_for_manual_login",
@@ -96,6 +142,8 @@ def task_outbox_root(config: AppConfig) -> Path:
     root = config.external_agent_task_outbox
     if not root.is_absolute():
         root = config.root / root
+    if root == DATA_TASK_OUTPUT or root.is_relative_to(DATA_TASK_OUTPUT):
+        data_task_outbox_root()
     return ensure_directory(root, allowed_roots=(root,))
 
 

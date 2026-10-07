@@ -19,10 +19,11 @@ def test_external_config_never_loads_legacy(monkeypatch, tmp_path):
     monkeypatch.setattr(config, 'load_config', lambda *a, **k: (_ for _ in ()).throw(AssertionError('legacy')))
     monkeypatch.setattr(module, 'DATA', tmp_path)
     monkeypatch.setattr(module, 'physical', lambda p: p)
+    monkeypatch.setattr(module, 'package_output_root', lambda: tmp_path / 'task-packages')
     cfg = module.external_config()
     assert cfg.root == tmp_path / 'mock'
     assert cfg.database_path.is_relative_to(cfg.root)
-    assert cfg.external_agent_task_outbox.is_relative_to(cfg.root)
+    assert cfg.external_agent_task_outbox == tmp_path / 'task-packages'
     assert cfg.wechat_mode == 'mock' and cfg.dry_run
     assert not cfg.wechat_app_secret and not cfg.web_auto_run_due
 
@@ -31,6 +32,7 @@ def test_cli_accepts_injected_config_without_loader(monkeypatch, tmp_path, capsy
     module = runtime()
     monkeypatch.setattr(module, 'DATA', tmp_path)
     monkeypatch.setattr(module, 'physical', lambda p: p)
+    monkeypatch.setattr(module, 'package_output_root', lambda: tmp_path / 'task-packages')
     from wechat_article_scheduler import cli
     monkeypatch.setattr(cli, 'load_config', lambda: (_ for _ in ()).throw(AssertionError('legacy')))
     assert cli.main(['init-db'], config=module.external_config()) == 0
@@ -88,12 +90,13 @@ def test_linux_guard_rejects_real_alias_and_hardlink(tmp_path):
 
 
 def test_linux_guard_checks_actual_mount_and_rejects_wrong_identity(monkeypatch):
-    runtime()
+    module = runtime()
     import linux_runtime_guard as guard
     import pytest
     import json
     original = guard.subprocess.check_output
     guard.verify()
+    assert module.package_output_root() == Path('/data/ProjectOutputs/wechat-article-scheduler/task-packages')
     def wrong_mount(args, **kwargs):
         if args[0] == '/usr/bin/findmnt':
             return json.dumps({'filesystems': [{**guard.FILESYSTEM, 'target': '/foreign'}]})
@@ -101,6 +104,8 @@ def test_linux_guard_checks_actual_mount_and_rejects_wrong_identity(monkeypatch)
     monkeypatch.setattr(guard.subprocess, 'check_output', wrong_mount)
     with pytest.raises(RuntimeError, match='unexpected mount'):
         guard.verify()
+    with pytest.raises(RuntimeError, match='DATA output volume'):
+        module.package_output_root()
 
 
 def test_linux_entry_refuses_existing_rebuild_and_real_mode():
@@ -128,6 +133,7 @@ def test_real_http_restart_external_fixture(tmp_path, monkeypatch):
     module = runtime()
     assert str(tmp_path).startswith(str(module.TEMP))
     monkeypatch.setattr(module, 'DATA', tmp_path)
+    monkeypatch.setattr(module, 'package_output_root', lambda: tmp_path / 'task-packages')
     cfg = module.external_config()
     for cycle in range(2):
         app = create_app(cfg)

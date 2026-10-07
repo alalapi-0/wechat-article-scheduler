@@ -64,6 +64,11 @@ def environment() -> dict[str, str]:
     }
 
 
+def package_output_root() -> Path:
+    from wechat_article_scheduler.external_agent.task_package import data_task_outbox_root
+    return data_task_outbox_root()
+
+
 def external_config():
     from wechat_article_scheduler.config import AppConfig
     root = physical(DATA / 'mock')
@@ -84,7 +89,7 @@ def external_config():
         wechat_app_id='', wechat_app_secret='', wechat_default_thumb_path='',
         web_auto_run_due=False, web_host='127.0.0.1', web_port=8080, rules={},
         external_agent_task_export_enabled=False,
-        external_agent_task_outbox=root / 'outbox/wechat_agent_tasks',
+        external_agent_task_outbox=package_output_root(),
     )
 
 
