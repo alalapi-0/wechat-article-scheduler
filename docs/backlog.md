@@ -10,6 +10,13 @@
 - 与只读检查报告相互独立的真实 proof 导入校验。
 - 经过独立产品决策后的其他内容平台。
 
+## 暂缓能力与重新准入条件
+
+- `freepublish/get` 发表状态与 `freepublish/getarticle` 已发表单篇只读查询：当前没有明确产品用途及可信外部标识交付流程，不接入运行时。只有用户另行明确要求、提供适用的真实标识并独立核实该端点权限后，才评估纯只读实现；不得从草稿 media_id、标题或 article_id 猜造 publish_id，也不得为取得标识自动提交发表。届时保留状态与标识原值和字段类型差异（如 msg_data_id 的 string/int64 差异），仅状态 0 解析 article_id 与 article_detail.item 的 idx/article_url，1 保留处理中，2/3/4 保留相应失败，5/6 保留删除/封禁事实；未知状态和 fail_idx 原样保留，不能仅凭 fail_idx 判断终态。查询结果不自动成为发布 proof。
+- 临时素材 upload/get、正文图 uploadimg 及更多永久素材类型：当前封面永久素材已覆盖草稿链路，本轮未证明其他端点必要。仅当排版/预览一致性或明确输入流程提出具体需求，并具备对应权限和最小验收标准后重新评估；不因上游接口存在而提前扩入。
+
+这些暂缓项不阻塞默认 mock、现有草稿链路或已知草稿的单篇只读核对；端点权限仍需分别观察。
+
 ## 明确不提前实现
 
 - 通用 adapter registry、manifest、content package 或跨项目 calendar。

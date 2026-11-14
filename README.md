@@ -69,6 +69,10 @@ Web 默认会处理勾选了 auto_execute 的到期任务。Web 自动执行、s
 
 每个排期任务都会保存创建当时的 `mock` 或 `real` 模式。执行进程的 `WECHAT_MODE` 与任务模式不一致时，任务会保持待执行并被拒绝运行；切换模式后需要在当前模式下重新安排该任务。已有草稿还必须带有匹配的任务和模式来源，旧数据中来源不明确的草稿不会被当作真实草稿复用、更新或提交 proof。
 
+Python 调用方可通过 `remote_sync.inspect_known_draft(config, *, media_id, index=0, expected_fields=None)` 核对可信来源的已知草稿标识；真实适配器的可选 `get_draft` 使用 `draft/get` 只读回看。该函数未接入 CLI、Web 或调度器，不上传素材、不创建或更新草稿、不写 SQLite，也不生成 proof。空标识在联网前拒绝；默认 mock 返回 unsupported，不影响原有演练。未提供 expected_fields 只能报告已读取，不能宣称内容一致；字段缺失和差异分别保留。它不能消除未知 media_id 的创建超时，也不会自动重建草稿或改写任务成功状态。
+
+草稿与已发表列表探测分别记录端点的本次观察；带时间的缓存不是当前账号全部权限的证明。发表列表权限未知或未授权不代表本地 mock、草稿链路或单篇只读接口不可用。发表状态查询、已发表单篇查询和其他素材端点仍是 [暂缓能力](docs/backlog.md)。
+
 完整命令和参数以运行时帮助为准：
 
     python3 -I -B scripts/storage_runtime.py cli --help
@@ -108,6 +112,8 @@ real 模式需要可读取且非空的封面文件。可以给文章绑定独立
 只读检查报告不能作为发布 proof。发布 proof 只能在用户实际完成后台发布后单独回填。
 
 不得绕过登录、扫码、验证码或风控，不得保存 cookie/密码，不得删除草稿或点击最终发布。可选的已登录 Chrome 只读连接说明见 [docs/wechat_chrome_session_runbook.md](docs/wechat_chrome_session_runbook.md)。
+
+外部核对须记录实际客户端固定版本，显式绑定页面句柄，并在每次快照、截图前重新确认可见账号和任务草稿。多候选、身份未知、页面失效、替换或回退时停止并交还用户；同一 host、标题或默认选中页不足以继续。文档静态检查不表示真实连接或账号已验收。
 
 ## 测试
 

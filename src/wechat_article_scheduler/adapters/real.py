@@ -278,6 +278,15 @@ class RealWechatAdapter(WechatAdapter):
         )
         return DraftResult(media_id=out_id, raw_response=raw)
 
+    def get_draft(self, *, media_id: str) -> dict:
+        """只读获取调用方已知的草稿，不构造正文或上传封面。"""
+        if not isinstance(media_id, str) or not media_id.strip():
+            raise ValueError("media_id 必须是有来源的非空草稿标识")
+        self._ensure_credentials()
+        token = self.get_access_token()
+        url = f"{API_BASE}/cgi-bin/draft/get?access_token={token}"
+        return self._http_post_json(url, {"media_id": media_id})
+
     def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
         """调用 draft/batchget 分页获取草稿列表。"""
         self._ensure_credentials()

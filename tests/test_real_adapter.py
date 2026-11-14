@@ -38,6 +38,41 @@ def test_token_cache_reuses_token() -> None:
     assert calls["n"] == 1
 
 
+def test_get_draft_sends_only_known_id_without_cover_or_write_calls(monkeypatch) -> None:
+    calls = []
+    response = {"news_item": [{"title": "第一篇"}, {"title": "第二篇"}]}
+
+    def fake_get(url):
+        calls.append("token")
+        return {"access_token": "TEST_TOKEN", "expires_in": 7200}
+
+    def fake_post(url, body):
+        assert url == "https://api.weixin.qq.com/cgi-bin/draft/get?access_token=TEST_TOKEN"
+        assert body == {"media_id": "known-draft"}
+        calls.append("draft/get")
+        return response
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("read-only inspection attempted a write or cover read")
+
+    adapter = RealWechatAdapter("test-app", "test-secret", http_get=fake_get, http_post_json_fn=fake_post)
+    for method in ("create_draft", "update_draft", "upload_thumb_media", "_build_article_fields"):
+        monkeypatch.setattr(adapter, method, forbidden)
+    assert adapter.get_draft(media_id="known-draft") is response
+    assert adapter.get_draft(media_id="known-draft") is response
+    assert calls == ["token", "draft/get", "draft/get"]
+
+
+@pytest.mark.parametrize("media_id", ["", "  ", None])
+def test_get_draft_rejects_empty_id_before_http(media_id) -> None:
+    def forbidden(*args, **kwargs):
+        pytest.fail("invalid media_id must not reach HTTP")
+
+    adapter = RealWechatAdapter("test-app", "test-secret", http_get=forbidden, http_post_json_fn=forbidden)
+    with pytest.raises(ValueError, match="media_id"):
+        adapter.get_draft(media_id=media_id)
+
+
 def test_upload_thumb_jpg_multipart_metadata(tmp_path: Path) -> None:
     jpg_path = tmp_path / "cover.jpg"
     Image.new("RGB", (1, 1), (255, 0, 0)).save(jpg_path, format="JPEG")

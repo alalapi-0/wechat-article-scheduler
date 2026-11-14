@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
+import urllib.error
 from datetime import datetime, timezone
 from typing import Any
 
 from wechat_article_scheduler.adapters.wechat_http import WechatApiError
-
-# 微信常见未授权错误码
-_UNAUTHORIZED_CODES = frozenset({48001, 40001, 40013, 40014})
+from wechat_article_scheduler.external_agent.redaction import redact_sensitive_values
+from wechat_article_scheduler.wechat_errors import wechat_error_diagnostic
 
 CAPABILITY_DRAFT_LIST = "draft_batchget"
 CAPABILITY_PUBLISHED_LIST = "freepublish_batchget"
@@ -23,40 +23,46 @@ def _classify_probe_response(
 ) -> dict[str, Any]:
     """将 API 响应归类为 authorized / unauthorized / empty / error。"""
     if exc is not None:
-        if isinstance(exc, WechatApiError) and exc.errcode in _UNAUTHORIZED_CODES:
+        if isinstance(exc, WechatApiError):
             return {
-                "state": "unauthorized",
-                "message": "账号接口权限不足（未授权）",
+                "state": "unauthorized" if exc.errcode == 48001 else "error",
                 "item_count": None,
                 "error_code": exc.errcode,
+                **wechat_error_diagnostic(exc.errcode),
             }
-        hint = str(exc)[:200]
+        network = isinstance(exc, (urllib.error.URLError, OSError))
         return {
             "state": "error",
-            "message": f"请求失败：{hint}",
+            "message": "请求失败：网络连接异常" if network else "请求失败：未完成接口读取",
             "item_count": None,
-            "error_code": getattr(exc, "errcode", None),
+            "error_code": None,
+            "reason_code": "network_error" if network else "request_error",
+            "action_hint": "核对连接后人工决定是否重试" if network else "核对本地配置和接口响应；不推断端点权限",
         }
     if not data:
         return {
             "state": "error",
             "message": "请求失败：空响应",
             "item_count": None,
+            "reason_code": "empty_response",
+            "action_hint": "核对接口响应；空响应不表示空列表或未授权",
         }
-    errcode = int(data.get("errcode", 0) or 0)
-    if errcode in _UNAUTHORIZED_CODES:
+    try:
+        errcode = int(data.get("errcode", 0) or 0)
+    except (TypeError, ValueError):
         return {
-            "state": "unauthorized",
-            "message": "账号接口权限不足（未授权）",
+            "state": "error",
+            "message": "请求失败：错误码格式无效",
             "item_count": None,
-            "error_code": errcode,
+            "reason_code": "invalid_response",
+            "action_hint": "核对接口响应；不推断端点权限",
         }
     if errcode != 0:
         return {
-            "state": "error",
-            "message": f"微信 API 错误 {errcode}: {data.get('errmsg', '')}",
+            "state": "unauthorized" if errcode == 48001 else "error",
             "item_count": None,
             "error_code": errcode,
+            **wechat_error_diagnostic(errcode),
         }
     items = data.get(list_key)
     if isinstance(items, list):
@@ -129,8 +135,15 @@ def probe_all_capabilities(adapter: Any) -> dict[str, Any]:
 
 
 def _redact_raw(data: dict[str, Any]) -> str:
-    safe = {k: v for k, v in data.items() if k not in ("access_token",)}
-    return json.dumps(safe, ensure_ascii=False)[:500]
+    safe = redact_sensitive_values({
+        key: data[key]
+        for key in (
+            "capability_id", "state", "message", "item_count", "error_code",
+            "reason_code", "action_hint", "label",
+        )
+        if key in data
+    })
+    return json.dumps(safe, ensure_ascii=False)
 
 
 def cache_capability_probe(conn: Any, probe: dict[str, Any]) -> None:
@@ -161,7 +174,7 @@ def cache_capability_probe(conn: Any, probe: dict[str, Any]) -> None:
 def get_cached_capabilities(conn: Any) -> dict[str, Any]:
     """读取缓存的能力探测结果。"""
     rows = conn.execute(
-        "SELECT capability_id, state, message, item_count, probed_at FROM wechat_capability_cache"
+        "SELECT capability_id, state, message, item_count, probed_at, raw_redacted FROM wechat_capability_cache"
     ).fetchall()
     out: dict[str, Any] = {}
     for row in rows:
@@ -171,6 +184,14 @@ def get_cached_capabilities(conn: Any) -> dict[str, Any]:
             "item_count": row["item_count"],
             "probed_at": row["probed_at"],
         }
+        try:
+            raw = json.loads(row["raw_redacted"] or "{}")
+        except (TypeError, ValueError):
+            raw = {}
+        if isinstance(raw, dict):
+            for key in ("reason_code", "action_hint", "error_code"):
+                if key in raw:
+                    out[str(row["capability_id"])][key] = raw[key]
     return out
 
 

@@ -53,6 +53,10 @@ class WechatAdapter(ABC):
     ) -> DraftResult:
         """更新已有草稿（微信 draft/update；mock 仅更新本地记录语义）。"""
 
+    def get_draft(self, *, media_id: str) -> dict:
+        """只读获取已知草稿；可选能力，不改变现有子类的可实例化性。"""
+        raise NotImplementedError("get_draft not implemented")
+
     def list_drafts_batchget(self, *, offset: int = 0, count: int = 20) -> dict:
         """draft/batchget 分页列表（子类可覆盖）。"""
         raise NotImplementedError("list_drafts_batchget not implemented")

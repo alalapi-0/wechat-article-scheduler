@@ -9,15 +9,94 @@ from typing import Any
 
 from wechat_article_scheduler import db
 from wechat_article_scheduler.adapters import get_adapter
+from wechat_article_scheduler.adapters.wechat_http import WechatApiError
 from wechat_article_scheduler.capability_probe import (
     cache_capability_probe,
     probe_all_capabilities,
 )
 from wechat_article_scheduler.config import AppConfig
 from wechat_article_scheduler.external_agent.redaction import redact_sensitive_values
+from wechat_article_scheduler.wechat_errors import wechat_error_diagnostic
 
 REMOTE_TYPE_DRAFT = "draft"
 PAGE_SIZE = 20
+_INSPECT_FIELDS = frozenset({
+    "title", "author", "digest", "content", "thumb_media_id",
+    "content_source_url", "need_open_comment", "only_fans_can_comment",
+})
+
+
+def inspect_known_draft(
+    config: AppConfig,
+    *,
+    media_id: str,
+    index: int = 0,
+    expected_fields: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """只读核对有来源的已知草稿；不连接数据库或推断任务/发布成功。
+
+    调用方负责确认标识的账号及 mock/real 来源。预期值须显式提供，
+    不通过上传封面或本地镜像构造；缺失/None 字段保留为 unknown。
+    comparison 仅适用于请求比较的字段，不证明整篇内容或发布状态。
+    """
+    result: dict[str, Any] = {
+        "media_id": media_id, "index": index, "state": "error",
+        "readable": None, "comparison": "unknown", "fields": {},
+        "differences": {}, "unknown_fields": {}, "error_code": None,
+    }
+    if not isinstance(media_id, str) or not media_id.strip():
+        return {**result, "reason_code": "invalid_media_id", "message": "缺少有来源的草稿标识，无法核对"}
+    if type(index) is not int or index < 0:
+        return {**result, "reason_code": "invalid_index", "message": "文章 index 必须是非负整数"}
+    if expected_fields is not None and (
+        not isinstance(expected_fields, dict) or not expected_fields.keys() <= _INSPECT_FIELDS
+    ):
+        return {**result, "reason_code": "invalid_expected_fields", "message": "只能核对支持的公开图文字段"}
+    try:
+        data = get_adapter(config).get_draft(media_id=media_id)
+        if not isinstance(data, dict):
+            raise ValueError("invalid response")
+        errcode = int(data.get("errcode", 0) or 0)
+        if errcode:
+            raise WechatApiError(errcode, "", endpoint="draft/get")
+    except NotImplementedError:
+        return {**result, "state": "unsupported", "readable": False,
+                "reason_code": "unsupported", "message": "当前适配器不支持单篇草稿读取"}
+    except WechatApiError as exc:
+        diagnostic = wechat_error_diagnostic(exc.errcode)
+        if exc.errcode in {61452, 61453}:
+            return {**result, **diagnostic, "state": "missing", "readable": False,
+                    "reason_code": "draft_missing" if exc.errcode == 61452 else "draft_deleted",
+                    "error_code": exc.errcode}
+        return {**result, **diagnostic, "error_code": exc.errcode}
+    except Exception:  # noqa: BLE001 - do not expose URLs, credentials or raw responses
+        return {**result, "reason_code": "request_failed", "message": "草稿读取失败，尚不能判断远端状态"}
+
+    news = data.get("news_item")
+    if not isinstance(news, list):
+        return {**result, "reason_code": "invalid_response", "message": "响应缺少有效的 news_item，无法核对"}
+    if index >= len(news):
+        return {**result, "state": "missing", "readable": False,
+                "reason_code": "article_index_missing", "message": "响应中没有所请求的文章 index"}
+    article = news[index]
+    if not isinstance(article, dict):
+        return {**result, "reason_code": "invalid_response", "message": "所请求的文章结构无效，无法核对"}
+    result.update(state="readable", readable=True, reason_code="readable", message="已读取草稿；内容一致性未知")
+    result["fields"] = {key: value for key, value in article.items() if key in _INSPECT_FIELDS}
+    for field, expected in (expected_fields or {}).items():
+        if expected is None:
+            result["unknown_fields"][field] = "expected_unknown"
+        elif field not in article:
+            result["unknown_fields"][field] = "remote_missing"
+        elif article[field] is None:
+            result["unknown_fields"][field] = "remote_unknown"
+        elif article[field] != expected:
+            result["differences"][field] = {"expected": expected, "actual": article[field]}
+    if result["differences"]:
+        result.update(state="mismatch", comparison="mismatch", reason_code="field_mismatch", message="所请求的字段存在差异")
+    elif expected_fields and not result["unknown_fields"]:
+        result.update(comparison="match", reason_code="fields_match", message="所请求的字段一致；不代表任务或发布成功")
+    return result
 
 
 def _content_hash(title: str, update_time: int | None) -> str:
