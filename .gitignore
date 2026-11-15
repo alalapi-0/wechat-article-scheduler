@@ -49,3 +49,10 @@ articles/imported/r114_browser*.md
 
 # 用户视角测试隔离目录
 articles/user_view_test/
+
+# Generated Project-to-Skill research copies; the catalog stays in that project
+/research/p2s-resource-analysis/
+
+# Private governance plans remain local; preserve their source history.
+/docs/pch-rebuild-20261020/PLAN.md
+/docs/pch-rebuild-20261020/TASKS.json

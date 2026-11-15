@@ -16,14 +16,28 @@ mapping:
       - project
       - status
     value_map: null
+  current_work.phase:
+    source_ref: state
+    selector:
+      path:
+      - current_work
+      - phase
+    value_map: null
+  current_work.next_action:
+    source_ref: state
+    selector:
+      path:
+      - current_work
+      - next_action
+    value_map: null
 unknown_fields:
   current_work.objective: The declared purpose is a stable product identity, not a current objective.
-  current_work.phase: The project state declares scope and runtime, not one typed phase.
+  current_work.phase: Applies only when the mapped current_work.phase field is missing or cannot be parsed.
   current_work.round: The project state does not publish a current round.
   current_work.status: Applies only when the declared project status field is missing or not a supported lifecycle value.
   current_work.completed: Included scope items are capabilities, not whole-project completion.
   current_work.accepted: Runtime and safety declarations are not an acceptance boolean.
-  current_work.next_action: The project state does not publish one canonical next action.
+  current_work.next_action: Applies only when the mapped current_work.next_action field is missing or cannot be parsed.
   current_work.owner_role: Declared readers are not one current owner-role field.
   progress.completed: Articles, jobs, drafts, and proofs are not a homogeneous numerator.
   progress.total: The workbench has no stable homogeneous completion denominator.

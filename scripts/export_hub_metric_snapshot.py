@@ -30,7 +30,7 @@ def main(argv=None):
     from hub.metrics import utcnow
 
     observed_at = utcnow()
-    resolver = SourceResolver(hub_root, clock=lambda: observed_at)
+    resolver = SourceResolver(hub_root, clock=lambda: observed_at, project_ids=[PROJECT_ID])
     registered = Path(resolver.projects[PROJECT_ID]["root_path"]).expanduser()
     if registered.resolve(strict=True) != project_root:
         return 2
@@ -52,7 +52,7 @@ def main(argv=None):
         PROJECT_ID,
         {"workbench": workbench},
         exporter_id="wechat-article-scheduler-export",
-        exporter_version="1.0",
+        exporter_version="1.1",
         management=management,
         clock=lambda: observed_at,
     )

@@ -80,3 +80,9 @@ current_work:
       closed_rounds: 1
       coverage: since_stage3_implementation_start
       last_closed_key: WAS-RS3-01-03-implementation
+
+pch_governance_20261116:
+  scope: lifecycle_and_single_project_source_observation
+  rr_candidate: preserved_local_not_adopted
+  validation_boundary: synthetic_metadata_only_no_real_workbench_or_accounts
+  business_state: unchanged
