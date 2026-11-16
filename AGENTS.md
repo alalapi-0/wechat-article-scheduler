@@ -94,7 +94,9 @@ Linux 默认入口使用固定存储守卫和专属解释器；不读取旧配�
 
 ## Personal Control Hub 生命周期
 
-本次所有者已授权全项目治理所需的精确代码/声明修正及正常既有 main 交付；此授权不包含账号操作、真实数据读取、部署、自动发布或 RR 生产采用。RR 未采用候选及私人计划保留本地，其采用范围须由当前所有者单独决定。
+本次 `PCH-LOCAL-PROJECT-IMPROVEMENT-20261114` 所有者已授权全项目治理所需的精确代码/声明修正及正常既有 main 交付，包括未采用RR候选的迁移隔离、合成夹具和验证修复。经验证并审查安全的候选源码可以交付既有main；私人计划与私人提交链保留本地。源码交付不授予RR生产采用、账号操作、真实数据读取、部署或自动发布权限，生产采用范围仍由当前所有者单独决定。
+
+未采用的016只存于 `src/wechat_article_scheduler/rr_review/candidate_migrations/`；普通迁移入口只发现已发布迁移。`create_fixture`仅在独占新合成数据库显式应用016，不改变现行库。完整隔离验证排除两份私人PCH计划；短Unix socket夹具使用项目Temp，不放宽真实B Peer或生产身份检查。
 
 创建、接手与收尾读取共享 `/home/alalapi/.agents/pch-project-contract.md`（1.0.1-20261114）。开工用 `pch-project begin --project-id wechat-article-scheduler` 读取 Hub 管理意图与原唯一 `project.yaml`；由原写者先更新该状态，再按契约用新 request ID、来源 SHA 和 CAS 执行 finish 并核对持久终态。规则写入不代表其他活动会话热加载；Hub 投影不替代真实微信、外部 Chrome、人工 proof 或作品接受。
 

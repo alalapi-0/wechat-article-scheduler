@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -133,7 +134,7 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
 
 def init_db(db_path: Path) -> None:
     """创建表结构并应用迁移（幂等）。"""
-    with connect(db_path) as conn:
+    with closing(connect(db_path)) as conn, conn:
         conn.executescript(SCHEMA_SQL)
         _migrate_schema(conn)
         apply_migrations(conn)

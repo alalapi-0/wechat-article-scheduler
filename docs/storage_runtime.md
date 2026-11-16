@@ -22,6 +22,8 @@ python3 -I -B scripts/test_linux_profile.py current
 
 `test` 覆盖原存储测试、mock adapter、迁移和基础 Web；包含实际 loopback HTTP 与 SQLite 重启持久性。完整测试入口只复制明确允许的源码、测试、文档、部署样例和合成 fixtures，逐文件校验相同字节；不复制原 `.env`、rules、数据库、articles 或 storage。所有普通 Python 子进程使用这个空配置副本，测试临时目录为私有权限。测试用 Python loopback 连接守卫记录外网尝试，它不是内核沙箱或恶意测试隔离；应用使用固定 mock 配置。测试断言、失败和浏览器条件跳过保留，不能将跳过声称为浏览器验收。
 
+源码副本还明确排除 `docs/pch-rebuild-20261020/PLAN.md` 与 `TASKS.json`，不读取其正文。未采用的016保留原SQL字节并移至 `src/wechat_article_scheduler/rr_review/candidate_migrations/`，只有独占新合成fixture显式应用；普通入口不会自动采用。原私有index仍保留旧路径时，验证器只接受这一处已核字节相同的迁移移动，并明确纳入新的候选SQL与定向测试，不忽略其他缺失迁移。RR测试用项目Temp内短路径承载独占Unix socket；本机B依赖和真实身份检查保持。
+
 测试报告固定写入专属 Temp 的 `current-pytest.xml`、`current-pytest.txt` 和 `current-source-view.json`，临时源码副本与 pytest fixtures 自动回收；不写 tracked 运行产物。工作站迁移的实际验收、原始分母与远端交付由 Hub inventory 本项目条目记录，业务事实继续由 `project.yaml` 负责。
 
 历史 Mac 存储调查与原数据保留在迁移归档；此前约 9.78 MB 的清理记录不构成本次删除授权。现有 Linux 副本不执行旧 Mac 运行时、不访问 APFS、不清理旧数据或账号状态。

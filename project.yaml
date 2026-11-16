@@ -82,7 +82,26 @@ current_work:
       last_closed_key: WAS-RS3-01-03-implementation
 
 pch_governance_20261116:
-  scope: lifecycle_and_single_project_source_observation
-  rr_candidate: preserved_local_not_adopted
-  validation_boundary: synthetic_metadata_only_no_real_workbench_or_accounts
+  scope: lifecycle_and_rr_candidate_source_isolation
+  rr_candidate: source_technically_verified_not_adopted
+  validation_boundary: controlled_source_synthetic_sqlite_unix_and_browser_no_real_workbench_or_accounts
   business_state: unchanged
+  source_repair:
+    task_id: PCH-LOCAL-PROJECT-IMPROVEMENT-20261114
+    unit: PCH-WECHAT-RR-SOURCE-ISOLATION-63
+    candidate_migration: src/wechat_article_scheduler/rr_review/candidate_migrations/016_rr_feedback.sql
+    ordinary_migrations: published_001_through_015_only
+    candidate_application: exclusive_new_synthetic_fixture_only
+    sqlite_connections: initializer_and_fixture_close_on_success_and_error
+    private_plans_in_test_view: excluded_before_reading
+    checks:
+      storage_runtime_test: {passed: 16, failed: 0}
+      controlled_current_profile: {passed: 473, failed: 0, skipped: 1, subtests_passed: 16}
+      outward_test_network_attempts: 0
+      contract: passed
+    browser_scope: RR_public_synthetic_feedback_and_isolated_browser_passed
+    remaining_skip: ordinary_view_e2e_baseline_requires_unavailable_playwright_chromium
+    source_delivery_target: existing_github_main_verified_by_git_and_hub_governance_receipt
+    production_rr_adopted: false
+    real_database_or_account_access: false
+    historical_stage3_receipt: unchanged_and_not_rebound_to_RR_production_acceptance

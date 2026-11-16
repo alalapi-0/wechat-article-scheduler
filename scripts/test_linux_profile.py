@@ -17,6 +17,12 @@ CODE_DIRS = {'src', 'tests', 'scripts', 'docs', 'fixtures', 'migrations', 'deplo
 FILES = {'AGENTS.md', 'README.md', 'project.yaml', 'hub.connection.yaml',
          'pyproject.toml', '.gitignore', '.env.example', 'config/rules.example.yaml',
          'configs/linux-runtime.json'}
+PRIVATE_PLANS = {'docs/pch-rebuild-20261020/PLAN.md', 'docs/pch-rebuild-20261020/TASKS.json'}
+CANDIDATE_SQL_MOVE = ('migrations/016_rr_feedback.sql',
+                      'src/wechat_article_scheduler/rr_review/candidate_migrations/016_rr_feedback.sql')
+EXPLICIT_SOURCE_FILES = ('scripts/linux_runtime_guard.py', 'configs/linux-runtime.json',
+                        'scripts/test_linux_profile.py', CANDIDATE_SQL_MOVE[1],
+                        'tests/test_rr_migration_isolation.py')
 GATE = '''import socket, ipaddress, os
 def local(address):
     host = address[0] if isinstance(address, tuple) else None
@@ -42,15 +48,25 @@ socket.socket.connect, socket.socket.connect_ex, socket.getaddrinfo = connect, c
 def run(label):
     from linux_runtime_guard import regular_bytes
     os.umask(0o077)
-    tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=REPO).decode().split('\0')
+    git_env = {**os.environ, 'GIT_OPTIONAL_LOCKS': '0'}
+    tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=REPO, env=git_env).decode().split('\0')
     rows = []
     with tempfile.TemporaryDirectory(prefix='suite-', dir=TEMP) as directory:
         base = Path(directory); view = base / 'source'; view.mkdir()
         for name in tracked:
             if not name: continue
+            if name in PRIVATE_PLANS: continue
             relative = Path(name)
             if relative.parts[0] not in CODE_DIRS and name not in FILES: continue
             source = REPO / relative
+            if name == CANDIDATE_SQL_MOVE[0] and not os.path.lexists(source):
+                # Admit this exact source relocation while the original private
+                # index is retained. A missing published migration still fails.
+                candidate = regular_bytes(REPO / CANDIDATE_SQL_MOVE[1])
+                original = subprocess.check_output(['git', 'show', 'HEAD:' + name], cwd=REPO, env=git_env)
+                if candidate != original:
+                    raise RuntimeError('candidate migration move changed the original SQL bytes')
+                continue
             if not stat.S_ISREG(source.lstat().st_mode):
                 raise RuntimeError('test view accepts regular code files only')
             target = view / relative; target.parent.mkdir(parents=True, exist_ok=True)
@@ -60,7 +76,7 @@ def run(label):
             assert hashlib.sha256(target.read_bytes()).hexdigest() == digest
             rows.append([name, digest])
         # New task-owned code is explicitly admitted, never via repository traversal.
-        for name in ('scripts/linux_runtime_guard.py', 'configs/linux-runtime.json', 'scripts/test_linux_profile.py'):
+        for name in EXPLICIT_SOURCE_FILES:
             source = REPO / name
             if name not in tracked and source.is_file():
                 target = view / name; target.parent.mkdir(parents=True, exist_ok=True)
@@ -84,6 +100,7 @@ def run(label):
             result = subprocess.run(args, cwd=view, env=env, stdout=output, stderr=subprocess.STDOUT)
         (TEMP / (label + '-source-view.json')).write_text(json.dumps({
             'files': sorted(rows), 'environment': env, 'protected_files_copied': 0,
+            'excluded_private_plans': sorted(PRIVATE_PLANS),
             'source_view': 'disposable; exact allowed source bytes; no original .env/rules/db/articles/storage',
             'network_gate': 'test-only Python loopback guard, inherited ordinary Python children; not kernel sandbox',
             'exit': result.returncode}, ensure_ascii=False, indent=2))

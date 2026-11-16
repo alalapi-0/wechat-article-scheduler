@@ -1,0 +1,31 @@
+<section id="review-feedback" aria-labelledby="feedback-heading">
+  <h2 id="feedback-heading">审核反馈</h2>
+  <p>只向本项目保存审核意见，不执行微信操作。请勿填写秘密。固定反馈后，本浏览器会保存本次正文、来源和附件摘要以便恢复核对；附件字节不会保存。不会自动采集截图、Cookie 或历史。</p>
+  <form id="feedback-form">
+    <fieldset id="feedback-fields">
+      <legend>描述当前页面的问题</legend>
+      <label for="feedback-description">问题（必填）</label><textarea id="feedback-description" maxlength="6000" required></textarea>
+      <label for="feedback-expected">预期表现</label><textarea id="feedback-expected" maxlength="6000"></textarea>
+      <label for="feedback-actual">实际表现</label><textarea id="feedback-actual" maxlength="6000"></textarea>
+      <label for="feedback-steps">复现步骤</label><textarea id="feedback-steps" maxlength="6000"></textarea>
+    </fieldset>
+    <label for="feedback-files">明确选择附件（最多两件，每件1MiB；PNG、JPEG、WebP、UTF-8文本）</label>
+    <input id="feedback-files" type="file" multiple accept="image/png,image/jpeg,image/webp,text/plain,.txt">
+    <p id="feedback-file-note">附件仅来自你的选择；恢复后须重新选择相同文件并校验摘要。</p>
+    <div class="review-actions"><button id="feedback-prepare" type="button">检查并固定本次反馈</button><button id="feedback-new" type="button">开始新的反馈</button></div>
+    <details id="feedback-preview"><summary>检查固定正文、附件与提交来源</summary><pre id="feedback-context">尚未固定反馈。</pre></details>
+    <label class="review-check"><input id="feedback-confirm" type="checkbox">我已检查正文、附件和来源，确认保存到项目。</label>
+    <button id="feedback-save" type="submit" disabled>保存反馈到项目</button>
+  </form>
+  <p id="feedback-status" role="status" aria-live="polite" aria-atomic="true">未同步：尚未固定反馈。</p>
+  <p id="feedback-version" role="status" aria-live="polite"></p>
+  <button id="feedback-reconcile" type="button" disabled>按原请求核对</button>
+  <p id="feedback-result" class="review-result"></p>
+  <details><summary>原请求与反馈编号</summary><p id="feedback-identifiers">尚无请求。</p></details>
+  <h3>查询已有反馈</h3>
+  <label for="feedback-lookup">反馈编号</label><input id="feedback-lookup" type="text" maxlength="128" autocomplete="off" spellcheck="false">
+  <button id="feedback-refresh" type="button">查询反馈编号 / 刷新状态</button>
+  <p id="feedback-lookup-status" role="status" aria-live="polite" aria-atomic="true">输入项目返回的反馈编号后查询。</p>
+  <pre id="feedback-lookup-result"></pre>
+  <noscript>反馈需要启用 JavaScript。当前文章和排期仍可只读浏览。</noscript>
+</section>

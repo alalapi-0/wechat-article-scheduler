@@ -1,0 +1,26 @@
+[Unit]
+Description=WeChat current mock workbench and protected RR Unix interface
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/alalapi/Projects/wechat-article-scheduler
+ExecStartPre=/usr/bin/env -i PATH=/usr/bin:/bin LANG=C.UTF-8 /usr/bin/python3 -I -B /home/alalapi/Projects/wechat-article-scheduler/scripts/storage_runtime.py check
+ExecStart=/usr/bin/env -i PATH=/usr/bin:/bin LANG=C.UTF-8 /home/alalapi/Runtimes/wechat-article-scheduler/.venv/bin/python -I -B -c "import sys,runpy;sys.path.insert(0,'/home/alalapi/Projects/wechat-article-scheduler/src');runpy.run_module('wechat_article_scheduler.rr_review.native_runtime',run_name='__main__')" serve
+Restart=no
+MemoryHigh=192M
+MemoryMax=256M
+MemorySwapMax=0
+CPUQuota=50%
+TasksMax=64
+UMask=0077
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+LimitCORE=0
+KillMode=mixed
+TimeoutStopSec=20
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
